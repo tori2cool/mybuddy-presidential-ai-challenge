@@ -1,0 +1,103 @@
+import { View, StyleSheet, Image } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { LinearGradient } from "expo-linear-gradient";
+import { ThemedText } from "@/components/ThemedText";
+import { Button } from "@/components/Button";
+import { OnboardingParamList } from "@/navigation/OnboardingNavigator";
+import { Spacing, Typography } from "@/constants/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Gradients } from "@/constants/theme";
+
+type WelcomeScreenNavigationProp = NativeStackNavigationProp<
+  OnboardingParamList,
+  "Welcome"
+>;
+
+export default function OnboardingWelcomeScreen() {
+  const navigation = useNavigation<WelcomeScreenNavigationProp>();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <LinearGradient
+      colors={[...Gradients.sky] as any}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+    >
+      <View
+        style={[
+          styles.content,
+          {
+            paddingTop: insets.top + Spacing.xl,
+            paddingBottom: insets.bottom + Spacing.xl,
+          },
+        ]}
+      >
+        <View style={styles.iconContainer}>
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={styles.icon}
+            resizeMode="contain"
+          />
+        </View>
+        <ThemedText
+          style={[styles.title, { color: "white" }]}
+          type="hero"
+        >
+          Welcome to MyBuddy!
+        </ThemedText>
+        <ThemedText
+          style={[styles.subtitle, { color: "rgba(255,255,255,0.9)" }]}
+          type="body"
+        >
+          Your fun learning companion
+        </ThemedText>
+        <View style={styles.buttonContainer}>
+          <Button
+            onPress={() => navigation.navigate("Quiz")}
+            style={styles.button}
+          >
+            Let's Get Started
+          </Button>
+        </View>
+      </View>
+    </LinearGradient>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: Spacing.xl,
+  },
+  iconContainer: {
+    marginBottom: Spacing.xxl,
+  },
+  icon: {
+    width: 120,
+    height: 120,
+  },
+  title: {
+    ...Typography.hero,
+    textAlign: "center",
+    marginBottom: Spacing.md,
+  },
+  subtitle: {
+    ...Typography.body,
+    textAlign: "center",
+    marginBottom: Spacing.xxl,
+  },
+  buttonContainer: {
+    width: "100%",
+    marginTop: Spacing.xxl,
+  },
+  button: {
+    width: "100%",
+  },
+});

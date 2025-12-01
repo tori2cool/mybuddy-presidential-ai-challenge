@@ -1,0 +1,29 @@
+# FastAPI / ASGI
+fastapi
+uvicorn[standard]
+
+# DB / ORM
+sqlmodel
+SQLAlchemy
+asyncpg
+
+# Pydantic (v1 or v2 depending on your FastAPI version; this will pull latest)
+pydantic
+
+# Redis (sync + async)
+redis[hiredis]
+
+# Celery
+celery
+
+# JWT / Keycloak
+python-jose[cryptography]
+requests
+
+# Migrations (optional but typical)
+alembic
+
+# Dev tools (optional)
+black
+isort
+mypy
