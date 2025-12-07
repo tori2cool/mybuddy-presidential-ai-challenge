@@ -7,7 +7,7 @@ import React, {
   ReactNode,
 } from "react";
 import * as SecureStore from "expo-secure-store";
-
+import { apiFetch } from "@/services/apiClient";
 import {
   startKeycloakLoginAsync,
   KeycloakLoginResult,
@@ -38,6 +38,16 @@ const USER_SUB_KEY = "auth_user_sub";
 const USER_EMAIL_KEY = "auth_user_email";
 const USER_NAME_KEY = "auth_user_name";
 
+async function clearStoredSession() {
+  await Promise.all([
+    SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
+    SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
+    SecureStore.deleteItemAsync(USER_SUB_KEY),
+    SecureStore.deleteItemAsync(USER_EMAIL_KEY),
+    SecureStore.deleteItemAsync(USER_NAME_KEY),
+  ]);
+}
+
 type AuthProviderProps = {
   children: ReactNode;
 };
@@ -47,6 +57,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
+
+  const resetAuthState = useCallback(async () => {
+    setAccessToken(null);
+    setApiAccessToken(null);
+    setRefreshToken(null);
+    setUser(null);
+    await clearStoredSession();
+  }, []);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      // fire-and-forget; we don’t await in this callback
+      resetAuthState().catch((err) => {
+        console.error("[AuthContext] Error resetting auth on 401:", err);
+      });
+    });
+
+    return () => setUnauthorizedHandler(null);
+  }, [resetAuthState]);
+
+  const validateSessionWithPing = useCallback(async () => {
+    try {
+      // Replace this with your real lightweight authenticated endpoint.
+      // For example: await apiFetch<unknown>("/me");
+      await apiFetch<unknown>("/subjects"); // adjust as needed
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        await resetAuthState();
+      } else {
+        console.warn("[AuthContext] Session validation failed (non-401):", err);
+      }
+    }
+  }, [resetAuthState]);
 
   useEffect(() => {
     async function loadStoredSession() {
@@ -69,6 +112,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
             email: email ?? undefined,
             name: name ?? undefined,
           });
+
+          await validateSessionWithPing();
         }
       } finally {
         setLoading(false);
@@ -76,7 +121,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     loadStoredSession();
-  }, []);
+  }, [validateSessionWithPing]);
 
   const persistSession = useCallback(async (result: KeycloakLoginResult) => {
     console.log("[AuthContext] Persisting session:", {
@@ -118,19 +163,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [persistSession]);
 
   const logout = useCallback(async () => {
-    setAccessToken(null);
-    setApiAccessToken(null);
-    setRefreshToken(null);
-    setUser(null);
-
-    await Promise.all([
-      SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
-      SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
-      SecureStore.deleteItemAsync(USER_SUB_KEY),
-      SecureStore.deleteItemAsync(USER_EMAIL_KEY),
-      SecureStore.deleteItemAsync(USER_NAME_KEY),
-    ]);
-  }, []);
+    await resetAuthState();
+  }, [resetAuthState]);
 
   const value: AuthContextValue = {
     loading,

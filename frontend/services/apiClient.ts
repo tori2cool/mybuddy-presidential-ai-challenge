@@ -107,6 +107,9 @@ export async function apiFetch<T>(
   }
 
   if (!res.ok) {
+    if (res.status === 401) {
+      unauthorizedHandler?.();
+    }
     throw new ApiError(res.status, json);
   }
 
