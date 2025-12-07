@@ -1,5 +1,18 @@
 // mybuddyai/services/apiClient.ts
 
+let accessToken: string | null = null;
+
+type UnauthorizedHandler = () => void;
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
+  unauthorizedHandler = handler;
+}
+
+export function setAccessToken(token: string | null) {
+  accessToken = token;
+}
+
 const API_BASE_URL =
   process.env.API_BASE_URL ||
   "https://mybuddy.suknet.org/api";
@@ -67,6 +80,10 @@ export async function apiFetch<T>(
     "Content-Type": "application/json",
     ...(options.headers || {}),
   };
+
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
 
   const res = await fetch(url.toString(), {
     method: options.method ?? "GET",

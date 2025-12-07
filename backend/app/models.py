@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, date
 from typing import Optional, List
-
+from sqlalchemy import Column
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 # ---------- MIXINS ----------
@@ -46,9 +47,8 @@ class Child(SQLModel, table=True):
     id: str = Field(primary_key=True, max_length=64)
     name: str = Field(sa_column_kwargs={"nullable": False}, max_length=255)
     birthday: Optional[date] = None
-    interests: List[str] = Field(
-        default_factory=list,
-        sa_column_kwargs={"nullable": False},
+    interests: list[str] = Field(
+        sa_column=Column(JSONB)
     )
     avatar: Optional[str] = Field(default=None, max_length=255)
 
@@ -104,11 +104,7 @@ class Flashcard(SQLModel, table=True):
     answer: str = Field(sa_column_kwargs={"nullable": False})
     acceptable_answers: list[str] = Field(
         default_factory=list,
-        sa_column_kwargs={
-            "nullable": False,
-            # NOTE: When using PostgreSQL, this should be JSONB. SQLModel will
-            # map this to the appropriate JSON type based on the engine dialect.
-        },
+        sa_column=Column(JSONB, nullable=False),
     )
     difficulty: str = Field(
         sa_column_kwargs={

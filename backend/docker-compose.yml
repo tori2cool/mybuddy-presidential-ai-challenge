@@ -35,34 +35,34 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: app-backend
+      dockerfile: ./Dockerfile
+    container_name: backend
     restart: unless-stopped
     develop:
       watch:
         - action: sync
-          path: ./backend
-          target: /app/backend
+          path: .
+          target: /app
         - action: rebuild
-          path: requirements.txt
+          path: ./requirements.txt
     depends_on:
       - db
       - redis
     environment:
       DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_URL: ${REDIS_URL}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
 
-      KEYCLOAK_ISSUER: https://id.suknet.org/realms/suknet
-      KEYCLOAK_AUDIENCE: fastapi-backend
-      KEYCLOAK_JWKS_URL: https://id.suknet.org/realms/suknet/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE}
+      KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL}
 
       ENVIRONMENT: docker
     ports:
       - "8000:8000"
     command: >
-      uvicorn backend.app.main:app
+      uvicorn app.main:app
       --host 0.0.0.0
       --port 8000
 
@@ -72,7 +72,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ./Dockerfile
     container_name: app-worker
     restart: unless-stopped
     depends_on:
@@ -80,18 +80,18 @@ services:
       - redis
       - db
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/appdb
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
 
-      KEYCLOAK_ISSUER: https://id.suknet.org/realms/suknet
-      KEYCLOAK_AUDIENCE: fastapi-backend
-      KEYCLOAK_JWKS_URL: https://id.suknet.org/realms/suknet/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE}
+      KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL}
 
       ENVIRONMENT: docker
     command: >
-      celery -A backend.app.celery_app.celery_app worker
+      celery -A app.celery_app.celery_app worker
       --loglevel=INFO
 
   # ---------------------------
@@ -100,23 +100,23 @@ services:
   beat:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ./Dockerfile
     container_name: app-beat
     restart: unless-stopped
     depends_on:
       - worker
       - redis
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/appdb
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
 
-      KEYCLOAK_ISSUER: https://id.suknet.org/realms/suknet
-      KEYCLOAK_AUDIENCE: fastapi-backend
-      KEYCLOAK_JWKS_URL: https://id.suknet.org/realms/suknet/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE}
+      KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL}
 
       ENVIRONMENT: docker
     command: >
-      celery -A backend.app.celery_app.celery_app beat
+      celery -A app.celery_app.celery_app beat
       --loglevel=INFO

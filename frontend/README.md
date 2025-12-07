@@ -1,4 +1,4 @@
-# MyBuddy AI - Kids Learning & Wellness App
+# MyBuddy - Kids Learning & Wellness App
 
 ## Overview
 
@@ -149,10 +149,16 @@ Preferred communication style: Simple, everyday language.
 ### Platform-Specific Considerations
 - Web fallback for keyboard-aware scroll views (react-native-web)
 - iOS-specific blur effects with Android solid color fallbacks
-- Replit-specific environment variables for development server proxy
+- Supports standard Expo CLI workflows (local LAN, tunnel, and web)
 
-### No External Services
-- No authentication providers
-- No backend APIs or cloud services
-- No analytics or crash reporting (currently)
-- No push notification services
+### Backend Integration
+
+The MyBuddy app is designed to work with the backend service located in the `backend/` directory of this repo. This backend is a proper service that exposes APIs for authentication, user accounts, and data storage, and it is the primary integration point for any server-side logic.
+
+The frontend still uses AsyncStorage for client-side persistence and local-first behavior where appropriate, but core features such as authenticated access and shared data are intended to be powered by the backend APIs.
+
+### External Services
+- No third-party authentication providers are currently wired into the frontend (integration is done via the local backend service).
+- No third-party cloud APIs are required to run the app.
+- No analytics or crash reporting (currently).
+- No push notification services.

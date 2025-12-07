@@ -40,7 +40,7 @@ def long_running_task(self, payload: dict | None = None) -> str:
     return f"Job {self.request.id} completed"
 
 
-@celery_app.task(name="backend.app.tasks.heartbeat")
+@celery_app.task(name="app.tasks.heartbeat")
 def heartbeat() -> str:
     msg = "Heartbeat task ran"
     print(msg)

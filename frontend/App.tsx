@@ -11,22 +11,31 @@ import OnboardingNavigator from "@/navigation/OnboardingNavigator";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ProgressProvider } from "@/contexts/ProgressContext";
 import { ChildProvider } from "@/contexts/ChildContext";
-import { useDevAutoChild } from "@/hooks/useDevAutoChild";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import LoginScreen from "@/screens/LoginScreen";
 
 function AppInner() {
-  useDevAutoChild();
+  const { loading, isAuthenticated } = useAuth();
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] =
+    useState(false);
 
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  if (loading) {
+    return null;
+  }
 
   return (
     <>
       <NavigationContainer>
-        {hasCompletedOnboarding ? (
-          <MainTabNavigator />
+        {isAuthenticated ? (
+          hasCompletedOnboarding ? (
+            <MainTabNavigator />
+          ) : (
+            <OnboardingNavigator
+              onComplete={() => setHasCompletedOnboarding(true)}
+            />
+          )
         ) : (
-          <OnboardingNavigator
-            onComplete={() => setHasCompletedOnboarding(true)}
-          />
+          <LoginScreen />
         )}
       </NavigationContainer>
       <StatusBar style="auto" />
@@ -37,17 +46,19 @@ function AppInner() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <ProgressProvider>
-        <ChildProvider>
-          <SafeAreaProvider>
-            <GestureHandlerRootView style={styles.root}>
-              <KeyboardProvider>
-                <AppInner />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </SafeAreaProvider>
-        </ChildProvider>
-      </ProgressProvider>
+      <AuthProvider>
+        <ProgressProvider>
+          <ChildProvider>
+            <SafeAreaProvider>
+              <GestureHandlerRootView style={styles.root}>
+                <KeyboardProvider>
+                  <AppInner />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </SafeAreaProvider>
+          </ChildProvider>
+        </ProgressProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }
