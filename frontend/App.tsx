@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -6,18 +6,14 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 
-import MainTabNavigator from "@/navigation/MainTabNavigator";
-import OnboardingNavigator from "@/navigation/OnboardingNavigator";
+import RootNavigator from "@/navigation/RootNavigator";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ProgressProvider } from "@/contexts/ProgressContext";
 import { ChildProvider } from "@/contexts/ChildContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import LoginScreen from "@/screens/LoginScreen";
 
 function AppInner() {
-  const { loading, isAuthenticated } = useAuth();
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] =
-    useState(false);
+  const { loading } = useAuth();
 
   if (loading) {
     return null;
@@ -26,17 +22,7 @@ function AppInner() {
   return (
     <>
       <NavigationContainer>
-        {isAuthenticated ? (
-          hasCompletedOnboarding ? (
-            <MainTabNavigator />
-          ) : (
-            <OnboardingNavigator
-              onComplete={() => setHasCompletedOnboarding(true)}
-            />
-          )
-        ) : (
-          <LoginScreen />
-        )}
+        <RootNavigator />
       </NavigationContainer>
       <StatusBar style="auto" />
     </>

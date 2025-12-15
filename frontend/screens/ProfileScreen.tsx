@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet, Image, Pressable, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
@@ -6,6 +7,9 @@ import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { useTheme } from "@/hooks/useTheme";
 import { useProgress, SUBJECTS, SubjectId } from "@/contexts/ProgressContext";
 import { Spacing, BorderRadius, Typography } from "@/constants/theme";
+import { useCurrentChildId } from "@/contexts/ChildContext";
+import { getChildById } from "@/services/childrenService";
+import { useNavigation } from "@react-navigation/native";
 
 const SUBJECT_INFO: Record<SubjectId, { name: string; icon: string; color: string }> = {
   math: { name: "Math", icon: "grid", color: "#8B5CF6" },
@@ -22,6 +26,33 @@ const DIFFICULTY_LABELS = {
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
+  const navigation = useNavigation();
+  const { childId } = useCurrentChildId();
+  const [childName, setChildName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      if (!childId) {
+        setChildName(null);
+        return;
+      }
+
+      try {
+        const child = await getChildById(childId);
+        if (cancelled) return;
+        setChildName(child?.name ?? null);
+      } catch {
+        if (!cancelled) setChildName(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [childId]);
+
   const { progress, getTodayStats, getThisWeekStats, getRewardLevel, getBalancedProgress, getSubjectDifficulty } = useProgress();
 
   const todayStats = getTodayStats();
@@ -49,8 +80,32 @@ export default function ProfileScreen() {
             style={styles.avatar}
           />
           <ThemedText type="title" style={styles.name}>
-            Buddy
+            {childName ?? "Profile"}
           </ThemedText>
+
+          {childName ? (
+            <Pressable
+              onPress={() => {
+                // Profile stack is nested inside Main tabs, which are inside the Root stack.
+                // Navigate via parent to reach the Root route.
+                navigation.getParent()?.navigate("ChildSelect" as never);
+              }}
+              accessibilityRole="button"
+              hitSlop={10}
+            >
+              <ThemedText
+                style={[
+                  styles.switchLink,
+                  {
+                    color: theme.textSecondary,
+                    textDecorationColor: theme.textSecondary,
+                  },
+                ]}
+              >
+                Not {childName}?
+              </ThemedText>
+            </Pressable>
+          ) : null}
           <View style={[styles.levelBadge, { backgroundColor: reward.color }]}>
             <Feather name={reward.icon as any} size={16} color="white" />
             <ThemedText style={styles.levelText}>{reward.level}</ThemedText>
@@ -436,6 +491,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   name: {
+    marginBottom: 2,
+  },
+  switchLink: {
+    fontSize: 13,
+    textDecorationLine: "underline",
     marginBottom: Spacing.sm,
   },
   levelBadge: {

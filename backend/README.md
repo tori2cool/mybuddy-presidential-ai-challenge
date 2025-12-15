@@ -4,8 +4,9 @@ Async FastAPI backend designed as a reusable base for Vite (or other SPA) fronte
 
 This service provides:
 
-- **FastAPI** HTTP API with automatic OpenAPI docs
+- **FastAPI** HTTP + WebSocket API with automatic OpenAPI docs
 - **Async SQLModel + PostgreSQL** for typed models and CRUD
+- **Pydantic v2 schemas** for clean request/response validation
 - **Keycloak JWT authentication** for securing endpoints
 - **Celery + Redis** for background jobs and scheduled tasks
 - **Redis pub/sub + WebSockets** for streaming job progress and real-time messaging
@@ -17,9 +18,15 @@ This service provides:
 
 **Runtime & Framework**
 
-- Python / FastAPI (`backend.app.main:app`)
-- Async SQLModel + SQLAlchemy + PostgreSQL
-- Celery workers + Celery beat
+- Python 3.11+
+- FastAPI (`backend/app/main.py`)
+- Pydantic **v2.x** (response/request schemas)
+- SQLModel + SQLAlchemy (async)
+- PostgreSQL
+
+**Async / Background**
+
+- Celery worker + beat
 - Redis for:
   - Celery broker & result backend
   - Pub/sub channels for WebSocket updates
@@ -30,15 +37,38 @@ This service provides:
 - Backend validates Bearer tokens via:
   - `KEYCLOAK_ISSUER`
   - `KEYCLOAK_AUDIENCE`
-  - `KEYCLOAK_JWKS_URL` (JWKS endpoint for signing keys)
+  - `KEYCLOAK_JWKS_URL`
 
-**Containers (see `docker-compose.yml`)**
+---
 
-- `db` – PostgreSQL database
-- `redis` – Redis instance (Celery + pub/sub)
-- `backend` – FastAPI application (HTTP + WebSocket)
-- `worker` – Celery worker process
-- `beat` – Celery beat scheduler (optional but configured)
+## Project Structure
+
+```
+backend/app/
+  main.py                 # App creation & router wiring
+  middleware.py           # Structured request logging
+  deps.py                 # Shared FastAPI dependencies
+  config.py               # Environment-based configuration
+  db.py                   # Async engine & session
+  models.py               # SQLModel ORM models
+  tasks.py                # Celery tasks
+
+  routers/
+    core.py               # /me, /jobs, /projects (v1 + legacy)
+    content.py            # /v1 children & educational content APIs
+    ws.py                 # WebSocket endpoints
+
+  schemas/
+    _base.py              # Pydantic v2 base (from_attributes enabled)
+    children.py           # ChildUpsert / ChildOut
+    # (future: content.py, projects.py, etc.)
+```
+
+**Design goals:**
+- `main.py` is *wiring only*
+- Business logic lives in routers
+- Reusable validation lives in `deps.py`
+- All HTTP responses are typed via Pydantic schemas
 
 ---
 
@@ -50,92 +80,136 @@ This service provides:
   - Simple readiness check
   - Response: `{ "status": "ok" }`
 
-### 1b. Current User Info
+---
 
-- `GET /me`
-  - Returns information about the current user based on the Keycloak JWT.
-  - Requires a valid Bearer token.
-  - Example response:
-    ```json
-    {
-      "sub": "...",
-      "username": "alice",
-      "email": "alice@example.com",
-      "name": "Alice Example",
-      "realm_roles": ["user", "admin"],
-      "client_roles": { "fastapi-backend": { "roles": ["user"] } },
-      "raw_claims": { ... }
-    }
-    ```
+### 2. Current User Info
 
-### 2. Authenticated Job API (FastAPI + Celery)
+- `GET /v1/me`
+- `GET /me` (deprecated)
 
-These endpoints require a valid **Keycloak Bearer token**.
+Returns information about the current user based on the Keycloak JWT.
 
-- `POST /jobs`
-  - Enqueues a long-running Celery task (`long_running_task`).
-  - The task publishes progress updates to Redis pub/sub.
-  - Response: `{ "job_id": "<celery-task-id>" }`
+Example response:
+```json
+{
+  "sub": "...",
+  "username": "alice",
+  "email": "alice@example.com",
+  "name": "Alice Example",
+  "realm_roles": ["user", "admin"],
+  "client_roles": { "fastapi-backend": { "roles": ["user"] } }
+}
+```
 
-- `GET /jobs/{job_id}`
-  - Polls the Celery task by ID.
-  - Response shape:
-    ```json
-    {
-      "job_id": "...",
-      "state": "PENDING|STARTED|SUCCESS|FAILURE|...",
-      "result": "Job ... completed" | null
-    }
-    ```
+---
 
-### 3. Project CRUD (Async SQLModel + Postgres)
+### 3. Children API (Personalized Content Root)
 
-Defined in `backend/app/models.py` and `backend/app/main.py` using SQLModel.
+Defined in `routers/content.py` using **Pydantic v2 schemas**.
 
-Model:
+All endpoints require authentication and are scoped to the current user (`owner_sub`).
 
-- `Project` with:
-  - `id` (int, PK)
-  - `name` (str)
-  - `description` (optional)
-  - `created_at`, `updated_at` (timestamps)
-  - `is_deleted`, `deleted_at` (soft delete)
-  - `tenant_id` (optional; can be derived from token claims)
+#### List children
 
-Endpoints (all require auth):
+- `GET /v1/children`
 
-- `POST /projects` → create a project
-- `GET /projects` → list projects (non-deleted)
-- `GET /projects/{project_id}` → retrieve single project
-- `PATCH /projects/{project_id}` → update name/description
-- `DELETE /projects/{project_id}` → soft delete (idempotent)
+```json
+[
+  {
+    "id": "abc123",
+    "name": "Sam",
+    "birthday": "2018-04-10",
+    "interests": ["space", "dinosaurs"],
+    "avatar": "astronaut"
+  }
+]
+```
 
-All database access is async via `AsyncSession` + SQLModel.
-Tables are auto-created on startup in development via `init_db()`; for production, you should use Alembic migrations.
+#### Create or update a child
 
-### 4. WebSockets
+- `POST /v1/children`
 
-Two WebSocket endpoints:
+Rules:
+- If `id` is provided: update or create (if owned by caller)
+- If `id` is omitted: create a new child with generated ID
+
+```json
+{
+  "name": "Sam",
+  "birthday": "2018-04-10",
+  "interests": ["space", "dinosaurs"]
+}
+```
+
+#### Get a single child
+
+- `GET /v1/children/{child_id}`
+
+---
+
+### 4. Educational & Activity Content APIs
+
+All content endpoints require a valid `childId` query parameter and validate ownership via a shared dependency.
+
+Examples:
+
+- `GET /v1/affirmations?childId=...`
+- `GET /v1/subjects?childId=...`
+- `GET /v1/flashcards?subjectId=...&difficulty=easy&childId=...`
+- `GET /v1/chores/daily?childId=...`
+- `GET /v1/outdoor/activities?childId=...&isDaily=true`
+
+These are designed to be **child-aware** so future personalization (age, interests, progress) can be layered in without API changes.
+
+---
+
+### 5. Authenticated Job API (FastAPI + Celery)
+
+- `POST /v1/jobs`
+- `GET /v1/jobs/{job_id}`
+
+Legacy aliases (`/jobs`) are kept but marked **deprecated**.
+
+Jobs are executed by Celery workers and publish progress events to Redis.
+
+---
+
+### 6. Project CRUD (Async SQLModel + Postgres)
+
+- `POST /v1/projects`
+- `GET /v1/projects`
+- `GET /v1/projects/{id}`
+- `PATCH /v1/projects/{id}`
+- `DELETE /v1/projects/{id}` (soft delete)
+
+Features:
+- Async DB access via `AsyncSession`
+- Soft delete (`is_deleted`, `deleted_at`)
+- Optional multi-tenancy via `tenant_id` derived from token claims
+
+---
+
+### 7. WebSockets
+
+Defined in `routers/ws.py`.
 
 - `GET /ws/echo`
-  - Minimal echo socket.
-  - Accepts text messages and sends back `"Echo: <message>"`.
+  - Simple echo socket for testing
 
-- `GET /ws/jobs/{job_id}`
-  - Streams job progress for the given Celery `job_id`.
-  - Subscribes to Redis channel `job_progress:<job_id>`.
-  - Messages look like:
-    ```json
-    {
-      "job_id": "...",
-      "progress": 0-100,
-      "step": <int>,
-      "total_steps": <int>,
-      "payload": { ... }
-    }
-    ```
+- `GET /ws/jobs/{job_id}?token=...`
+  - Streams job progress via Redis pub/sub
+  - Channel: `job_progress:{job_id}`
 
-This is designed for frontends (e.g. Vite/React) to show live progress bars for background jobs.
+Example message:
+```json
+{
+  "job_id": "...",
+  "progress": 40,
+  "step": 2,
+  "total_steps": 5,
+  "payload": { "message": "Processing" }
+}
+```
 
 ---
 
@@ -143,163 +217,54 @@ This is designed for frontends (e.g. Vite/React) to show live progress bars for 
 
 ### Prerequisites
 
-- Docker & Docker Compose installed
-- A Keycloak realm configured with:
-  - A public client for your frontend
-  - A confidential/public client for this API (audience must match `KEYCLOAK_AUDIENCE`)
-
-### Environment Configuration
-
-Configuration is handled via environment variables (see `docker-compose.yml` and `example.env`).
-
-**Core application variables:**
-
-- `DATABASE_URL` – Postgres connection (asyncpg DSN), e.g.
-  - `postgresql+asyncpg://postgres:postgres@db:5432/appdb`
-- `REDIS_URL` – Redis connection, e.g.
-  - `redis://redis:6379/0`
-- `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` – Celery config (typically both Redis)
-
-If you run the app *outside* Docker, `backend/app/config.py` provides sensible defaults:
-
-- `DATABASE_URL` defaults to `postgresql+asyncpg://postgres:postgres@localhost:5432/appdb`
-- `REDIS_URL` defaults to `redis://localhost:6379/0`
-- `CELERY_RESULT_BACKEND` defaults to `redis://localhost:6379/1`
-
-**Postgres bootstrap variables (Docker only):**
-
-These are read by the `db` service in `docker-compose.yml`:
-
-- `POSTGRES_USER` – database user to create
-- `POSTGRES_PASS` – password for `POSTGRES_USER`
-- `POSTGRES_DB` – database name
-
-You can set these in an `.env` file (see `example.env`) or in your shell before running Docker.
-
-**Keycloak variables:**
-
-Used by the backend to validate JWTs:
-
-- `KEYCLOAK_ISSUER` – Realm issuer URL, e.g.
-  - `https://id.suknet.org/realms/suknet`
-- `KEYCLOAK_AUDIENCE` – Client ID configured in Keycloak for this API
-- `KEYCLOAK_JWKS_URL` – JWKS endpoint for that realm
-
-The `docker-compose.yml` includes **sample values** for these based on one of our realms. You should override them to match your own Keycloak setup.
+- Docker & Docker Compose
+- Keycloak realm with:
+  - A frontend client
+  - An API client matching `KEYCLOAK_AUDIENCE`
 
 ### Start the stack
-
-From the project root:
 
 ```bash
 docker compose up --build
 ```
 
-Docker Compose will read environment variables from your shell and from an optional `.env` file. A sample configuration is provided in `example.env`; copy it to `.env` and adjust values (Postgres, Redis, Keycloak) as needed.
+Services started:
 
-This will start:
+- FastAPI backend: `http://localhost:8000`
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+- Celery worker + beat
 
-- FastAPI backend on `http://localhost:8000`
-- Postgres on `localhost:5432`
-- Redis on `localhost:6379`
-- Celery worker and beat attached to the same codebase
+---
 
-### API Docs
-
-Once running, visit:
+## API Docs
 
 - Swagger UI: `http://localhost:8000/docs`
 - OpenAPI JSON: `http://localhost:8000/openapi.json`
 
 ---
 
-## Example Usage
-
-### Create a Project (curl)
-
-```bash
-ACCESS_TOKEN="<your-keycloak-access-token>"
-
-curl -X POST "http://localhost:8000/projects" \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "My First Project",
-    "description": "Example project from curl"
-  }'
-```
-
-### List Projects
-
-```bash
-curl "http://localhost:8000/projects" \
-  -H "Authorization: Bearer $ACCESS_TOKEN"
-```
-
-### Enqueue a Job and Stream Progress
-
-1. Enqueue job:
-
-   ```bash
-   JOB=$(curl -s -X POST "http://localhost:8000/jobs" \
-     -H "Authorization: Bearer $ACCESS_TOKEN" \
-     -H "Content-Type: application/json")
-
-   echo "$JOB"  # {"job_id": "..."}
-   ```
-
-2. Connect a WebSocket client (e.g. in the browser or via `websocat`) to:
-
-   ```
-   ws://localhost:8000/ws/jobs/<job_id>
-   ```
-
-   You’ll receive JSON messages with progress updates until the job is complete.
-
----
-
 ## Frontend Integration (Vite / TypeScript)
 
-This backend is designed to work smoothly with Vite/TypeScript frontends via OpenAPI-generated types.
+The API is fully typed via OpenAPI and works well with `openapi-typescript`.
 
-### Generate Types from OpenAPI (frontend side)
+```bash
+npm install -D openapi-typescript
+```
 
-In your Vite project:
-
-1. Install generator:
-
-   ```bash
-   npm install -D openapi-typescript
-   ```
-
-2. Add script to `package.json`:
-
-   ```json
-   {
-     "scripts": {
-       "gen:api": "openapi-typescript http://localhost:8000/openapi.json -o src/api/schema.ts"
-     }
-   }
-   ```
-
-3. Generate types:
-
-   ```bash
-   npm run gen:api
-   ```
-
-You’ll get typed `paths`/`components` you can use to build a small, typed API client.
+```bash
+openapi-typescript http://localhost:8000/openapi.json -o src/api/schema.ts
+```
 
 ---
 
 ## Development Notes
 
-- **Database migrations**: for local/dev, tables are created automatically via `init_db()` on startup. For production, set up **Alembic** migrations and remove the auto-create behaviour.
-- **Soft delete**: `DELETE /projects/{id}` sets `is_deleted = True` and `deleted_at` instead of hard-deleting rows.
-- **Tenancy**: `tenant_id` is available on `Project` and can be populated from Keycloak token claims (e.g. `sub` or a custom claim) for multi-tenant setups.
-- **Background tasks**: Celery tasks live in `backend/app/tasks.py`. `long_running_task` publishes progress to Redis for WebSocket streaming; `heartbeat` is scheduled by Celery beat.
-
-> Note: `docker-compose.yml` ships with sample Keycloak settings (`KEYCLOAK_ISSUER`, `KEYCLOAK_AUDIENCE`, `KEYCLOAK_JWKS_URL`) pointing at one of our realms. Make sure to update these to match your own Keycloak realm and client IDs before using this in your environment.
+- **Pydantic v2** is used; schemas rely on `from_attributes=True`
+- **Auto table creation** is enabled for dev via `init_db()`
+- Use **Alembic** migrations for production
+- Shared dependencies (e.g. child ownership validation) live in `deps.py`
+- Legacy routes are preserved but marked `deprecated=True`
 
 ---
 

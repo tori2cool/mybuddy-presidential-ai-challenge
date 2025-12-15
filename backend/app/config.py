@@ -23,6 +23,16 @@ class Settings(BaseModel):
     Application-level configuration.
     """
 
+    # ---- Logging ----
+    # Log level for application logs (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    log_level: str = os.getenv("MYBUDDY_LOG_LEVEL", "INFO")
+    # Threshold in milliseconds after which a request is considered "slow"
+    log_slow_request_ms: int = int(os.getenv("MYBUDDY_LOG_SLOW_REQUEST_MS", "500"))
+    # Whether to log full HTTP request bodies at DEBUG level
+    log_request_bodies: bool = os.getenv("MYBUDDY_LOG_REQUEST_BODIES", "false").lower() in {"1", "true", "yes"}
+    # Whether to log full HTTP response bodies at DEBUG level
+    log_response_bodies: bool = os.getenv("MYBUDDY_LOG_RESPONSE_BODIES", "false").lower() in {"1", "true", "yes"}
+
     # ---- Database ----
     # Async SQLAlchemy URL (adjust to your DB/users/host as needed)
     database_url: str = os.getenv(

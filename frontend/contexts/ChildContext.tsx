@@ -1,15 +1,21 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
+  useMemo,
   useState,
   ReactNode,
-  useMemo,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type ChildContextValue = {
   childId: string | null;
-  setChildId: (id: string | null) => void;
+  setChildId: (id: string | null) => Promise<void>;
+  loaded: boolean;
 };
+
+const SELECTED_CHILD_ID_KEY = "selected_child_id";
 
 const ChildContext = createContext<ChildContextValue | undefined>(undefined);
 
@@ -26,14 +32,43 @@ type ChildProviderProps = {
  * Those concerns are handled by separate hooks (e.g. useDevAutoChild).
  */
 export function ChildProvider({ children }: ChildProviderProps) {
-  const [childId, setChildId] = useState<string | null>(null);
+  const [childId, _setChildId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(SELECTED_CHILD_ID_KEY);
+        if (cancelled) return;
+        _setChildId(stored ?? null);
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const setChildId = useCallback(async (id: string | null) => {
+    _setChildId(id);
+    if (id) {
+      await AsyncStorage.setItem(SELECTED_CHILD_ID_KEY, id);
+    } else {
+      await AsyncStorage.removeItem(SELECTED_CHILD_ID_KEY);
+    }
+  }, []);
 
   const value = useMemo(
     () => ({
       childId,
       setChildId,
+      loaded,
     }),
-    [childId]
+    [childId, loaded, setChildId]
   );
 
   return <ChildContext.Provider value={value}>{children}</ChildContext.Provider>;

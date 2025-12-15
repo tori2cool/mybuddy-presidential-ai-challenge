@@ -1,3 +1,4 @@
+# app/models.py
 from __future__ import annotations
 
 from datetime import datetime, date
@@ -45,10 +46,13 @@ class Child(SQLModel, table=True):
     __tablename__ = "children"
 
     id: str = Field(primary_key=True, max_length=64)
+    # Keycloak JWT subject (sub) that owns this child profile.
+    owner_sub: str = Field(index=True, max_length=255)
     name: str = Field(sa_column_kwargs={"nullable": False}, max_length=255)
     birthday: Optional[date] = None
     interests: list[str] = Field(
-        sa_column=Column(JSONB)
+        default_factory=list,
+        sa_column=Column(JSONB, nullable=False),
     )
     avatar: Optional[str] = Field(default=None, max_length=255)
 

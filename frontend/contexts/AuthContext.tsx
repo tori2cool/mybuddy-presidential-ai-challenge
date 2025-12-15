@@ -6,7 +6,7 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import * as SecureStore from "expo-secure-store";
+import { secureStorage } from "@/services/storage/secureStorage";
 import { apiFetch } from "@/services/apiClient";
 import {
   startKeycloakLoginAsync,
@@ -40,11 +40,11 @@ const USER_NAME_KEY = "auth_user_name";
 
 async function clearStoredSession() {
   await Promise.all([
-    SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
-    SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
-    SecureStore.deleteItemAsync(USER_SUB_KEY),
-    SecureStore.deleteItemAsync(USER_EMAIL_KEY),
-    SecureStore.deleteItemAsync(USER_NAME_KEY),
+    secureStorage.deleteItemAsync(ACCESS_TOKEN_KEY),
+    secureStorage.deleteItemAsync(REFRESH_TOKEN_KEY),
+    secureStorage.deleteItemAsync(USER_SUB_KEY),
+    secureStorage.deleteItemAsync(USER_EMAIL_KEY),
+    secureStorage.deleteItemAsync(USER_NAME_KEY),
   ]);
 }
 
@@ -78,10 +78,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [resetAuthState]);
 
   const validateSessionWithPing = useCallback(async () => {
+    // Avoid network validation until we actually have a token.
+    // During login (or first load) this prevents 401 loops resetting state.
+    if (!accessToken) {
+      console.log("[AuthContext] Skipping session validation: no accessToken");
+      return;
+    }
+
     try {
-      // Replace this with your real lightweight authenticated endpoint.
-      // For example: await apiFetch<unknown>("/me");
-      await apiFetch<unknown>("/subjects"); // adjust as needed
+      // Lightweight authenticated endpoint.
+      await apiFetch<unknown>("/me");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         await resetAuthState();
@@ -89,18 +95,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.warn("[AuthContext] Session validation failed (non-401):", err);
       }
     }
-  }, [resetAuthState]);
+  }, [accessToken, resetAuthState]);
 
   useEffect(() => {
     async function loadStoredSession() {
       try {
         const [storedAccess, storedRefresh, sub, email, name] =
           await Promise.all([
-            SecureStore.getItemAsync(ACCESS_TOKEN_KEY),
-            SecureStore.getItemAsync(REFRESH_TOKEN_KEY),
-            SecureStore.getItemAsync(USER_SUB_KEY),
-            SecureStore.getItemAsync(USER_EMAIL_KEY),
-            SecureStore.getItemAsync(USER_NAME_KEY),
+            secureStorage.getItemAsync(ACCESS_TOKEN_KEY),
+            secureStorage.getItemAsync(REFRESH_TOKEN_KEY),
+            secureStorage.getItemAsync(USER_SUB_KEY),
+            secureStorage.getItemAsync(USER_EMAIL_KEY),
+            secureStorage.getItemAsync(USER_NAME_KEY),
           ]);
 
         if (storedAccess && sub) {
@@ -136,31 +142,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(result.user);
 
     await Promise.all([
-      SecureStore.setItemAsync(ACCESS_TOKEN_KEY, result.accessToken),
+      secureStorage.setItemAsync(ACCESS_TOKEN_KEY, result.accessToken),
       result.refreshToken
-        ? SecureStore.setItemAsync(REFRESH_TOKEN_KEY, result.refreshToken)
-        : SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
-      SecureStore.setItemAsync(USER_SUB_KEY, result.user.sub),
+        ? secureStorage.setItemAsync(REFRESH_TOKEN_KEY, result.refreshToken)
+        : secureStorage.deleteItemAsync(REFRESH_TOKEN_KEY),
+      secureStorage.setItemAsync(USER_SUB_KEY, result.user.sub),
       result.user.email
-        ? SecureStore.setItemAsync(USER_EMAIL_KEY, result.user.email)
-        : SecureStore.deleteItemAsync(USER_EMAIL_KEY),
+        ? secureStorage.setItemAsync(USER_EMAIL_KEY, result.user.email)
+        : secureStorage.deleteItemAsync(USER_EMAIL_KEY),
       result.user.name
-        ? SecureStore.setItemAsync(USER_NAME_KEY, result.user.name)
-        : SecureStore.deleteItemAsync(USER_NAME_KEY),
+        ? secureStorage.setItemAsync(USER_NAME_KEY, result.user.name)
+        : secureStorage.deleteItemAsync(USER_NAME_KEY),
     ]);
   }, []);
 
   const login = useCallback(async () => {
     console.log("[AuthContext] login() called");
-    const result = await startKeycloakLoginAsync();
-    console.log("[AuthContext] login() result:", !!result);
-    if (!result) return;
-    await persistSession(result);
-    console.log(
-      "[AuthContext] session persisted, accessToken now:",
-      result.accessToken,
-    );
-  }, [persistSession]);
+
+    // Disable the 401 reset handler during interactive login to avoid loops
+    // if any background request fires while we don't have a token yet.
+    setUnauthorizedHandler(null);
+
+    try {
+      const result = await startKeycloakLoginAsync();
+      console.log("[AuthContext] login() result:", !!result);
+      if (!result) return;
+      await persistSession(result);
+      console.log("[AuthContext] session persisted");
+    } finally {
+      setUnauthorizedHandler(() => {
+        resetAuthState().catch((err) => {
+          console.error("[AuthContext] Error resetting auth on 401:", err);
+        });
+      });
+    }
+  }, [persistSession, resetAuthState]);
 
   const logout = useCallback(async () => {
     await resetAuthState();

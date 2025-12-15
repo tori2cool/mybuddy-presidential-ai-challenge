@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, StyleSheet, TextInput, Image, Pressable, ScrollView } from "react-native";
 import { useRoute, RouteProp } from "@react-navigation/native";
+import { createChild } from "@/services/childrenService";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Button } from "@/components/Button";
@@ -22,14 +23,31 @@ type NameAvatarScreenRouteProp = RouteProp<OnboardingParamList, "NameAvatar">;
 
 export default function OnboardingNameAvatarScreen() {
   const route = useRoute<NameAvatarScreenRouteProp>();
-  const { onComplete } = route.params;
+  const { onComplete, interests } = route.params;
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const [name, setName] = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState("astronaut");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleFinish = () => {
-    onComplete();
+  const handleFinish = async () => {
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const created = await createChild({
+        name: name.trim(),
+        avatar: selectedAvatar,
+        interests: interests ?? [],
+      });
+      onComplete(created.id);
+      setSubmitting(false);
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to create child");
+      setSubmitting(false);
+      return;
+    }
   };
 
   return (
@@ -100,12 +118,18 @@ export default function OnboardingNameAvatarScreen() {
           />
         </View>
 
+        {error ? (
+          <ThemedText style={{ color: theme.error, marginBottom: Spacing.md }}>
+            {error}
+          </ThemedText>
+        ) : null}
+
         <Button
           onPress={handleFinish}
-          disabled={name.trim().length === 0}
+          disabled={name.trim().length === 0 || submitting}
           style={styles.button}
         >
-          Finish Setup
+          {submitting ? "Saving..." : "Finish Setup"}
         </Button>
       </ScrollView>
     </ThemedView>

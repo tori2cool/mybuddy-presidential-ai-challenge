@@ -108,7 +108,15 @@ export default function OnboardingQuizScreen() {
         ]}
       >
         <Button
-          onPress={() => navigation.navigate("NameAvatar")}
+          onPress={() =>
+            navigation.navigate("NameAvatar", {
+              // onComplete is provided via initialParams from the navigator.
+              // It will be merged by React Navigation.
+              // @ts-expect-error - merged from initialParams
+              onComplete: undefined,
+              interests: selected,
+            })
+          }
           disabled={selected.length === 0}
         >
           Next
