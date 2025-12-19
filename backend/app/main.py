@@ -1,6 +1,5 @@
 # main.py
 from __future__ import annotations
-
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
@@ -9,7 +8,6 @@ from .middleware import logging_middleware
 from .routers.core import router as core_router
 from .routers.content import router as content_router
 from .routers.ws import router as ws_router
-from .api import router as mybuddy_router  # your public content API if you still have it
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

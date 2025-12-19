@@ -13,8 +13,8 @@ def _set_test_env():
 @pytest.fixture
 def mock_user_sub(monkeypatch):
     """Patch get_current_user so tests can control ownership scoping."""
-    from app import api as api_module
-    from app import main as main_module
+    from backend.app import api as api_module
+    from backend.app import main as main_module
 
     def _apply(sub: str):
         async def _fake_user():

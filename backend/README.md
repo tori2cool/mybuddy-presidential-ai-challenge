@@ -19,7 +19,7 @@ This service provides:
 **Runtime & Framework**
 
 - Python 3.11+
-- FastAPI (`backend/app/main.py`)
+- FastAPI (`app/main.py`) (serve with `uvicorn app.main:app`)
 - Pydantic **v2.x** (response/request schemas)
 - SQLModel + SQLAlchemy (async)
 - PostgreSQL
@@ -44,7 +44,7 @@ This service provides:
 ## Project Structure
 
 ```
-backend/app/
+app/
   main.py                 # App creation & router wiring
   middleware.py           # Structured request logging
   deps.py                 # Shared FastAPI dependencies
@@ -225,7 +225,7 @@ Example message:
 ### Start the stack
 
 ```bash
-docker compose up --build
+docker compose up --build  # from within ./backend
 ```
 
 Services started:

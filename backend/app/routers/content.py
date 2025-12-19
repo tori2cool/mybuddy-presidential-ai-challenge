@@ -27,7 +27,6 @@ def child_to_dict(row: Child) -> dict:
         "avatar": row.avatar,
     }
 
-
 @router.get("/children", response_model=list[ChildOut])
 async def list_children(
     session: AsyncSession = Depends(get_session),
@@ -37,7 +36,6 @@ async def list_children(
     stmt = select(Child).where(Child.owner_sub == owner_sub).order_by(Child.created_at.desc())
     result = await session.execute(stmt)
     return result.scalars().all()
-
 
 @router.post("/children", response_model=ChildOut)
 async def upsert_child(

@@ -21,4 +21,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Default command is overridden by docker-compose, but keep something sensible here
+# IMPORTANT: use the same import path as docker-compose (and production)
+# so routers registered in app.main are served.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
