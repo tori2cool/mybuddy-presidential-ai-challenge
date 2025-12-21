@@ -13,7 +13,7 @@ from ..models import Project, ProjectCreate, ProjectRead, ProjectUpdate
 from ..security import get_current_user
 from ..tasks import long_running_task
 
-router = APIRouter(tags=["core"])
+router = APIRouter(prefix="/v1", tags=["core"])
 
 def get_tenant_id_from_claims(user: dict) -> str | None:
     return user.get("tenant") or user.get("sub")
@@ -43,19 +43,19 @@ def get_job_status_payload(job_id: str) -> dict:
         "result": async_result.result if async_result.ready() else None,
     }
 
-@router.get("/v1/me")
+@router.get("/me")
 async def me_v1(user: dict = Depends(get_current_user)):
     return me_payload(user)
 
-@router.post("/v1/jobs")
+@router.post("/jobs")
 def create_job_v1(user: dict = Depends(get_current_user)):
     return create_job_payload(user)
 
-@router.get("/v1/jobs/{job_id}")
+@router.get("/jobs/{job_id}")
 def get_job_status_v1(job_id: str, user: dict = Depends(get_current_user)):
     return get_job_status_payload(job_id)
 
-@router.post("/v1/projects", response_model=ProjectRead)
+@router.post("/projects", response_model=ProjectRead)
 async def create_project_v1(
     data: ProjectCreate,
     session: AsyncSession = Depends(get_session),
@@ -68,7 +68,7 @@ async def create_project_v1(
     await session.refresh(project)
     return project
 
-@router.get("/v1/projects", response_model=List[ProjectRead])
+@router.get("/projects", response_model=List[ProjectRead])
 async def list_projects_v1(
     session: AsyncSession = Depends(get_session),
     user: dict = Depends(get_current_user),

@@ -3,7 +3,7 @@ import { apiFetch } from "@/services/apiClient";
 export type ChildModel = {
   id: string;
   name: string;
-  birthday?: string | null;
+  birthday: string; // "YYYY-MM-DD"
   interests: string[];
   avatar?: string | null;
 };
@@ -11,7 +11,7 @@ export type ChildModel = {
 export type UpsertChildInput = {
   id?: string;
   name: string;
-  birthday?: string | null;
+  birthday: string;
   interests?: string[];
   avatar?: string | null;
 };

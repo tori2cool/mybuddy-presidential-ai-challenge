@@ -137,8 +137,16 @@ const flashcardData: Record<SubjectId, Flashcard[]> = {
 export async function getFlashcards(
   subjectId: SubjectId,
   difficulty: DifficultyTier,
-  childId: string,
+  childId: string | null,
 ): Promise<Flashcard[]> {
+  if (!childId) {
+    console.warn("getFlashcards: missing childId; falling back to static data.", {
+      subjectId,
+      difficulty,
+    });
+    const subjectCards = flashcardData[subjectId] || [];
+    return subjectCards.filter((card) => card.difficulty === difficulty);
+  }
   try {
     const data = await withTimeout(
       apiFetch<Flashcard[]>("/flashcards", {
@@ -150,6 +158,21 @@ export async function getFlashcards(
       }),
       FLASHCARDS_TIMEOUT_MS,
     );
+
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn(
+        "getFlashcards: API returned empty/non-array; falling back to static data.",
+        {
+          childId,
+          subjectId,
+          difficulty,
+          receivedType: Array.isArray(data) ? "array" : typeof data,
+        },
+      );
+      const subjectCards = flashcardData[subjectId] || [];
+      return subjectCards.filter((card) => card.difficulty === difficulty);
+    }
+
     return data;
   } catch (err) {
     console.warn("getFlashcards: falling back to static data:", err);

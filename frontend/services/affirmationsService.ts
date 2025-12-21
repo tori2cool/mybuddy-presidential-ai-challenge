@@ -2,7 +2,7 @@
 
 import { Affirmation } from "@/types/models";
 import { Gradients } from "@/constants/theme";
-import { apiFetch, withTimeout, ApiError } from "@/services/apiClient";
+import { apiFetch, withTimeout } from "@/services/apiClient";
 
 // Existing static fallback data
 const fallbackAffirmations: Affirmation[] = [
@@ -21,14 +21,24 @@ const AFFIRMATIONS_TIMEOUT_MS = 3000;
 export async function getAffirmations(childId: string): Promise<Affirmation[]> {
   try {
     const data = await withTimeout(
-      apiFetch<Affirmation[]>("/affirmations", {
+      apiFetch<unknown>("/affirmations", {
         query: { childId },
       }),
       AFFIRMATIONS_TIMEOUT_MS,
     );
-    return data;
+
+    // Fallback not only on errors/timeouts, but also when backend returns no usable data.
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn(
+        "getAffirmations: API returned empty/non-array; falling back to static data.",
+        { childId, receivedType: typeof data },
+      );
+      return [...fallbackAffirmations];
+    }
+
+    return data as Affirmation[];
   } catch (err) {
-    // In dev, you might log this:
+    // Keep existing timeout/error fallback behavior.
     console.warn("getAffirmations: falling back to static data:", err);
     return [...fallbackAffirmations];
   }

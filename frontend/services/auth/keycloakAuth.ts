@@ -85,7 +85,7 @@ export async function startKeycloakLoginAsync(): Promise<KeycloakLoginResult | n
   const request = new AuthSession.AuthRequest({
     clientId,
     redirectUri,
-    scopes: ["openid", "profile", "email"],
+    scopes: ["openid", "profile", "email", "offline_access"],
     responseType: AuthSession.ResponseType.Code,
     usePKCE: true,
   });

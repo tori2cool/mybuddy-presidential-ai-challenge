@@ -1,5 +1,6 @@
 # backend/app/security.py
 from functools import lru_cache
+import logging
 
 import requests
 from jose import JWTError, jwt
@@ -7,6 +8,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from .config import settings
+
+logger = logging.getLogger(__name__)
 
 auth_scheme = HTTPBearer(auto_error=False)
 
@@ -31,14 +34,35 @@ def decode_token(token: str) -> dict:
     """
     Validate a Keycloak JWT using the JWKS endpoint.
     """
-    jwks = get_jwks()
+    # Read header first so we can locate the appropriate signing key (kid)
     unverified_header = jwt.get_unverified_header(token)
+    kid = unverified_header.get("kid")
 
-    key_data = None
-    for k in jwks.get("keys", []):
-        if k.get("kid") == unverified_header.get("kid"):
-            key_data = k
-            break
+    def _find_key(jwks_payload: dict) -> dict | None:
+        for k in jwks_payload.get("keys", []):
+            if k.get("kid") == kid:
+                return k
+        return None
+
+    # First attempt: use cached JWKS
+    jwks = get_jwks()
+    key_data = _find_key(jwks)
+
+    # If the kid is unknown, it may be due to Keycloak key rotation.
+    # Do exactly one refresh of the cached JWKS and retry.
+    if key_data is None:
+        if str(settings.log_level).upper() == "DEBUG":
+            logger.debug("JWT signing key (kid=%s) not found in cached JWKS; refreshing JWKS once", kid)
+        try:
+            get_jwks.cache_clear()
+            jwks = get_jwks()
+        except requests.RequestException as exc:
+            raise AuthError(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Unable to refresh JWKS: {exc}",
+            )
+
+        key_data = _find_key(jwks)
 
     if key_data is None:
         raise AuthError(

@@ -19,6 +19,7 @@ import { Spacing, BorderRadius, Typography } from "@/constants/theme";
 import { getSubjects } from "@/services/subjectsService";
 import { getFlashcards } from "@/services/flashcardsService";
 import { Flashcard, Subject } from "@/types/models";
+import { useCurrentChildId } from "@/contexts/ChildContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -32,10 +33,11 @@ interface FlashcardPracticeModalProps {
   visible: boolean;
   subject: Subject | null;
   difficulty: DifficultyTier;
+  childId: string | null;
   onClose: () => void;
 }
 
-function FlashcardPracticeModal({ visible, subject, difficulty, onClose }: FlashcardPracticeModalProps) {
+function FlashcardPracticeModal({ visible, subject, difficulty, childId, onClose }: FlashcardPracticeModalProps) {
   const { theme } = useTheme();
   const { addFlashcardResult } = useProgress();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -54,16 +56,26 @@ function FlashcardPracticeModal({ visible, subject, difficulty, onClose }: Flash
   const difficultyInfo = DIFFICULTY_LABELS[difficulty];
 
   useEffect(() => {
-    if (visible && subject) {
+    if (visible && subject && childId) {
       setIsLoading(true);
       resetState();
-      getFlashcards(subject.id, difficulty).then(data => {
-        setCards(data);
-      }).finally(() => {
-        setIsLoading(false);
-      });
+      let cancelled = false;
+
+      (async () => {
+        try {
+          const data = await getFlashcards(subject.id, difficulty, childId);
+          if (cancelled) return;
+          setCards(data);
+        } finally {
+          if (!cancelled) setIsLoading(false);
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [visible, subject, difficulty]);
+  }, [visible, subject, difficulty, childId]);
 
   useEffect(() => {
     if (visible && !hasChecked && !isLoading && cards.length > 0) {
@@ -378,6 +390,7 @@ function FlashcardPracticeModal({ visible, subject, difficulty, onClose }: Flash
 
 export default function FlashcardsScreen() {
   const { theme } = useTheme();
+  const { childId } = useCurrentChildId();
   const { progress, getSubjectDifficulty, getBalancedProgress } = useProgress();
   const [practiceSubject, setPracticeSubject] = useState<Subject | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -385,18 +398,28 @@ export default function FlashcardsScreen() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
 
   useEffect(() => {
+    if (!childId) return;
+
+    let cancelled = false;
+
     const loadSubjects = async () => {
       try {
-        const fetchedSubjects = await getSubjects();
+        const fetchedSubjects = await getSubjects(childId);
+        if (cancelled) return;
         setSubjects(fetchedSubjects);
       } catch (e) {
         console.error("Failed to load subjects", e);
+        if (cancelled) return;
         setSubjects([]);
       }
     };
 
     loadSubjects();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [childId]);
 
   const balancedProgress = getBalancedProgress();
 
@@ -557,6 +580,7 @@ export default function FlashcardsScreen() {
         visible={modalVisible}
         subject={practiceSubject}
         difficulty={selectedDifficulty}
+        childId={childId}
         onClose={handleCloseModal}
       />
     </ScreenScrollView>

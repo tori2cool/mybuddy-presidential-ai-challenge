@@ -1,12 +1,10 @@
 # backend/app/db.py
-
 from collections.abc import AsyncGenerator
-
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
-
 from .config import settings
+from .seed import seed_affirmations_if_empty
 
 # Async engine using DATABASE_URL from settings
 engine: AsyncEngine = create_async_engine(
@@ -29,10 +27,15 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-# Init DB (for dev) – creates all tables from SQLModel metadata
+# Init DB – creates SQLModel tables then applies lightweight SQL migrations
 async def init_db() -> None:
-    """
-    Create tables on startup (for dev). In prod, use Alembic migrations.
+    """Initialize database structures.
+
+    - Creates SQLModel tables first.
+    - Then applies any pending `backend/migrations/*.sql` migrations.
+
+    In prod you may still prefer Alembic, but this keeps local/dev deployments
+    lightweight.
     """
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
