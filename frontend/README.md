@@ -2,6 +2,20 @@
 
 ## Overview
 
+## Reverse-proxy dev setup (Expo Web)
+
+Expo SDK 54 serves Web via Metro (default: `http://localhost:8081`).
+
+If you run Expo Web behind a reverse proxy (example: `https://mybuddy.suknet.org`) see:
+
+- `frontend/docs/DEV_PROXY.md`
+
+Quick start (from `frontend/`):
+
+```bash
+EXPO_PROXY_HOST=mybuddy.suknet.org npm run start:web:proxied
+```
+
 MyBuddy is a kid-friendly mobile application built with React Native and Expo that promotes self-discovery, learning, and wellness through five core features:
 
 1. **Affirmations** - TikTok-style vertical scrolling daily positive affirmations

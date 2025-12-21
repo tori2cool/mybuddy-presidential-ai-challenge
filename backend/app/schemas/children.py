@@ -10,13 +10,13 @@ from ._base import APIModel
 class ChildUpsert(APIModel):
     id: Optional[str] = None
     name: str
-    birthday: Optional[date] = None
+    birthday: date
     interests: List[str] = Field(min_length=1)   # at least one
     avatar: Optional[str] = None
 
 class ChildOut(APIModel):
     id: str
     name: str
-    birthday: Optional[date] = None
+    birthday: date
     interests: List[str] = Field(min_length=1)
     avatar: Optional[str] = None

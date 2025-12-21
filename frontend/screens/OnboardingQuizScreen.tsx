@@ -11,10 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/hooks/useTheme";
 import { ProgressBar } from "@/components/ProgressBar";
 
-type QuizScreenNavigationProp = NativeStackNavigationProp<
-  OnboardingParamList,
-  "Quiz"
->;
+type QuizScreenNavigationProp = NativeStackNavigationProp<OnboardingParamList>;
 
 const interests = [
   { id: "animals", label: "Animals", icon: "🐾" },
@@ -110,10 +107,6 @@ export default function OnboardingQuizScreen() {
         <Button
           onPress={() =>
             navigation.navigate("NameAvatar", {
-              // onComplete is provided via initialParams from the navigator.
-              // It will be merged by React Navigation.
-              // @ts-expect-error - merged from initialParams
-              onComplete: undefined,
               interests: selected,
             })
           }

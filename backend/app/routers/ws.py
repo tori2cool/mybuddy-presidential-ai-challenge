@@ -10,11 +10,11 @@ from redis import asyncio as aioredis
 from ..config import settings
 from ..security import decode_token, AuthError
 
-router = APIRouter(tags=["ws"])
+router = APIRouter(prefix="/ws", tags=["ws"])
 
 connected_clients: Dict[str, WebSocket] = {}
 
-@router.websocket("/ws/echo")
+@router.websocket("/echo")
 async def websocket_echo(websocket: WebSocket):
     await websocket.accept()
     client_id = f"{id(websocket)}"
@@ -30,7 +30,7 @@ async def websocket_echo(websocket: WebSocket):
         connected_clients.pop(client_id, None)
         await websocket.close()
 
-@router.websocket("/ws/jobs/{job_id}")
+@router.websocket("/jobs/{job_id}")
 async def websocket_job_updates(
     websocket: WebSocket,
     job_id: str,

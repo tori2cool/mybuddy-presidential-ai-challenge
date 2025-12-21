@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import LoginScreen from "@/screens/LoginScreen";
@@ -41,14 +41,17 @@ export default function RootNavigator() {
       <>
         <Stack.Screen name="ChildSelect" component={ChildSelectScreen} />
         <Stack.Screen name="Onboarding" options={{ headerShown: false }}>
-          {() => (
-            <OnboardingNavigator
-              onComplete={(newChildId) => {
-                // fire-and-forget; persistence happens inside ChildContext
-                setChildId(newChildId).catch(() => {});
-              }}
-            />
-          )}
+          {({ navigation }) => {
+            const handleComplete = useCallback(
+              async (newChildId: string) => {
+                await setChildId(newChildId);
+                navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+              },
+              [navigation, setChildId]
+            );
+
+            return <OnboardingNavigator onComplete={handleComplete} />;
+          }}
         </Stack.Screen>
         <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
       </>

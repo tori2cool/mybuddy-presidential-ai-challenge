@@ -16,9 +16,11 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 
 import { getDailyChores } from "@/services/choresService";
 import { Chore } from "@/types/models";
+import { useCurrentChildId } from "@/contexts/ChildContext";
 
 export default function ChoresScreen() {
   const { theme } = useTheme();
+  const { childId } = useCurrentChildId();
   const { addChoreCompleted, progress, getTodayStats } = useProgress();
 
   const [chores, setChores] = useState<Chore[]>([]);
@@ -31,22 +33,32 @@ export default function ChoresScreen() {
   const trackedChores = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    if (!childId) return;
+
+    let cancelled = false;
+
     const loadChores = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await getDailyChores();
+        const data = await getDailyChores(childId);
+        if (cancelled) return;
         setChores(data);
       } catch (e) {
         console.error("Failed to load chores", e);
+        if (cancelled) return;
         setError("Couldn't load chores. Please try again later.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadChores();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [childId]);
 
   const toggleChore = (id: string) => {
     const wasCompleted = completed.includes(id);

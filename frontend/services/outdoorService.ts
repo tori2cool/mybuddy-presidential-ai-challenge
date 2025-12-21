@@ -56,26 +56,47 @@ export async function getOutdoorActivities(
   childId: string,
   opts?: { isDaily?: boolean },
 ): Promise<OutdoorActivity[]> {
+  const applyDailyFilter = (items: OutdoorActivity[]): OutdoorActivity[] => {
+    if (opts?.isDaily === true) return items.filter((a) => a.isDaily);
+    if (opts?.isDaily === false) return items.filter((a) => !a.isDaily);
+    return items;
+  };
+
   try {
     const data = await withTimeout(
-      apiFetch<OutdoorActivity[]>("/outdoor/activities", {
+      apiFetch<unknown>("/outdoor/activities", {
         query: {
           childId,
-          isDaily: opts?.isDaily,
+          ...(opts?.isDaily !== undefined ? { isDaily: opts.isDaily } : {}),
         },
       }),
       OUTDOOR_TIMEOUT_MS,
     );
-    return data;
+
+    if (Array.isArray(data)) {
+      const filtered = applyDailyFilter(data as OutdoorActivity[]);
+
+      // Apply empty-array fallback after filtering.
+      if (filtered.length === 0) {
+        console.warn(
+          "getOutdoorActivities: API returned empty/non-array; falling back to static data.",
+          { childId, receivedType: typeof data },
+        );
+        return applyDailyFilter([...fallbackOutdoorActivities]);
+      }
+
+      return filtered;
+    }
+
+    if (__DEV__) {
+      console.warn(
+        "getOutdoorActivities: API returned empty/non-array; falling back to static data.",
+        { childId, receivedType: typeof data },
+      );
+    }
+    return applyDailyFilter([...fallbackOutdoorActivities]);
   } catch (err) {
     console.warn("getOutdoorActivities: falling back to static data:", err);
-
-    if (opts?.isDaily === true) {
-      return fallbackOutdoorActivities.filter((a) => a.isDaily);
-    }
-    if (opts?.isDaily === false) {
-      return fallbackOutdoorActivities.filter((a) => !a.isDaily);
-    }
-    return [...fallbackOutdoorActivities];
+    return applyDailyFilter([...fallbackOutdoorActivities]);
   }
 }

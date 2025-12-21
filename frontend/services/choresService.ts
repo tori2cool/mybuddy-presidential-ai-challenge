@@ -13,12 +13,21 @@ const CHORES_TIMEOUT_MS = 3000;
 export async function getDailyChores(childId: string): Promise<Chore[]> {
   try {
     const data = await withTimeout(
-      apiFetch<Chore[]>("/chores/daily", {
+      apiFetch<unknown>("/chores/daily", {
         query: { childId },
       }),
       CHORES_TIMEOUT_MS,
     );
-    return data;
+
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn(
+        "getDailyChores: API returned empty/non-array; falling back to static data.",
+        { childId, receivedType: typeof data },
+      );
+      return [...fallbackDailyChores];
+    }
+
+    return data as Chore[];
   } catch (err) {
     console.warn("getDailyChores: falling back to static data:", err);
     return [...fallbackDailyChores];

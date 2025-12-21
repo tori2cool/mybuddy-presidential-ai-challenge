@@ -47,7 +47,9 @@ Token validation is implemented in `backend/app/security.py`:
 `get_jwks()` is decorated with `@lru_cache()`, meaning:
 
 - The JWKS is cached for the lifetime of the process
-- Key rotations in Keycloak may require a restart (or code changes to refresh periodically)
+- On an **unknown `kid`**, the backend will automatically clear the JWKS cache and refetch **once**
+  - This typically handles Keycloak key rotation without requiring a restart
+- If the signing key still can’t be found after the refresh, the request fails with `401`
 
 ---
 
@@ -167,9 +169,13 @@ If you later need stronger controls:
 
 ### 401: Signing key not found
 
-- Token header `kid` is not present in cached JWKS
+- Token header `kid` is not present in JWKS
 - Key rotation may have occurred
-- Restart the backend (or implement JWKS refresh)
+- The backend will auto-refresh JWKS **once** on unknown `kid` and retry
+- If it still fails:
+  - confirm the token is from the expected realm/client
+  - verify `KEYCLOAK_JWKS_URL` points to the correct realm
+  - check Keycloak availability/logs
 
 ### 401: Invalid token: ...
 

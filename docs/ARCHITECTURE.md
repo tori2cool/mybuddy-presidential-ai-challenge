@@ -29,16 +29,21 @@ This document describes the overall architecture of MyBuddy, including how the f
 
 ## Data Models and Alignment
 
-Shared domain concepts are represented both in the backend (SQLModel models) and in the frontend (TypeScript types in `frontend/types/models.ts`).
+Shared domain concepts are represented in both the backend (SQLModel/Pydantic schemas exposed via FastAPI and documented in OpenAPI) and the frontend (TypeScript types and service-layer mappings).
 
-- Ensure that field names and types stay aligned between backend models and frontend types.
-- When you add or change a model in the backend, update the corresponding TypeScript type.
-- Keep enums / string unions (e.g., `DifficultyTier`, `SubjectId`) synchronized.
+**Backend is the source of truth** for domain models and API contracts.
+
+- **Canonical definitions:** Backend SQLModel/Pydantic schemas (and the generated **OpenAPI** spec) are canonical for field names, types, validation, and API request/response shapes.
+- **Propagate backend changes:** When backend models/schemas change, update the corresponding frontend TypeScript types in `frontend/types/models.ts` **and** update any affected frontend service-layer code (e.g., `frontend/services/*Service.ts`) that maps API JSON into app models.
+- **Keep enums/unions aligned:** Keep backend enums and frontend string unions (e.g., `DifficultyTier`, `SubjectId`) synchronized.
+- **Prefer generation when possible:** Prefer generating TypeScript types from OpenAPI when feasible, to reduce drift.
+- **Coordinate changes:** Coordinate model and contract changes across backend + frontend and avoid unannounced breaking changes.
 
 ### Example: Flashcards
 
-- Backend: `Flashcard` SQLModel with fields like `id`, `question`, `answer`, `difficulty`, `subject_id`.
-- Frontend: `Flashcard` interface in `frontend/types/models.ts` with the same fields.
+- Backend (canonical): `Flashcard` SQLModel/Pydantic schema and its FastAPI endpoint responses (documented in OpenAPI) with fields like `id`, `question`, `answer`, `difficulty`, `subject_id`.
+- Frontend: `Flashcard` interface (and related types) in `frontend/types/models.ts` aligned to the backend schema; frontend services map API JSON to these types.
+
 
 ## Data Flows
 

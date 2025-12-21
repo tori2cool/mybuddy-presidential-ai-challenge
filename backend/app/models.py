@@ -1,6 +1,6 @@
 # app/models.py
 from __future__ import annotations
-
+from sqlalchemy import UniqueConstraint
 from datetime import datetime, date
 from typing import Optional, List
 from sqlalchemy import Column
@@ -31,6 +31,55 @@ class TenantMixin(SQLModel):
 
 
 # ---------- PROJECT MODELS ----------
+class ChildActivityEvent(SQLModel, table=True):
+    """
+    Append-only event stream for progress/stats/streaks.
+    """
+    __tablename__ = "child_activity_events"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    child_id: str = Field(
+        foreign_key="children.id",
+        index=True,
+        sa_column_kwargs={"nullable": False},
+        max_length=64,
+    )
+
+    # "flashcard_answered" | "chore_completed" | "outdoor_completed" | "affirmation_viewed"
+    kind: str = Field(index=True, sa_column_kwargs={"nullable": False}, max_length=50)
+
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+    # flexible payload:
+    # flashcard: {"subjectId":"math","correct":true,"flashcardId":"..."}
+    # chore: {"choreId":"..."}
+    # outdoor: {"outdoorActivityId":"..."}
+    # affirmation: {"affirmationId":"..."}
+    meta: dict = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False))
+
+
+class ChildAchievement(SQLModel, table=True):
+    """
+    Stores when a child unlocks an achievement.
+    """
+    __tablename__ = "child_achievements"
+    __table_args__ = (
+        UniqueConstraint("child_id", "achievement_id", name="uq_child_achievement"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    child_id: str = Field(
+        foreign_key="children.id",
+        index=True,
+        sa_column_kwargs={"nullable": False},
+        max_length=64,
+    )
+
+    achievement_id: str = Field(index=True, sa_column_kwargs={"nullable": False}, max_length=100)
+
+    unlocked_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 # ---------- MYBUDDY CONTENT MODELS ----------
 # See mybuddyai/docs/DATABASE_SCHEMA.md for the canonical schema.
@@ -49,7 +98,7 @@ class Child(SQLModel, table=True):
     # Keycloak JWT subject (sub) that owns this child profile.
     owner_sub: str = Field(index=True, max_length=255)
     name: str = Field(sa_column_kwargs={"nullable": False}, max_length=255)
-    birthday: Optional[date] = None
+    birthday: date = Field(sa_column_kwargs={"nullable": False})
     interests: list[str] = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False),
