@@ -2,6 +2,7 @@
 from __future__ import annotations
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .db import init_db
 from .middleware import logging_middleware
@@ -16,6 +17,14 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="MyBuddy Backend", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.middleware("http")(logging_middleware)
 
 # Standardized routers
