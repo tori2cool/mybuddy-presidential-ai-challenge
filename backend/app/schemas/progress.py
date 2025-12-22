@@ -5,7 +5,10 @@ from typing import Literal, Optional
 from pydantic import Field
 from ._base import APIModel
 
-SubjectId = Literal["math", "science", "reading", "history"]
+# NOTE: SubjectId is intentionally a plain string so subjects can be DB-driven.
+# TODO(aqueryus): when subjects become fully DB-driven, consider replacing ad-hoc strings
+# with a constrained type sourced from the database at the edges.
+SubjectId = str
 DifficultyTier = Literal["easy", "medium", "hard"]
 
 class FlashcardAnsweredIn(APIModel):

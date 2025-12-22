@@ -8,7 +8,7 @@ from .middleware import logging_middleware
 from .routers.core import router as core_router
 from .routers.content import router as content_router
 from .routers.ws import router as ws_router
-from .routers import progress as progress_router
+from .routers.progress import router as progress_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

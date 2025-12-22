@@ -5,10 +5,13 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Dict, List, Literal, Optional, Tuple
 
-SubjectId = Literal["math", "science", "reading", "history"]
+# NOTE: SubjectId is intentionally a plain string so subjects can be DB-driven.
+SubjectId = str
 DifficultyTier = Literal["easy", "medium", "hard"]
 
-SUBJECTS: List[SubjectId] = ["math", "science", "reading", "history"]
+# TODO(aqueryus): Replace hardcoded SUBJECTS with subjects loaded from the DB.
+# Keep constants for now since achievement/balanced logic assumes a fixed set.
+SUBJECTS: list[str] = ["math", "science", "reading", "history"]
 
 DIFFICULTY_THRESHOLDS = {
     "easy": 0,
@@ -71,8 +74,9 @@ def calculate_difficulty(correct: int) -> DifficultyTier:
         return "medium"
     return "easy"
 
-def compute_balanced_progress(subject_correct: Dict[SubjectId, int]) -> dict:
-    subject_corrects = [subject_correct.get(s, 0) for s in SUBJECTS]
+def compute_balanced_progress(subject_correct: Dict[SubjectId, int], subjects: Optional[List[SubjectId]] = None) -> dict:
+    subjects = subjects or SUBJECTS
+    subject_corrects = [subject_correct.get(s, 0) for s in subjects]
     min_correct = min(subject_corrects) if subject_corrects else 0
 
     levels = sorted(LEVEL_THRESHOLDS.items(), key=lambda kv: kv[1], reverse=True)
@@ -84,7 +88,7 @@ def compute_balanced_progress(subject_correct: Dict[SubjectId, int]) -> dict:
     # ported from your TS logic (reverse scan)
     for i in range(len(levels) - 1, -1, -1):
         level_name, threshold = levels[i]
-        required_per_subject = (threshold + len(SUBJECTS) - 1) // len(SUBJECTS)
+        required_per_subject = (threshold + len(subjects) - 1) // len(subjects) if subjects else 0
         if min_correct >= required_per_subject:
             current_level = level_name
             if i > 0:
@@ -94,13 +98,15 @@ def compute_balanced_progress(subject_correct: Dict[SubjectId, int]) -> dict:
                 next_level = None
                 next_threshold = 0
 
-    required_per_subject = (next_threshold + len(SUBJECTS) - 1) // len(SUBJECTS) if next_level else 0
+    required_per_subject = (
+        (next_threshold + len(subjects) - 1) // len(subjects) if (next_level and subjects) else 0
+    )
 
     subject_progress: Dict[SubjectId, dict] = {}
     lowest_subject: Optional[SubjectId] = None
     lowest_value = 10**9
 
-    for s in SUBJECTS:
+    for s in subjects:
         cur = subject_correct.get(s, 0)
         met = cur >= required_per_subject if next_level else True
         subject_progress[s] = {"current": cur, "required": required_per_subject, "met": met}
@@ -108,14 +114,14 @@ def compute_balanced_progress(subject_correct: Dict[SubjectId, int]) -> dict:
             lowest_value = cur
             lowest_subject = s
 
-    can_level_up = (next_level is None) or all(subject_progress[s]["met"] for s in SUBJECTS)
+    can_level_up = (next_level is None) or all(subject_progress[s]["met"] for s in subjects)
 
     if next_level is None:
         message = "You've reached the highest level!"
     elif can_level_up:
         message = f"Ready to become {next_level}!"
     else:
-        needed = [s for s in SUBJECTS if not subject_progress[s]["met"]]
+        needed = [s for s in subjects if not subject_progress[s]["met"]]
         subject_names = ", ".join([s.capitalize() for s in needed])
         message = f"Need more correct answers in: {subject_names}"
 
@@ -129,7 +135,11 @@ def compute_balanced_progress(subject_correct: Dict[SubjectId, int]) -> dict:
         "message": message,
     }
 
-def reward_for_level(current_level: str, subject_correct: Dict[SubjectId, int]) -> dict:
+def reward_for_level(
+    current_level: str,
+    subject_correct: Dict[SubjectId, int],
+    subjects: Optional[List[SubjectId]] = None,
+) -> dict:
     level_colors = {
         "Super Star Kid": {"icon": "star", "color": "#F59E0B"},
         "Amazing Kid": {"icon": "award", "color": "#8B5CF6"},
@@ -141,13 +151,15 @@ def reward_for_level(current_level: str, subject_correct: Dict[SubjectId, int]) 
     icon = level_colors.get(current_level, level_colors["New Kid"])["icon"]
     color = level_colors.get(current_level, level_colors["New Kid"])["color"]
 
-    balanced = compute_balanced_progress(subject_correct)
+    subjects = subjects or SUBJECTS
+
+    balanced = compute_balanced_progress(subject_correct, subjects=subjects)
     next_level = balanced["nextLevel"]
     next_at = LEVEL_THRESHOLDS.get(next_level) if next_level else None
     current_threshold = LEVEL_THRESHOLDS.get(current_level, 0)
 
-    min_correct = min(subject_correct.get(s, 0) for s in SUBJECTS) if SUBJECTS else 0
-    effective_progress = min_correct * len(SUBJECTS)
+    min_correct = min((subject_correct.get(s, 0) for s in subjects), default=0)
+    effective_progress = min_correct * len(subjects)
 
     if next_at is None or next_at == current_threshold:
         pct = 100

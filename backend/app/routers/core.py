@@ -11,7 +11,6 @@ from sqlmodel import select
 from ..db import get_session
 from ..models import Project, ProjectCreate, ProjectRead, ProjectUpdate
 from ..security import get_current_user
-from ..tasks import long_running_task
 
 router = APIRouter(prefix="/v1", tags=["core"])
 
@@ -28,11 +27,6 @@ def me_payload(user: dict) -> dict:
         "client_roles": user.get("resource_access", {}),
         "raw_claims": user,
     }
-
-def create_job_payload(user: dict) -> dict:
-    subject = user.get("sub", "anonymous")
-    result = long_running_task.delay(f"user:{subject}")
-    return {"job_id": result.id}
 
 def get_job_status_payload(job_id: str) -> dict:
     from ..celery_app import celery_app

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
-from ..deps import get_child_owned
+from ..deps import get_child_owned_path
 from ..models import Child
 from ..schemas.progress import (
     FlashcardAnsweredIn,
@@ -24,7 +24,7 @@ from ..services.progress_queries import (
     compute_totals,
     compute_streaks,
     unlock_achievements,
-    get_unlocked_achievement_ids,
+    get_unlocked_achievements_map,
 )
 
 router = APIRouter(prefix="/v1", tags=["mybuddy-progress"])
@@ -39,28 +39,42 @@ async def _build_dashboard(session: AsyncSession, child: Child) -> DashboardOut:
     by_subject = await compute_flashcards_by_subject(session, child_id=child.id)
     streaks = await compute_streaks(session, child_id=child.id)
 
-    subject_correct = {s: by_subject[s]["correct"] for s in rules.SUBJECTS}
-    subject_difficulty = {s: by_subject[s]["difficulty"] for s in rules.SUBJECTS}
+    core_subjects = list(rules.SUBJECTS)
+    subject_correct = {s: by_subject.get(s, {}).get("correct", 0) for s in core_subjects}
+    subject_difficulty = {s: by_subject.get(s, {}).get("difficulty", "easy") for s in core_subjects}
 
-    balanced = rules.compute_balanced_progress(subject_correct)
-    reward = rules.reward_for_level(balanced["currentLevel"], subject_correct)
+    balanced = rules.compute_balanced_progress(subject_correct, subjects=core_subjects)
+    reward = rules.reward_for_level(balanced["currentLevel"], subject_correct, subjects=core_subjects)
 
-    unlocked_ids = await get_unlocked_achievement_ids(session, child_id=child.id)
+    unlocked_map = await get_unlocked_achievements_map(session, child_id=child.id)
     catalog = _achievement_catalog()
 
     unlocked = []
     locked = []
     for a in rules.ACHIEVEMENTS:
-        if a.id in unlocked_ids:
-            # fetch unlockedAt timestamp
-            # (simple way: we didn’t pull timestamps here; for now set unlockedAt=None or add a query)
-            unlocked.append(AchievementOut(
-                id=a.id, title=a.title, description=a.description, icon=a.icon, type=a.type, unlockedAt=None
-            ))
+        unlocked_at = unlocked_map.get(a.id)
+        if unlocked_at is not None:
+            unlocked.append(
+                AchievementOut(
+                    id=a.id,
+                    title=a.title,
+                    description=a.description,
+                    icon=a.icon,
+                    type=a.type,
+                    unlockedAt=unlocked_at,
+                )
+            )
         else:
-            locked.append(AchievementOut(
-                id=a.id, title=a.title, description=a.description, icon=a.icon, type=a.type, unlockedAt=None
-            ))
+            locked.append(
+                AchievementOut(
+                    id=a.id,
+                    title=a.title,
+                    description=a.description,
+                    icon=a.icon,
+                    type=a.type,
+                    unlockedAt=None,
+                )
+            )
 
     return DashboardOut(
         totalPoints=totals["totalPoints"],
@@ -93,8 +107,9 @@ async def _unlock_from_current_state(session: AsyncSession, child: Child) -> lis
     by_subject = await compute_flashcards_by_subject(session, child_id=child.id)
     streaks = await compute_streaks(session, child_id=child.id)
 
-    subject_correct = {s: by_subject[s]["correct"] for s in rules.SUBJECTS}
-    subject_difficulty = {s: by_subject[s]["difficulty"] for s in rules.SUBJECTS}
+    core_subjects = list(rules.SUBJECTS)
+    subject_correct = {s: by_subject.get(s, {}).get("correct", 0) for s in core_subjects}
+    subject_difficulty = {s: by_subject.get(s, {}).get("difficulty", "easy") for s in core_subjects}
 
     unlockable = rules.evaluate_achievement_conditions(
         total_points=totals["totalPoints"],
@@ -113,7 +128,7 @@ async def _unlock_from_current_state(session: AsyncSession, child: Child) -> lis
 
 @router.get("/children/{child_id}/dashboard", response_model=DashboardOut)
 async def get_dashboard(
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
     return await _build_dashboard(session, child)
@@ -121,7 +136,7 @@ async def get_dashboard(
 @router.post("/children/{child_id}/events/flashcard", response_model=EventAckOut)
 async def flashcard_answered(
     payload: FlashcardAnsweredIn,
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
     points = rules.POINTS["flashcard_correct"] if payload.correct else rules.POINTS["flashcard_wrong"]
@@ -145,7 +160,7 @@ async def flashcard_answered(
 @router.post("/children/{child_id}/events/chore", response_model=EventAckOut)
 async def chore_completed(
     payload: ChoreCompletedIn,
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
     points = rules.POINTS["chore_completed"]
@@ -163,7 +178,7 @@ async def chore_completed(
 @router.post("/children/{child_id}/events/outdoor", response_model=EventAckOut)
 async def outdoor_completed(
     payload: OutdoorCompletedIn,
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
     points = rules.POINTS["outdoor_completed"]
@@ -181,7 +196,7 @@ async def outdoor_completed(
 @router.post("/children/{child_id}/events/affirmation", response_model=EventAckOut)
 async def affirmation_viewed(
     payload: AffirmationViewedIn,
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
     points = rules.POINTS["affirmation_viewed"]

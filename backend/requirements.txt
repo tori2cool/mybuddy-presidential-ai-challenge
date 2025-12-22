@@ -27,3 +27,4 @@ alembic
 black
 isort
 mypy
+pytest

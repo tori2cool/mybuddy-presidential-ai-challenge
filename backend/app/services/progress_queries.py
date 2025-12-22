@@ -4,11 +4,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone, date as date_type
 from typing import Dict, List, Literal, Optional, Tuple
 
-from sqlalchemy import func, distinct, and_
+from sqlalchemy import func, distinct, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from ..models import ChildActivityEvent, ChildAchievement
+from ..models import ChildActivityEvent, ChildAchievement, Subject
 from .progress_rules import SUBJECTS, SubjectId, calculate_difficulty
 
 EventKind = Literal["flashcard_answered", "chore_completed", "outdoor_completed", "affirmation_viewed"]
@@ -36,10 +36,22 @@ async def insert_event(session: AsyncSession, *, child_id: str, kind: EventKind,
     return ev
 
 async def get_unlocked_achievement_ids(session: AsyncSession, *, child_id: str) -> set[str]:
-    rows = (await session.execute(
-        select(ChildAchievement.achievement_id).where(ChildAchievement.child_id == child_id)
-    )).all()
+    rows = (
+        await session.execute(select(ChildAchievement.achievement_id).where(ChildAchievement.child_id == child_id))
+    ).all()
     return {r[0] for r in rows}
+
+
+async def get_unlocked_achievements_map(session: AsyncSession, *, child_id: str) -> Dict[str, datetime]:
+    """Return {achievement_id: unlocked_at} for a child."""
+    rows = (
+        await session.execute(
+            select(ChildAchievement.achievement_id, ChildAchievement.unlocked_at).where(
+                ChildAchievement.child_id == child_id
+            )
+        )
+    ).all()
+    return {aid: ts for (aid, ts) in rows}
 
 async def unlock_achievements(session: AsyncSession, *, child_id: str, achievement_ids: List[str]) -> List[str]:
     existing = await get_unlocked_achievement_ids(session, child_id=child_id)
@@ -47,6 +59,11 @@ async def unlock_achievements(session: AsyncSession, *, child_id: str, achieveme
     for aid in new_ids:
         session.add(ChildAchievement(child_id=child_id, achievement_id=aid))
     return new_ids
+
+
+async def list_subject_ids(session: AsyncSession) -> list[SubjectId]:
+    rows = (await session.execute(select(Subject.id))).all()
+    return [r[0] for r in rows]
 
 async def compute_totals(session: AsyncSession, *, child_id: str) -> dict:
     # totals by kind
@@ -173,25 +190,45 @@ async def compute_week_stats(session: AsyncSession, *, child_id: str) -> dict:
     }
 
 async def compute_flashcards_by_subject(session: AsyncSession, *, child_id: str) -> Dict[SubjectId, dict]:
-    # count completed by subjectId (stored in meta)
-    stmt = (
+    # Initialize with all DB subjects (model 1) so the client can render 0s.
+    subject_ids = await list_subject_ids(session)
+
+    by_subject: Dict[SubjectId, dict] = {
+        s: {"completed": 0, "correct": 0, "difficulty": "easy"} for s in subject_ids
+    }
+
+    # count completed/correct by subjectId (stored in meta)
+    # Use a subquery to avoid Postgres GROUP BY errors on JSONB expressions.
+    ev = (
         select(
-            ChildActivityEvent.meta["subjectId"].as_string(),
-            func.count(ChildActivityEvent.id),
-            func.sum(func.case((ChildActivityEvent.meta["correct"].as_boolean() == True, 1), else_=0)),  # noqa
+            ChildActivityEvent.meta["subjectId"].as_string().label("subjectId"),
+            ChildActivityEvent.meta["correct"].as_boolean().label("correct"),
         )
         .where(ChildActivityEvent.child_id == child_id, ChildActivityEvent.kind == "flashcard_answered")
-        .group_by(ChildActivityEvent.meta["subjectId"].as_string())
+        .subquery()
+    )
+
+    stmt = (
+        select(
+            ev.c.subjectId,
+            func.count().label("completed"),
+            func.coalesce(func.sum(case((ev.c.correct == True, 1), else_=0)), 0).label("correct"),  # noqa: E712
+        )
+        .group_by(ev.c.subjectId)
     )
     rows = (await session.execute(stmt)).all()
 
-    by_subject: Dict[SubjectId, dict] = {s: {"completed": 0, "correct": 0, "difficulty": "easy"} for s in SUBJECTS}
     for subject_id, completed, correct_sum in rows:
-        if subject_id in by_subject:
-            correct = int(correct_sum or 0)
-            by_subject[subject_id]["completed"] = int(completed or 0)
-            by_subject[subject_id]["correct"] = correct
-            by_subject[subject_id]["difficulty"] = calculate_difficulty(correct)
+        sid = subject_id or "unknown"
+        if sid not in by_subject:
+            # Fallback for events referencing subjects not present in the DB.
+            by_subject[sid] = {"completed": 0, "correct": 0, "difficulty": "easy"}
+
+        correct = int(correct_sum or 0)
+        by_subject[sid]["completed"] = int(completed or 0)
+        by_subject[sid]["correct"] = correct
+        by_subject[sid]["difficulty"] = calculate_difficulty(correct)
+
     return by_subject
 
 async def compute_streaks(session: AsyncSession, *, child_id: str) -> dict:
@@ -200,10 +237,12 @@ async def compute_streaks(session: AsyncSession, *, child_id: str) -> dict:
     today = _today_utc_date()
     start = datetime(today.year, today.month, today.day, tzinfo=timezone.utc) - timedelta(days=180)
 
+    date_expr = func.date(ChildActivityEvent.created_at).label("d")
     stmt = (
-        select(distinct(func.date(ChildActivityEvent.created_at)))
+        select(date_expr)
         .where(ChildActivityEvent.child_id == child_id, ChildActivityEvent.created_at >= start)
-        .order_by(distinct(func.date(ChildActivityEvent.created_at)).desc())
+        .distinct()
+        .order_by(date_expr.desc())
     )
     rows = (await session.execute(stmt)).all()
     active_days = [r[0] for r in rows if r and r[0] is not None]  # list[date]

@@ -266,6 +266,20 @@ openapi-typescript http://localhost:8000/openapi.json -o src/api/schema.ts
 - Shared dependencies (e.g. child ownership validation) live in `deps.py`
 - Legacy routes are preserved but marked `deprecated=True`
 
+### Recreating the DB schema (no migrations)
+
+This repo currently assumes you can **drop & recreate** the dev database when schema changes.
+
+If you change column types (e.g. switching timestamp columns to `timestamptz` / timezone-aware UTC), recreate:
+
+```bash
+# from ./backend
+docker compose down
+# WARNING: this deletes Postgres data volume
+docker compose down -v
+docker compose up --build
+```
+
 ---
 
 ## License

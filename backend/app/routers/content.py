@@ -13,8 +13,27 @@ from sqlmodel import select
 from ..db import get_session
 from ..models import Child, Affirmation, Subject, Flashcard, Chore, OutdoorActivity
 from ..security import get_current_user
-from ..deps import get_child_owned
+from ..deps import get_child_owned_query, get_child_owned_path
 from ..schemas.children import ChildUpsert, ChildOut
+from ..tasks import redis_client, seed_content
+
+SEED_LOCK_KEY = "seed:content"
+SEED_LOCK_TTL_SECONDS = 300
+
+
+def _enqueue_seed_if_needed() -> None:
+    """Enqueue background seed task at most once per TTL.
+
+    Uses Redis SET NX with TTL as a lightweight distributed lock.
+    """
+
+    try:
+        acquired = redis_client.set(SEED_LOCK_KEY, "1", nx=True, ex=SEED_LOCK_TTL_SECONDS)
+        if acquired:
+            seed_content.delay()
+    except Exception:
+        # Never fail the request due to seed enqueuing.
+        return
 
 router = APIRouter(prefix="/v1", tags=["mybuddy-content"])
 
@@ -88,33 +107,36 @@ async def upsert_child(
 
 @router.get("/children/{child_id}", response_model=ChildOut)
 async def get_child(
-    child_id: str,
-    session: AsyncSession = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    child: Child = Depends(get_child_owned_path),
 ):
-    owner_sub = user.get("sub")
-    stmt = select(Child).where(Child.id == child_id, Child.owner_sub == owner_sub)
-    child = (await session.execute(stmt)).scalars().first()
-    if child is None:
-        raise HTTPException(status_code=404, detail="Child not found")
     return child
 
 
 @router.get("/affirmations")
 async def list_affirmations(
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_query),
     session: AsyncSession = Depends(get_session),
 ):
     # TODO: personalize using child.age/interests later
+    any_row = (await session.execute(select(Affirmation.id).limit(1))).first()
+    if any_row is None:
+        _enqueue_seed_if_needed()
+        return []
+
     rows = (await session.execute(select(Affirmation))).scalars().all()
     return [{"id": r.id, "text": r.text, "gradient": [r.gradient_0, r.gradient_1]} for r in rows]
 
 
 @router.get("/subjects")
 async def list_subjects(
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_query),
     session: AsyncSession = Depends(get_session),
 ):
+    any_row = (await session.execute(select(Subject.id).limit(1))).first()
+    if any_row is None:
+        _enqueue_seed_if_needed()
+        return []
+
     rows = (await session.execute(select(Subject))).scalars().all()
     return [{"id": r.id, "name": r.name, "icon": r.icon, "color": r.color} for r in rows]
 
@@ -123,9 +145,17 @@ async def list_subjects(
 async def list_flashcards(
     subject_id: str = Query(..., alias="subjectId"),
     difficulty: Literal["easy", "medium", "hard"] = Query(...),
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_query),
     session: AsyncSession = Depends(get_session),
 ):
+    # If the DB hasn't been seeded yet, trigger seed_content and return empty.
+    # This keeps /flashcards callable without requiring clients to call /subjects first.
+    any_subject = (await session.execute(select(Subject.id).limit(1))).first()
+    any_flashcard = (await session.execute(select(Flashcard.id).limit(1))).first()
+    if any_subject is None or any_flashcard is None:
+        _enqueue_seed_if_needed()
+        return []
+
     subject = (await session.execute(select(Subject).where(Subject.id == subject_id))).scalars().first()
     if subject is None:
         raise HTTPException(status_code=400, detail="Invalid subjectId; subject does not exist.")
@@ -146,9 +176,14 @@ async def list_flashcards(
 
 @router.get("/chores/daily")
 async def list_daily_chores(
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_query),
     session: AsyncSession = Depends(get_session),
 ):
+    any_row = (await session.execute(select(Chore.id).limit(1))).first()
+    if any_row is None:
+        _enqueue_seed_if_needed()
+        return []
+
     rows = (await session.execute(select(Chore))).scalars().all()
     return [{"id": r.id, "label": r.label, "icon": r.icon, "isExtra": r.is_extra} for r in rows]
 
@@ -156,9 +191,14 @@ async def list_daily_chores(
 @router.get("/outdoor/activities")
 async def list_outdoor_activities(
     is_daily: Optional[bool] = Query(None, alias="isDaily"),
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_query),
     session: AsyncSession = Depends(get_session),
 ):
+    any_row = (await session.execute(select(OutdoorActivity.id).limit(1))).first()
+    if any_row is None:
+        _enqueue_seed_if_needed()
+        return []
+
     stmt = select(OutdoorActivity)
     if is_daily is not None:
         stmt = stmt.where(OutdoorActivity.is_daily == is_daily)

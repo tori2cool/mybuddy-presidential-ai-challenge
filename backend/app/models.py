@@ -1,7 +1,7 @@
 # app/models.py
 from __future__ import annotations
-from sqlalchemy import UniqueConstraint
-from datetime import datetime, date
+from sqlalchemy import UniqueConstraint, DateTime
+from datetime import datetime, date, timezone
 from typing import Optional, List
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
@@ -10,10 +10,18 @@ from sqlmodel import Field, SQLModel
 # ---------- MIXINS ----------
 
 class TimeStampedMixin(SQLModel):
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow,
-        sa_column_kwargs={"onupdate": datetime.utcnow},
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            index=True,
+            onupdate=lambda: datetime.now(timezone.utc),
+        ),
     )
 
 
@@ -49,7 +57,10 @@ class ChildActivityEvent(SQLModel, table=True):
     # "flashcard_answered" | "chore_completed" | "outdoor_completed" | "affirmation_viewed"
     kind: str = Field(index=True, sa_column_kwargs={"nullable": False}, max_length=50)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
 
     # flexible payload:
     # flashcard: {"subjectId":"math","correct":true,"flashcardId":"..."}
@@ -79,7 +90,10 @@ class ChildAchievement(SQLModel, table=True):
 
     achievement_id: str = Field(index=True, sa_column_kwargs={"nullable": False}, max_length=100)
 
-    unlocked_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    unlocked_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
 
 # ---------- MYBUDDY CONTENT MODELS ----------
 # See mybuddyai/docs/DATABASE_SCHEMA.md for the canonical schema.
@@ -105,10 +119,18 @@ class Child(SQLModel, table=True):
     )
     avatar: Optional[str] = Field(default=None, max_length=255)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow,
-        sa_column_kwargs={"onupdate": datetime.utcnow},
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            index=True,
+            onupdate=lambda: datetime.now(timezone.utc),
+        ),
     )
 
 class Affirmation(SQLModel, table=True):

@@ -15,6 +15,7 @@ import { AsyncStatus } from "@/components/AsyncStatus";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useTheme } from "@/hooks/useTheme";
 import { useProgress, DifficultyTier, SubjectId, SUBJECTS, DIFFICULTY_THRESHOLDS } from "@/contexts/ProgressContext";
+import { useDashboard } from "@/contexts/DashboardContext";
 import { Spacing, BorderRadius, Typography } from "@/constants/theme";
 import { getSubjects } from "@/services/subjectsService";
 import { getFlashcards } from "@/services/flashcardsService";
@@ -40,6 +41,7 @@ interface FlashcardPracticeModalProps {
 function FlashcardPracticeModal({ visible, subject, difficulty, childId, onClose }: FlashcardPracticeModalProps) {
   const { theme } = useTheme();
   const { addFlashcardResult } = useProgress();
+  const { postEvent, flushDebouncedRefresh } = useDashboard();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [hasChecked, setHasChecked] = useState(false);
@@ -97,6 +99,8 @@ function FlashcardPracticeModal({ visible, subject, difficulty, childId, onClose
   };
 
   const handleClose = () => {
+    // flush debounced refresh when leaving the flow
+    flushDebouncedRefresh().catch(() => {});
     resetState();
     onClose();
   };
@@ -115,6 +119,17 @@ function FlashcardPracticeModal({ visible, subject, difficulty, childId, onClose
     setHasChecked(true);
     
     addFlashcardResult(subject.id, correct);
+
+    // API-first progress event (DashboardContext is read-only; it will refresh)
+    postEvent({
+      kind: "flashcard",
+      body: {
+        subjectId: subject.id,
+        correct,
+        flashcardId: currentCard.id,
+        answer: userAnswer.trim(),
+      },
+    }).catch(() => {});
 
     if (correct) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
