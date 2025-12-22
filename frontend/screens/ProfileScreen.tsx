@@ -1,30 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  View,
-  StyleSheet,
-  Image,
-  Pressable,
-  ScrollView,
-  RefreshControl,
-} from "react-native";
+import { View, StyleSheet, Image, Pressable, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { useTheme } from "@/hooks/useTheme";
-import { SUBJECTS, SubjectId } from "@/contexts/ProgressContext";
-import { useDashboard } from "@/contexts/DashboardContext";
+import { useProgress, SUBJECTS } from "@/contexts/ProgressContext";
+import { SUBJECTS as SUBJECT_INFO } from "@/constants/curriculum";
 import { Spacing, BorderRadius, Typography } from "@/constants/theme";
-import { useCurrentChildId } from "@/contexts/ChildContext";
-import { getChildById } from "@/services/childrenService";
-import { useNavigation } from "@react-navigation/native";
-
-const SUBJECT_INFO: Record<SubjectId, { name: string; icon: string; color: string }> = {
-  math: { name: "Math", icon: "grid", color: "#8B5CF6" },
-  science: { name: "Science", icon: "zap", color: "#10B981" },
-  reading: { name: "Reading", icon: "book-open", color: "#FB923C" },
-  history: { name: "History", icon: "globe", color: "#3B82F6" },
-};
 
 const DIFFICULTY_LABELS = {
   easy: { label: "Easy", color: "#10B981" },
@@ -34,87 +16,26 @@ const DIFFICULTY_LABELS = {
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
-  const navigation = useNavigation();
-  const { childId } = useCurrentChildId();
-  const [childName, setChildName] = useState<string | null>(null);
+  const { progress, getTodayStats, getThisWeekStats, getLevelInfo, getGraduationProgress, getSubjectDifficulty } = useProgress();
 
-  useEffect(() => {
-    let cancelled = false;
+  const todayStats = getTodayStats();
+  const weekStats = getThisWeekStats();
+  const levelInfo = getLevelInfo();
+  const graduationProgress = getGraduationProgress();
 
-    (async () => {
-      if (!childId) {
-        setChildName(null);
-        return;
-      }
+  const totalLessons = Object.values(progress.lessonsBySubject)
+    .reduce((acc, s) => acc + s.completed, 0);
+  const totalCorrect = Object.values(progress.lessonsBySubject)
+    .reduce((acc, s) => acc + s.correct, 0);
+  const accuracy = totalLessons > 0 
+    ? Math.round((totalCorrect / totalLessons) * 100) 
+    : 0;
 
-      try {
-        const child = await getChildById(childId);
-        if (cancelled) return;
-        setChildName(child?.name ?? null);
-      } catch {
-        if (!cancelled) setChildName(null);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [childId]);
-
-  const {
-    data: dashboard,
-    refreshDashboard,
-    status: dashboardStatus,
-    error: dashboardError,
-  } = useDashboard();
-
-  const [refreshing, setRefreshing] = useState(false);
-
-  const onRefresh = useCallback(async () => {
-    if (!childId) return;
-    setRefreshing(true);
-    try {
-      await refreshDashboard({ force: true });
-    } catch {
-      // Error is surfaced via DashboardContext.error
-    } finally {
-      setRefreshing(false);
-    }
-  }, [childId, refreshDashboard]);
-
-  const refreshControl = useMemo(
-    () => (
-      <RefreshControl
-        refreshing={refreshing || dashboardStatus === "refreshing"}
-        onRefresh={onRefresh}
-      />
-    ),
-    [refreshing, dashboardStatus, onRefresh],
-  );
-
-  const reward = dashboard?.reward;
-  const balancedProgress = dashboard?.balanced;
-
-  const totalFlashcards = Object.values(dashboard?.flashcardsBySubject ?? {}).reduce(
-    (acc, s) => acc + (s?.completed ?? 0),
-    0,
-  );
-  const totalCorrect = Object.values(dashboard?.flashcardsBySubject ?? {}).reduce(
-    (acc, s) => acc + (s?.correct ?? 0),
-    0,
-  );
-  const accuracy = totalFlashcards > 0 ? Math.round((totalCorrect / totalFlashcards) * 100) : 0;
-
-  const unlockedAchievements = dashboard?.achievementsUnlocked ?? [];
-  const lockedAchievements = dashboard?.achievementsLocked ?? [];
-
-  // Initial background refresh (SWR); keep non-blocking.
-  useEffect(() => {
-    refreshDashboard({ force: false }).catch(() => {});
-  }, [refreshDashboard]);
+  const unlockedAchievements = progress.achievements.filter(a => a.unlockedAt);
+  const lockedAchievements = progress.achievements.filter(a => !a.unlockedAt);
 
   return (
-    <ScreenScrollView refreshControl={refreshControl}>
+    <ScreenScrollView>
       <ThemedView style={styles.container}>
         <View style={styles.avatarSection}>
           <Image
@@ -122,59 +43,11 @@ export default function ProfileScreen() {
             style={styles.avatar}
           />
           <ThemedText type="title" style={styles.name}>
-            {childName ?? "Profile"}
+            Buddy
           </ThemedText>
-
-          {dashboardError ? (
-            <ThemedText
-              style={[
-                styles.inlineError,
-                {
-                  color: theme.textSecondary,
-                },
-              ]}
-            >
-              {dashboardError}
-            </ThemedText>
-          ) : null}
-
-          {childName ? (
-            <Pressable
-              onPress={() => {
-                // Profile stack is nested inside Main tabs, which are inside the Root stack.
-                // Navigate via parent to reach the Root route.
-                navigation.getParent()?.navigate("ChildSelect" as never);
-              }}
-              accessibilityRole="button"
-              hitSlop={10}
-            >
-              <ThemedText
-                style={[
-                  styles.switchLink,
-                  {
-                    color: theme.textSecondary,
-                    textDecorationColor: theme.textSecondary,
-                  },
-                ]}
-              >
-                Not {childName}?
-              </ThemedText>
-            </Pressable>
-          ) : null}
-          <View
-            style={[
-              styles.levelBadge,
-              { backgroundColor: reward?.color ?? theme.primary },
-            ]}
-          >
-            <Feather
-              name={(reward?.icon ?? "award") as any}
-              size={16}
-              color="white"
-            />
-            <ThemedText style={styles.levelText}>
-              {reward?.level ?? ""}
-            </ThemedText>
+          <View style={[styles.levelBadge, { backgroundColor: levelInfo.gradeInfo.color }]}>
+            <Feather name="award" size={16} color="white" />
+            <ThemedText style={styles.levelText}>{levelInfo.rank}</ThemedText>
           </View>
         </View>
 
@@ -185,7 +58,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.streakInfo}>
               <ThemedText type="hero" style={{ color: theme.primary }}>
-                {dashboard?.currentStreak ?? 0}
+                {progress.currentStreak}
               </ThemedText>
               <ThemedText style={[styles.streakLabel, { color: theme.textSecondary }]}>
                 Day Streak
@@ -195,16 +68,16 @@ export default function ProfileScreen() {
           <View style={styles.streakStats}>
             <View style={styles.streakStat}>
               <ThemedText style={[styles.streakStatValue, { color: theme.text }]}>
-                {dashboard?.longestStreak ?? 0}
+                {progress.longestStreak}
               </ThemedText>
               <ThemedText style={[styles.streakStatLabel, { color: theme.textSecondary }]}>
                 Best Streak
               </ThemedText>
             </View>
-            <View style={[styles.streakDivider, { backgroundColor: theme.border }]} />
+            <View style={[styles.streakDivider, { backgroundColor: theme.textSecondary + "40" }]} />
             <View style={styles.streakStat}>
               <ThemedText style={[styles.streakStatValue, { color: theme.text }]}>
-                {dashboard?.totalPoints ?? 0}
+                {progress.totalPoints}
               </ThemedText>
               <ThemedText style={[styles.streakStatLabel, { color: theme.textSecondary }]}>
                 Total Points
@@ -223,140 +96,122 @@ export default function ProfileScreen() {
           
           <View style={styles.levelInfo}>
             <ThemedText style={[styles.currentLevelLabel, { color: theme.textSecondary }]}>
-              Current Level
+              {levelInfo.gradeInfo.name} - Level {levelInfo.gradeLevel}
             </ThemedText>
             <View style={styles.currentLevelRow}>
-              <View style={[styles.levelBadgeSmall, { backgroundColor: reward.color }]}>
-                <Feather name={reward.icon as any} size={14} color="white" />
-                <ThemedText style={styles.levelTextSmall}>{reward.level}</ThemedText>
+              <View style={[styles.levelBadgeSmall, { backgroundColor: levelInfo.gradeInfo.color }]}>
+                <Feather name="award" size={14} color="white" />
+                <ThemedText style={styles.levelTextSmall}>{levelInfo.rank}</ThemedText>
               </View>
-              {balancedProgress?.nextLevel ? (
-                <View style={styles.nextLevelInfo}>
-                  <Feather name="arrow-right" size={16} color={theme.textSecondary} />
-                  <ThemedText style={[styles.nextLevelText, { color: theme.textSecondary }]}>
-                    {balancedProgress.nextLevel}
-                  </ThemedText>
-                </View>
-              ) : null}
             </View>
           </View>
 
-          <ThemedText
-            style={[
-              styles.balanceMessage,
-              {
-                color: balancedProgress?.canLevelUp
-                  ? theme.success
-                  : theme.textSecondary,
-              },
-            ]}
-          >
-            {balancedProgress?.message ?? ""}
+          <View style={styles.xpProgressSection}>
+            <ThemedText style={[styles.xpLabel, { color: theme.textSecondary }]}>
+              XP Progress: {levelInfo.xpProgress.current}/{levelInfo.xpProgress.required}
+            </ThemedText>
+            <View style={[styles.subjectProgressBar, { backgroundColor: theme.textSecondary + "30" }]}>
+              <View 
+                style={[
+                  styles.subjectProgressFill, 
+                  { 
+                    width: `${levelInfo.xpProgress.progress}%`,
+                    backgroundColor: theme.primary,
+                  }
+                ]} 
+              />
+            </View>
+          </View>
+
+          <ThemedText style={[styles.balanceMessage, { color: graduationProgress.canGraduate ? theme.success : theme.textSecondary }]}>
+            {graduationProgress.canGraduate ? "Ready to graduate to next grade!" : "Complete requirements to graduate:"}
           </ThemedText>
 
-          {balancedProgress?.nextLevel ? (
-            <View style={styles.subjectProgressSection}>
-              <ThemedText style={[styles.subjectProgressTitle, { color: theme.textSecondary }]}>
-                Correct Answers Needed Per Subject:
-              </ThemedText>
-              {SUBJECTS.map((subjectId) => {
-                const subjectInfo = SUBJECT_INFO[subjectId];
-                const subjectProg = balancedProgress?.subjectProgress?.[subjectId] as
-                  | { current: number; required: number; met: boolean }
-                  | undefined;
-
-                const difficulty =
-                  dashboard?.flashcardsBySubject?.[subjectId]?.difficulty ?? "easy";
-                const diffInfo = DIFFICULTY_LABELS[difficulty];
-
-                const required = balancedProgress?.requiredPerSubject ?? 0;
-                const current = subjectProg?.current ?? 0;
-                const met = subjectProg?.met ?? false;
-                const progressPercent = required > 0 ? Math.min((current / required) * 100, 100) : 100;
-
-                return (
-                  <View key={subjectId} style={styles.subjectProgressItem}>
-                    <View style={styles.subjectProgressHeader}>
-                      <View style={styles.subjectProgressLabelRow}>
-                        <View
-                          style={[
-                            styles.subjectIcon,
-                            { backgroundColor: subjectInfo.color + "20" },
-                          ]}
-                        >
-                          <Feather
-                            name={subjectInfo.icon as any}
-                            size={14}
-                            color={subjectInfo.color}
-                          />
-                        </View>
-                        <ThemedText
-                          style={[styles.subjectName, { color: theme.textPrimary }]}
-                        >
-                          {subjectInfo.name}
-                        </ThemedText>
-                        <View
-                          style={[
-                            styles.difficultyPill,
-                            { backgroundColor: diffInfo.color + "20" },
-                          ]}
-                        >
-                          <ThemedText
-                            style={[
-                              styles.difficultyPillText,
-                              { color: diffInfo.color },
-                            ]}
-                          >
-                            {diffInfo.label}
-                          </ThemedText>
-                        </View>
-                      </View>
-                      <View style={styles.subjectProgressCountRow}>
-                        <ThemedText
-                          style={[
-                            styles.subjectProgressCount,
-                            { color: met ? "#10B981" : theme.textSecondary },
-                          ]}
-                        >
-                          {current}/{required}
-                        </ThemedText>
-                        {met ? (
-                          <Feather
-                            name="check-circle"
-                            size={16}
-                            color="#10B981"
-                          />
-                        ) : null}
-                      </View>
-                    </View>
-                    <View
-                      style={[
-                        styles.subjectProgressBar,
-                        { backgroundColor: theme.border },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.subjectProgressFill,
-                          {
-                            width: `${progressPercent}%`,
-                            backgroundColor: met ? "#10B981" : subjectInfo.color,
-                          },
-                        ]}
-                      />
-                    </View>
+          <View style={styles.subjectProgressSection}>
+            <View style={styles.subjectProgressItem}>
+              <View style={styles.subjectProgressHeader}>
+                <View style={styles.subjectProgressLabelRow}>
+                  <View style={[styles.subjectIcon, { backgroundColor: "#8B5CF6" + "20" }]}>
+                    <Feather name="book" size={14} color="#8B5CF6" />
                   </View>
-                );
-              })}
+                  <ThemedText style={[styles.subjectName, { color: theme.text }]}>
+                    Lessons
+                  </ThemedText>
+                </View>
+                <View style={styles.subjectProgressCountRow}>
+                  <ThemedText style={[styles.subjectProgressCount, { color: graduationProgress.requirements.lessons.met ? "#10B981" : theme.textSecondary }]}>
+                    {graduationProgress.requirements.lessons.current}/{graduationProgress.requirements.lessons.required}
+                  </ThemedText>
+                  {graduationProgress.requirements.lessons.met ? (
+                    <Feather name="check-circle" size={16} color="#10B981" />
+                  ) : null}
+                </View>
+              </View>
             </View>
-          ) : (
-            <View style={[styles.maxLevelBadge, { backgroundColor: "#10B981" + "20" }]}>
-              <Feather name="award" size={20} color="#10B981" />
-              <ThemedText style={[styles.maxLevelText, { color: "#10B981" }]}>
-                Maximum Level Achieved!
-              </ThemedText>
+
+            <View style={styles.subjectProgressItem}>
+              <View style={styles.subjectProgressHeader}>
+                <View style={styles.subjectProgressLabelRow}>
+                  <View style={[styles.subjectIcon, { backgroundColor: "#10B981" + "20" }]}>
+                    <Feather name="check-square" size={14} color="#10B981" />
+                  </View>
+                  <ThemedText style={[styles.subjectName, { color: theme.text }]}>
+                    Chores
+                  </ThemedText>
+                </View>
+                <View style={styles.subjectProgressCountRow}>
+                  <ThemedText style={[styles.subjectProgressCount, { color: graduationProgress.requirements.chores.met ? "#10B981" : theme.textSecondary }]}>
+                    {graduationProgress.requirements.chores.current}/{graduationProgress.requirements.chores.required}
+                  </ThemedText>
+                  {graduationProgress.requirements.chores.met ? (
+                    <Feather name="check-circle" size={16} color="#10B981" />
+                  ) : null}
+                </View>
+              </View>
             </View>
-          )}
+
+            <View style={styles.subjectProgressItem}>
+              <View style={styles.subjectProgressHeader}>
+                <View style={styles.subjectProgressLabelRow}>
+                  <View style={[styles.subjectIcon, { backgroundColor: "#FB923C" + "20" }]}>
+                    <Feather name="sun" size={14} color="#FB923C" />
+                  </View>
+                  <ThemedText style={[styles.subjectName, { color: theme.text }]}>
+                    Outdoor Activities
+                  </ThemedText>
+                </View>
+                <View style={styles.subjectProgressCountRow}>
+                  <ThemedText style={[styles.subjectProgressCount, { color: graduationProgress.requirements.outdoor.met ? "#10B981" : theme.textSecondary }]}>
+                    {graduationProgress.requirements.outdoor.current}/{graduationProgress.requirements.outdoor.required}
+                  </ThemedText>
+                  {graduationProgress.requirements.outdoor.met ? (
+                    <Feather name="check-circle" size={16} color="#10B981" />
+                  ) : null}
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.subjectProgressItem}>
+              <View style={styles.subjectProgressHeader}>
+                <View style={styles.subjectProgressLabelRow}>
+                  <View style={[styles.subjectIcon, { backgroundColor: "#EC4899" + "20" }]}>
+                    <Feather name="heart" size={14} color="#EC4899" />
+                  </View>
+                  <ThemedText style={[styles.subjectName, { color: theme.text }]}>
+                    Affirmations
+                  </ThemedText>
+                </View>
+                <View style={styles.subjectProgressCountRow}>
+                  <ThemedText style={[styles.subjectProgressCount, { color: graduationProgress.requirements.affirmations.met ? "#10B981" : theme.textSecondary }]}>
+                    {graduationProgress.requirements.affirmations.current}/{graduationProgress.requirements.affirmations.required}
+                  </ThemedText>
+                  {graduationProgress.requirements.affirmations.met ? (
+                    <Feather name="check-circle" size={16} color="#10B981" />
+                  ) : null}
+                </View>
+              </View>
+            </View>
+          </View>
         </View>
 
         <ThemedText type="headline" style={styles.sectionTitle}>
@@ -367,16 +222,16 @@ export default function ProfileScreen() {
           <View style={[styles.todayCard, { backgroundColor: theme.backgroundDefault }]}>
             <Feather name="book" size={24} color="#8B5CF6" />
             <ThemedText style={styles.todayValue}>
-              {dashboard?.today.flashcardsCompleted ?? 0}
+              {todayStats?.lessonsCompleted || 0}
             </ThemedText>
             <ThemedText style={[styles.todayLabel, { color: theme.textSecondary }]}>
-              Flashcards
+              Lessons
             </ThemedText>
           </View>
           <View style={[styles.todayCard, { backgroundColor: theme.backgroundDefault }]}>
             <Feather name="check-circle" size={24} color="#10B981" />
             <ThemedText style={styles.todayValue}>
-              {dashboard?.today.choresCompleted ?? 0}
+              {todayStats?.choresCompleted || 0}
             </ThemedText>
             <ThemedText style={[styles.todayLabel, { color: theme.textSecondary }]}>
               Chores
@@ -385,7 +240,7 @@ export default function ProfileScreen() {
           <View style={[styles.todayCard, { backgroundColor: theme.backgroundDefault }]}>
             <Feather name="sun" size={24} color="#FB923C" />
             <ThemedText style={styles.todayValue}>
-              {dashboard?.today.outdoorActivities ?? 0}
+              {todayStats?.outdoorActivities || 0}
             </ThemedText>
             <ThemedText style={[styles.todayLabel, { color: theme.textSecondary }]}>
               Outdoor
@@ -394,7 +249,7 @@ export default function ProfileScreen() {
           <View style={[styles.todayCard, { backgroundColor: theme.backgroundDefault }]}>
             <Feather name="heart" size={24} color="#EC4899" />
             <ThemedText style={styles.todayValue}>
-              {dashboard?.today.affirmationsViewed ?? 0}
+              {todayStats?.affirmationsViewed || 0}
             </ThemedText>
             <ThemedText style={[styles.todayLabel, { color: theme.textSecondary }]}>
               Affirmations
@@ -414,7 +269,7 @@ export default function ProfileScreen() {
               </ThemedText>
               <View style={styles.weeklyValueRow}>
                 <ThemedText type="headline" style={{ color: theme.primary }}>
-                  {dashboard?.week.daysActive ?? 0}
+                  {weekStats?.daysActive || 0}
                 </ThemedText>
                 <ThemedText style={[styles.weeklyTarget, { color: theme.textSecondary }]}>
                   / 7
@@ -427,7 +282,7 @@ export default function ProfileScreen() {
               </ThemedText>
               <View style={styles.weeklyValueRow}>
                 <ThemedText type="headline" style={{ color: theme.secondary }}>
-                  {dashboard?.week.totalPoints ?? 0}
+                  {weekStats?.totalPoints || 0}
                 </ThemedText>
               </View>
             </View>
@@ -435,11 +290,11 @@ export default function ProfileScreen() {
           <View style={styles.weeklyRow}>
             <View style={styles.weeklyItem}>
               <ThemedText style={[styles.weeklyLabel, { color: theme.textSecondary }]}>
-                Flashcards
+                Lessons
               </ThemedText>
               <View style={styles.weeklyValueRow}>
                 <ThemedText type="headline">
-                  {dashboard?.week.flashcardsCompleted ?? 0}
+                  {weekStats?.lessonsCompleted || 0}
                 </ThemedText>
               </View>
             </View>
@@ -448,16 +303,8 @@ export default function ProfileScreen() {
                 Accuracy
               </ThemedText>
               <View style={styles.weeklyValueRow}>
-                <ThemedText
-                  type="headline"
-                  style={{
-                    color:
-                      (dashboard?.week.accuracyPct ?? 0) >= 70
-                        ? theme.success
-                        : theme.text,
-                  }}
-                >
-                  {dashboard?.week.accuracyPct ?? 0}%
+                <ThemedText type="headline" style={{ color: accuracy >= 70 ? theme.success : theme.text }}>
+                  {accuracy}%
                 </ThemedText>
               </View>
             </View>
@@ -465,7 +312,7 @@ export default function ProfileScreen() {
         </View>
 
         <ThemedText type="headline" style={styles.sectionTitle}>
-          Achievements ({unlockedAchievements.length}/{unlockedAchievements.length + lockedAchievements.length})
+          Achievements ({unlockedAchievements.length}/{progress.achievements.length})
         </ThemedText>
 
         {unlockedAchievements.length > 0 ? (
@@ -514,7 +361,7 @@ export default function ProfileScreen() {
               key={achievement.id}
               style={[styles.lockedCard, { backgroundColor: theme.backgroundDefault }]}
             >
-              <View style={[styles.lockedIcon, { backgroundColor: theme.border }]}>
+              <View style={[styles.lockedIcon, { backgroundColor: theme.textSecondary + "30" }]}>
                 <Feather name="lock" size={16} color={theme.textSecondary} />
               </View>
               <ThemedText 
@@ -535,16 +382,14 @@ export default function ProfileScreen() {
           <View style={styles.statRow}>
             <View style={styles.statItem}>
               <Feather name="book" size={20} color="#8B5CF6" />
-              <ThemedText style={styles.statValue}>{totalFlashcards}</ThemedText>
+              <ThemedText style={styles.statValue}>{totalLessons}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
-                Flashcards
+                Lessons
               </ThemedText>
             </View>
             <View style={styles.statItem}>
               <Feather name="check-circle" size={20} color="#10B981" />
-              <ThemedText style={styles.statValue}>
-                {dashboard?.totals.choresCompleted ?? 0}
-              </ThemedText>
+              <ThemedText style={styles.statValue}>{progress.totalChoresCompleted}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
                 Chores
               </ThemedText>
@@ -553,18 +398,14 @@ export default function ProfileScreen() {
           <View style={styles.statRow}>
             <View style={styles.statItem}>
               <Feather name="sun" size={20} color="#FB923C" />
-              <ThemedText style={styles.statValue}>
-                {dashboard?.totals.outdoorActivities ?? 0}
-              </ThemedText>
+              <ThemedText style={styles.statValue}>{progress.totalOutdoorActivities}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
                 Outdoor
               </ThemedText>
             </View>
             <View style={styles.statItem}>
               <Feather name="heart" size={20} color="#EC4899" />
-              <ThemedText style={styles.statValue}>
-                {dashboard?.totals.affirmationsViewed ?? 0}
-              </ThemedText>
+              <ThemedText style={styles.statValue}>{progress.totalAffirmationsViewed}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
                 Affirmations
               </ThemedText>
@@ -607,11 +448,6 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  inlineError: {
-    fontSize: 12,
-    marginTop: Spacing.xs,
-    textAlign: "center",
-  },
   container: {
     paddingHorizontal: Spacing.lg,
   },
@@ -626,11 +462,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   name: {
-    marginBottom: 2,
-  },
-  switchLink: {
-    fontSize: 13,
-    textDecorationLine: "underline",
     marginBottom: Spacing.sm,
   },
   levelBadge: {
@@ -737,6 +568,13 @@ const styles = StyleSheet.create({
   balanceMessage: {
     fontSize: 14,
     marginBottom: Spacing.md,
+  },
+  xpProgressSection: {
+    marginBottom: Spacing.md,
+  },
+  xpLabel: {
+    fontSize: 12,
+    marginBottom: Spacing.xs,
   },
   subjectProgressSection: {
     gap: Spacing.sm,

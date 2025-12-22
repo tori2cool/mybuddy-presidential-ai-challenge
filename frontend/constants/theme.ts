@@ -9,6 +9,8 @@ export const Colors = {
     secondary: "#FB923C",
     success: "#10B981",
     error: "#EC4899",
+    warning: "#F59E0B",
+    info: "#3B82F6",
     text: "#1F2937",
     textSecondary: "#6B7280",
     buttonText: "#FFFFFF",
@@ -19,12 +21,15 @@ export const Colors = {
     backgroundDefault: "#FFFFFF",
     backgroundSecondary: "#F3F4F6",
     backgroundTertiary: "#E5E7EB",
+    border: "#E5E7EB",
   },
   dark: {
     primary: primaryDark,
     secondary: "#FB923C",
     success: "#10B981",
     error: "#EC4899",
+    warning: "#F59E0B",
+    info: "#60A5FA",
     text: "#F9FAFB",
     textSecondary: "#9CA3AF",
     buttonText: "#FFFFFF",
@@ -35,6 +40,7 @@ export const Colors = {
     backgroundDefault: "#1F2937",
     backgroundSecondary: "#374151",
     backgroundTertiary: "#4B5563",
+    border: "#374151",
   },
 };
 

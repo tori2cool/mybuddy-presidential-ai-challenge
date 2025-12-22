@@ -1,11 +1,24 @@
-// frontend/contexts/ProgressContent.tsx
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { DifficultyTier, SubjectId } from "@/types/models";
+import { 
+  GradeLevel, 
+  SubjectId as CurriculumSubjectId, 
+  GRADE_ORDER, 
+  LEVELS_PER_GRADE, 
+  GRADES,
+  getLevelFromPoints,
+  getRankForLevel,
+  getXpForNextLevel,
+  SUBJECTS
+} from "@/constants/curriculum";
 
 const STORAGE_KEY = "@mybuddy_progress";
+const AFFIRMATIONS_STORAGE_KEY = "@mybuddy_affirmations";
 
-const SUBJECTS: SubjectId[] = ["math", "science", "reading", "history"];
+export type DifficultyTier = "easy" | "medium" | "hard";
+export type SubjectId = CurriculumSubjectId;
+
+const SUBJECT_IDS: SubjectId[] = Object.keys(SUBJECTS) as SubjectId[];
 
 const DIFFICULTY_THRESHOLDS = {
   easy: 0,
@@ -13,19 +26,10 @@ const DIFFICULTY_THRESHOLDS = {
   hard: 40,
 };
 
-const LEVEL_THRESHOLDS = {
-  "New Kid": 0,
-  "Good Kid": 50,
-  "Great Kid": 200,
-  "Awesome Kid": 500,
-  "Amazing Kid": 1000,
-  "Super Star Kid": 2000,
-};
-
 interface DailyStats {
   date: string;
-  flashcardsCompleted: number;
-  flashcardsCorrect: number;
+  lessonsCompleted: number;
+  lessonsCorrect: number;
   choresCompleted: number;
   outdoorActivities: number;
   affirmationsViewed: number;
@@ -36,7 +40,7 @@ interface WeeklyStats {
   weekStart: string;
   totalPoints: number;
   daysActive: number;
-  flashcardsCompleted: number;
+  lessonsCompleted: number;
   choresCompleted: number;
   outdoorActivities: number;
 }
@@ -55,16 +59,15 @@ interface SubjectStats {
   correct: number;
   difficulty: DifficultyTier;
   recentResults: boolean[];
+  currentGrade: GradeLevel;
+  currentLevel: number;
 }
 
-interface BalancedProgress {
-  canLevelUp: boolean;
-  currentLevel: string;
-  nextLevel: string | null;
-  requiredPerSubject: number;
-  subjectProgress: Record<SubjectId, { current: number; required: number; met: boolean }>;
-  lowestSubject: SubjectId | null;
-  message: string;
+interface GraduationRequirements {
+  lessonsXp: number;
+  choresCompleted: number;
+  outdoorCompleted: number;
+  affirmationsViewed: number;
 }
 
 interface ProgressData {
@@ -75,10 +78,15 @@ interface ProgressData {
   dailyStats: DailyStats[];
   weeklyStats: WeeklyStats[];
   achievements: Achievement[];
-  flashcardsBySubject: Record<SubjectId, SubjectStats>;
+  lessonsBySubject: Record<SubjectId, SubjectStats>;
   totalChoresCompleted: number;
   totalOutdoorActivities: number;
   totalAffirmationsViewed: number;
+  completedChoreIds: string[];
+  completedOutdoorIds: string[];
+  currentGrade: GradeLevel;
+  currentLevel: number;
+  lessonsXp: number;
 }
 
 const defaultSubjectStats: SubjectStats = {
@@ -86,6 +94,8 @@ const defaultSubjectStats: SubjectStats = {
   correct: 0,
   difficulty: "easy",
   recentResults: [],
+  currentGrade: "preK",
+  currentLevel: 1,
 };
 
 const defaultProgress: ProgressData = {
@@ -96,7 +106,7 @@ const defaultProgress: ProgressData = {
   dailyStats: [],
   weeklyStats: [],
   achievements: [
-    { id: "first_flashcard", title: "Brain Starter", description: "Complete your first flashcard", icon: "zap", unlockedAt: null, type: "special" },
+    { id: "first_lesson", title: "Brain Starter", description: "Complete your first lesson", icon: "zap", unlockedAt: null, type: "special" },
     { id: "first_chore", title: "Helper Bee", description: "Complete your first chore", icon: "check-circle", unlockedAt: null, type: "special" },
     { id: "first_outdoor", title: "Nature Explorer", description: "Complete your first outdoor activity", icon: "sun", unlockedAt: null, type: "special" },
     { id: "streak_3", title: "On Fire!", description: "Keep a 3-day streak", icon: "flame", unlockedAt: null, type: "daily" },
@@ -105,43 +115,69 @@ const defaultProgress: ProgressData = {
     { id: "points_100", title: "Rising Star", description: "Earn 100 points", icon: "trending-up", unlockedAt: null, type: "daily" },
     { id: "points_500", title: "Superstar", description: "Earn 500 points", icon: "star", unlockedAt: null, type: "weekly" },
     { id: "points_2000", title: "Legend", description: "Earn 2000 points", icon: "award", unlockedAt: null, type: "monthly" },
-    { id: "flashcards_10", title: "Quick Learner", description: "Complete 10 flashcards", icon: "book", unlockedAt: null, type: "daily" },
-    { id: "flashcards_50", title: "Knowledge Seeker", description: "Complete 50 flashcards", icon: "book-open", unlockedAt: null, type: "weekly" },
+    { id: "lessons_10", title: "Quick Learner", description: "Complete 10 lessons", icon: "book", unlockedAt: null, type: "daily" },
+    { id: "lessons_50", title: "Knowledge Seeker", description: "Complete 50 lessons", icon: "book-open", unlockedAt: null, type: "weekly" },
     { id: "chores_7", title: "Tidy Champion", description: "Complete 7 chores", icon: "home", unlockedAt: null, type: "weekly" },
     { id: "outdoor_5", title: "Adventure Kid", description: "Complete 5 outdoor activities", icon: "compass", unlockedAt: null, type: "weekly" },
     { id: "perfect_day", title: "Perfect Day", description: "Complete activities in all categories in one day", icon: "sun", unlockedAt: null, type: "daily" },
-    { id: "medium_math", title: "Math Whiz", description: "Reach Medium difficulty in Math", icon: "grid", unlockedAt: null, type: "special" },
-    { id: "medium_science", title: "Science Star", description: "Reach Medium difficulty in Science", icon: "zap", unlockedAt: null, type: "special" },
-    { id: "medium_reading", title: "Bookworm", description: "Reach Medium difficulty in Reading", icon: "book-open", unlockedAt: null, type: "special" },
-    { id: "medium_history", title: "History Buff", description: "Reach Medium difficulty in History", icon: "globe", unlockedAt: null, type: "special" },
-    { id: "hard_unlocked", title: "Master Student", description: "Reach Hard difficulty in any subject", icon: "award", unlockedAt: null, type: "special" },
-    { id: "balanced_learner", title: "Balanced Learner", description: "Get 10+ correct in all subjects", icon: "target", unlockedAt: null, type: "special" },
+    { id: "level_10", title: "First Rank Complete", description: "Reach Level 10", icon: "award", unlockedAt: null, type: "special" },
+    { id: "grade_k", title: "Kindergarten Ready", description: "Graduate Pre-K", icon: "star", unlockedAt: null, type: "special" },
+    { id: "balanced_learner", title: "Balanced Learner", description: "Study all 10 subjects", icon: "target", unlockedAt: null, type: "special" },
   ],
-  flashcardsBySubject: {
-    math: { ...defaultSubjectStats },
-    science: { ...defaultSubjectStats },
-    reading: { ...defaultSubjectStats },
-    history: { ...defaultSubjectStats },
-  },
+  lessonsBySubject: Object.fromEntries(
+    SUBJECT_IDS.map(id => [id, { ...defaultSubjectStats }])
+  ) as Record<SubjectId, SubjectStats>,
   totalChoresCompleted: 0,
   totalOutdoorActivities: 0,
   totalAffirmationsViewed: 0,
+  completedChoreIds: [],
+  completedOutdoorIds: [],
+  currentGrade: "preK",
+  currentLevel: 1,
+  lessonsXp: 0,
 };
+
+interface LevelInfo {
+  globalLevel: number;
+  grade: GradeLevel;
+  gradeLevel: number;
+  rank: string;
+  gradeInfo: typeof GRADES[GradeLevel];
+  xpProgress: { current: number; required: number; progress: number };
+}
+
+interface GraduationProgress {
+  canGraduate: boolean;
+  requirements: {
+    lessons: { current: number; required: number; met: boolean };
+    chores: { current: number; required: number; met: boolean };
+    outdoor: { current: number; required: number; met: boolean };
+    affirmations: { current: number; required: number; met: boolean };
+  };
+  overallProgress: number;
+}
 
 interface ProgressContextType {
   progress: ProgressData;
   isLoading: boolean;
-  addFlashcardResult: (subject: string, correct: boolean) => void;
-  addChoreCompleted: () => void;
-  addOutdoorActivity: () => void;
+  addLessonResult: (subject: SubjectId, correct: boolean) => void;
+  addChoreCompleted: (choreId?: string) => void;
+  addOutdoorActivity: (activityId?: string) => void;
   addAffirmationViewed: () => void;
   getTodayStats: () => DailyStats | null;
   getThisWeekStats: () => WeeklyStats | null;
   getNewAchievements: () => Achievement[];
   getSubjectDifficulty: (subject: SubjectId) => DifficultyTier;
-  getBalancedProgress: () => BalancedProgress;
-  getRewardLevel: () => { level: string; icon: string; color: string; nextAt: number | null; progress: number };
+  getLevelInfo: () => LevelInfo;
+  getGraduationProgress: () => GraduationProgress;
+  isChoreCompleted: (choreId: string) => boolean;
+  isOutdoorCompleted: (activityId: string) => boolean;
+  toggleChore: (choreId: string, points: number) => void;
+  toggleOutdoor: (activityId: string, points: number) => void;
   resetProgress: () => void;
+  customAffirmations: string[];
+  addCustomAffirmation: (text: string) => void;
+  removeCustomAffirmation: (index: number) => void;
 }
 
 const ProgressContext = createContext<ProgressContextType | null>(null);
@@ -172,7 +208,7 @@ function isYesterday(dateStr: string): boolean {
   return dateStr === yesterday.toISOString().split("T")[0];
 }
 
-function calculateDifficulty(correct: number, recentResults: boolean[]): DifficultyTier {
+function calculateDifficulty(correct: number): DifficultyTier {
   if (correct >= DIFFICULTY_THRESHOLDS.hard) {
     return "hard";
   } else if (correct >= DIFFICULTY_THRESHOLDS.medium) {
@@ -189,9 +225,11 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
   const [progress, setProgress] = useState<ProgressData>(defaultProgress);
   const [isLoading, setIsLoading] = useState(true);
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
+  const [customAffirmations, setCustomAffirmations] = useState<string[]>([]);
 
   useEffect(() => {
     loadProgress();
+    loadCustomAffirmations();
   }, []);
 
   const loadProgress = async () => {
@@ -208,19 +246,31 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
           });
         }
         
-        SUBJECTS.forEach(subject => {
-          if (!merged.flashcardsBySubject[subject]) {
-            merged.flashcardsBySubject[subject] = { ...defaultSubjectStats };
+        if (!merged.lessonsBySubject) {
+          merged.lessonsBySubject = defaultProgress.lessonsBySubject;
+        }
+        
+        SUBJECT_IDS.forEach(subject => {
+          if (!merged.lessonsBySubject[subject]) {
+            merged.lessonsBySubject[subject] = { ...defaultSubjectStats };
           } else {
-            const existing = merged.flashcardsBySubject[subject];
-            merged.flashcardsBySubject[subject] = {
+            const existing = merged.lessonsBySubject[subject];
+            merged.lessonsBySubject[subject] = {
               completed: existing.completed || 0,
               correct: existing.correct || 0,
-              difficulty: existing.difficulty || calculateDifficulty(existing.correct || 0, []),
+              difficulty: existing.difficulty || calculateDifficulty(existing.correct || 0),
               recentResults: existing.recentResults || [],
+              currentGrade: existing.currentGrade || "preK",
+              currentLevel: existing.currentLevel || 1,
             };
           }
         });
+        
+        if (!merged.completedChoreIds) merged.completedChoreIds = [];
+        if (!merged.completedOutdoorIds) merged.completedOutdoorIds = [];
+        if (!merged.lessonsXp) merged.lessonsXp = 0;
+        if (!merged.currentGrade) merged.currentGrade = "preK";
+        if (!merged.currentLevel) merged.currentLevel = 1;
         
         setProgress(merged);
       }
@@ -231,6 +281,17 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
     }
   };
 
+  const loadCustomAffirmations = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(AFFIRMATIONS_STORAGE_KEY);
+      if (stored) {
+        setCustomAffirmations(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error("Failed to load custom affirmations:", error);
+    }
+  };
+
   const saveProgress = useCallback(async (newProgress: ProgressData) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newProgress));
@@ -238,6 +299,30 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
       console.error("Failed to save progress:", error);
     }
   }, []);
+
+  const saveCustomAffirmations = useCallback(async (affirmations: string[]) => {
+    try {
+      await AsyncStorage.setItem(AFFIRMATIONS_STORAGE_KEY, JSON.stringify(affirmations));
+    } catch (error) {
+      console.error("Failed to save custom affirmations:", error);
+    }
+  }, []);
+
+  const addCustomAffirmation = useCallback((text: string) => {
+    setCustomAffirmations(prev => {
+      const updated = [...prev, text];
+      saveCustomAffirmations(updated);
+      return updated;
+    });
+  }, [saveCustomAffirmations]);
+
+  const removeCustomAffirmation = useCallback((index: number) => {
+    setCustomAffirmations(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      saveCustomAffirmations(updated);
+      return updated;
+    });
+  }, [saveCustomAffirmations]);
 
   const updateStreak = useCallback((currentProgress: ProgressData): ProgressData => {
     const today = getToday();
@@ -271,8 +356,8 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
       const existing = dailyStats[existingIndex];
       dailyStats[existingIndex] = {
         ...existing,
-        flashcardsCompleted: existing.flashcardsCompleted + (update.flashcardsCompleted || 0),
-        flashcardsCorrect: existing.flashcardsCorrect + (update.flashcardsCorrect || 0),
+        lessonsCompleted: existing.lessonsCompleted + (update.lessonsCompleted || 0),
+        lessonsCorrect: existing.lessonsCorrect + (update.lessonsCorrect || 0),
         choresCompleted: existing.choresCompleted + (update.choresCompleted || 0),
         outdoorActivities: existing.outdoorActivities + (update.outdoorActivities || 0),
         affirmationsViewed: existing.affirmationsViewed + (update.affirmationsViewed || 0),
@@ -281,8 +366,8 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
     } else {
       dailyStats.push({
         date: today,
-        flashcardsCompleted: update.flashcardsCompleted || 0,
-        flashcardsCorrect: update.flashcardsCorrect || 0,
+        lessonsCompleted: update.lessonsCompleted || 0,
+        lessonsCorrect: update.lessonsCorrect || 0,
         choresCompleted: update.choresCompleted || 0,
         outdoorActivities: update.outdoorActivities || 0,
         affirmationsViewed: update.affirmationsViewed || 0,
@@ -312,9 +397,9 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
         ...existing,
         totalPoints: existing.totalPoints + points,
         daysActive: isNewDay ? existing.daysActive + 1 : existing.daysActive,
-        flashcardsCompleted: currentProgress.dailyStats
+        lessonsCompleted: currentProgress.dailyStats
           .filter(s => s.date >= weekStart)
-          .reduce((acc, s) => acc + s.flashcardsCompleted, 0),
+          .reduce((acc, s) => acc + s.lessonsCompleted, 0),
         choresCompleted: currentProgress.dailyStats
           .filter(s => s.date >= weekStart)
           .reduce((acc, s) => acc + s.choresCompleted, 0),
@@ -327,7 +412,7 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
         weekStart,
         totalPoints: points,
         daysActive: 1,
-        flashcardsCompleted: 0,
+        lessonsCompleted: 0,
         choresCompleted: 0,
         outdoorActivities: 0,
       });
@@ -338,6 +423,15 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
     }
 
     return { ...currentProgress, weeklyStats };
+  }, []);
+
+  const updateLevelFromXp = useCallback((currentProgress: ProgressData): ProgressData => {
+    const levelInfo = getLevelFromPoints(currentProgress.lessonsXp);
+    return {
+      ...currentProgress,
+      currentGrade: levelInfo.grade,
+      currentLevel: levelInfo.level,
+    };
   }, []);
 
   const checkAchievements = useCallback((currentProgress: ProgressData): ProgressData => {
@@ -354,10 +448,10 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
       }
     };
 
-    const totalFlashcards = Object.values(currentProgress.flashcardsBySubject)
+    const totalLessons = Object.values(currentProgress.lessonsBySubject)
       .reduce((acc, s) => acc + s.completed, 0);
 
-    checkAndUnlock("first_flashcard", totalFlashcards >= 1);
+    checkAndUnlock("first_lesson", totalLessons >= 1);
     checkAndUnlock("first_chore", currentProgress.totalChoresCompleted >= 1);
     checkAndUnlock("first_outdoor", currentProgress.totalOutdoorActivities >= 1);
     checkAndUnlock("streak_3", currentProgress.currentStreak >= 3);
@@ -366,29 +460,25 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
     checkAndUnlock("points_100", currentProgress.totalPoints >= 100);
     checkAndUnlock("points_500", currentProgress.totalPoints >= 500);
     checkAndUnlock("points_2000", currentProgress.totalPoints >= 2000);
-    checkAndUnlock("flashcards_10", totalFlashcards >= 10);
-    checkAndUnlock("flashcards_50", totalFlashcards >= 50);
+    checkAndUnlock("lessons_10", totalLessons >= 10);
+    checkAndUnlock("lessons_50", totalLessons >= 50);
     checkAndUnlock("chores_7", currentProgress.totalChoresCompleted >= 7);
     checkAndUnlock("outdoor_5", currentProgress.totalOutdoorActivities >= 5);
     
     if (todayStats) {
       checkAndUnlock("perfect_day", 
-        todayStats.flashcardsCompleted > 0 && 
+        todayStats.lessonsCompleted > 0 && 
         todayStats.choresCompleted > 0 && 
         todayStats.outdoorActivities > 0
       );
     }
 
-    checkAndUnlock("medium_math", currentProgress.flashcardsBySubject.math?.difficulty === "medium" || currentProgress.flashcardsBySubject.math?.difficulty === "hard");
-    checkAndUnlock("medium_science", currentProgress.flashcardsBySubject.science?.difficulty === "medium" || currentProgress.flashcardsBySubject.science?.difficulty === "hard");
-    checkAndUnlock("medium_reading", currentProgress.flashcardsBySubject.reading?.difficulty === "medium" || currentProgress.flashcardsBySubject.reading?.difficulty === "hard");
-    checkAndUnlock("medium_history", currentProgress.flashcardsBySubject.history?.difficulty === "medium" || currentProgress.flashcardsBySubject.history?.difficulty === "hard");
+    const levelInfo = getLevelFromPoints(currentProgress.lessonsXp);
+    checkAndUnlock("level_10", levelInfo.globalLevel >= 10);
+    checkAndUnlock("grade_k", GRADE_ORDER.indexOf(levelInfo.grade) >= 1);
     
-    const anyHard = SUBJECTS.some(s => currentProgress.flashcardsBySubject[s]?.difficulty === "hard");
-    checkAndUnlock("hard_unlocked", anyHard);
-    
-    const allSubjectsMin10 = SUBJECTS.every(s => (currentProgress.flashcardsBySubject[s]?.correct || 0) >= 10);
-    checkAndUnlock("balanced_learner", allSubjectsMin10);
+    const subjectsStudied = SUBJECT_IDS.filter(s => currentProgress.lessonsBySubject[s]?.completed > 0).length;
+    checkAndUnlock("balanced_learner", subjectsStudied >= 10);
 
     if (newlyUnlocked.length > 0) {
       setNewAchievements(prev => [...prev, ...newlyUnlocked]);
@@ -397,14 +487,12 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
     return { ...currentProgress, achievements };
   }, []);
 
-  const addFlashcardResult = useCallback((subject: string, correct: boolean) => {
-    const subjectId = subject as SubjectId;
-    
+  const addLessonResult = useCallback((subject: SubjectId, correct: boolean) => {
     setProgress(prev => {
       const points = correct ? 10 : 2;
       let updated = updateStreak(prev);
       
-      const subjectStats = updated.flashcardsBySubject[subjectId] || { ...defaultSubjectStats };
+      const subjectStats = updated.lessonsBySubject[subject] || { ...defaultSubjectStats };
       const newCorrect = subjectStats.correct + (correct ? 1 : 0);
       
       let recentResults = [...(subjectStats.recentResults || []), correct];
@@ -412,25 +500,30 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
         recentResults = recentResults.slice(-10);
       }
       
-      const newDifficulty = calculateDifficulty(newCorrect, recentResults);
+      const newDifficulty = calculateDifficulty(newCorrect);
       
       updated = {
         ...updated,
         totalPoints: updated.totalPoints + points,
-        flashcardsBySubject: {
-          ...updated.flashcardsBySubject,
-          [subjectId]: {
+        lessonsXp: updated.lessonsXp + points,
+        lessonsBySubject: {
+          ...updated.lessonsBySubject,
+          [subject]: {
             completed: subjectStats.completed + 1,
             correct: newCorrect,
             difficulty: newDifficulty,
             recentResults,
+            currentGrade: subjectStats.currentGrade,
+            currentLevel: subjectStats.currentLevel,
           },
         },
       };
 
+      updated = updateLevelFromXp(updated);
+
       updated = updateDailyStats(updated, {
-        flashcardsCompleted: 1,
-        flashcardsCorrect: correct ? 1 : 0,
+        lessonsCompleted: 1,
+        lessonsCorrect: correct ? 1 : 0,
         totalPoints: points,
       });
 
@@ -440,9 +533,9 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
       saveProgress(updated);
       return updated;
     });
-  }, [updateStreak, updateDailyStats, updateWeeklyStats, checkAchievements, saveProgress]);
+  }, [updateStreak, updateDailyStats, updateWeeklyStats, updateLevelFromXp, checkAchievements, saveProgress]);
 
-  const addChoreCompleted = useCallback(() => {
+  const addChoreCompleted = useCallback((choreId?: string) => {
     setProgress(prev => {
       const points = 15;
       let updated = updateStreak(prev);
@@ -466,7 +559,7 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
     });
   }, [updateStreak, updateDailyStats, updateWeeklyStats, checkAchievements, saveProgress]);
 
-  const addOutdoorActivity = useCallback(() => {
+  const addOutdoorActivity = useCallback((activityId?: string) => {
     setProgress(prev => {
       const points = 20;
       let updated = updateStreak(prev);
@@ -489,6 +582,70 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
       return updated;
     });
   }, [updateStreak, updateDailyStats, updateWeeklyStats, checkAchievements, saveProgress]);
+
+  const toggleChore = useCallback((choreId: string, points: number) => {
+    setProgress(prev => {
+      const isCompleted = prev.completedChoreIds.includes(choreId);
+      let updated = { ...prev };
+      
+      if (isCompleted) {
+        updated.completedChoreIds = prev.completedChoreIds.filter(id => id !== choreId);
+        updated.totalPoints = Math.max(0, prev.totalPoints - points);
+        updated.totalChoresCompleted = Math.max(0, prev.totalChoresCompleted - 1);
+      } else {
+        updated = updateStreak(prev);
+        updated.completedChoreIds = [...prev.completedChoreIds, choreId];
+        updated.totalPoints = prev.totalPoints + points;
+        updated.totalChoresCompleted = prev.totalChoresCompleted + 1;
+        
+        updated = updateDailyStats(updated, {
+          choresCompleted: 1,
+          totalPoints: points,
+        });
+        updated = updateWeeklyStats(updated, points);
+        updated = checkAchievements(updated);
+      }
+      
+      saveProgress(updated);
+      return updated;
+    });
+  }, [updateStreak, updateDailyStats, updateWeeklyStats, checkAchievements, saveProgress]);
+
+  const toggleOutdoor = useCallback((activityId: string, points: number) => {
+    setProgress(prev => {
+      const isCompleted = prev.completedOutdoorIds.includes(activityId);
+      let updated = { ...prev };
+      
+      if (isCompleted) {
+        updated.completedOutdoorIds = prev.completedOutdoorIds.filter(id => id !== activityId);
+        updated.totalPoints = Math.max(0, prev.totalPoints - points);
+        updated.totalOutdoorActivities = Math.max(0, prev.totalOutdoorActivities - 1);
+      } else {
+        updated = updateStreak(prev);
+        updated.completedOutdoorIds = [...prev.completedOutdoorIds, activityId];
+        updated.totalPoints = prev.totalPoints + points;
+        updated.totalOutdoorActivities = prev.totalOutdoorActivities + 1;
+        
+        updated = updateDailyStats(updated, {
+          outdoorActivities: 1,
+          totalPoints: points,
+        });
+        updated = updateWeeklyStats(updated, points);
+        updated = checkAchievements(updated);
+      }
+      
+      saveProgress(updated);
+      return updated;
+    });
+  }, [updateStreak, updateDailyStats, updateWeeklyStats, checkAchievements, saveProgress]);
+
+  const isChoreCompleted = useCallback((choreId: string): boolean => {
+    return progress.completedChoreIds.includes(choreId);
+  }, [progress.completedChoreIds]);
+
+  const isOutdoorCompleted = useCallback((activityId: string): boolean => {
+    return progress.completedOutdoorIds.includes(activityId);
+  }, [progress.completedOutdoorIds]);
 
   const addAffirmationViewed = useCallback(() => {
     setProgress(prev => {
@@ -531,136 +688,102 @@ export function ProgressProvider({ children }: ProgressProviderProps) {
   }, [newAchievements]);
 
   const getSubjectDifficulty = useCallback((subject: SubjectId): DifficultyTier => {
-    return progress.flashcardsBySubject[subject]?.difficulty || "easy";
-  }, [progress.flashcardsBySubject]);
+    return progress.lessonsBySubject[subject]?.difficulty || "easy";
+  }, [progress.lessonsBySubject]);
 
-  const getBalancedProgress = useCallback((): BalancedProgress => {
-    const subjectCorrects = SUBJECTS.map(s => progress.flashcardsBySubject[s]?.correct || 0);
-    const minCorrect = Math.min(...subjectCorrects);
-    const totalCorrect = subjectCorrects.reduce((a, b) => a + b, 0);
-    
-    const levels = Object.entries(LEVEL_THRESHOLDS).sort((a, b) => b[1] - a[1]);
-    let currentLevel = "New Kid";
-    let nextLevel: string | null = null;
-    let nextThreshold = LEVEL_THRESHOLDS["Good Kid"];
-    
-    for (let i = levels.length - 1; i >= 0; i--) {
-      const [levelName, threshold] = levels[i];
-      const requiredPerSubject = Math.ceil(threshold / SUBJECTS.length);
-      
-      if (minCorrect >= requiredPerSubject) {
-        currentLevel = levelName;
-        if (i > 0) {
-          nextLevel = levels[i - 1][0];
-          nextThreshold = levels[i - 1][1];
-        } else {
-          nextLevel = null;
-          nextThreshold = 0;
-        }
-      }
-    }
-    
-    const requiredPerSubject = nextLevel ? Math.ceil(nextThreshold / SUBJECTS.length) : 0;
-    
-    const subjectProgress: Record<SubjectId, { current: number; required: number; met: boolean }> = {} as any;
-    let lowestSubject: SubjectId | null = null;
-    let lowestValue = Infinity;
-    
-    SUBJECTS.forEach(subject => {
-      const current = progress.flashcardsBySubject[subject]?.correct || 0;
-      const met = current >= requiredPerSubject;
-      subjectProgress[subject] = { current, required: requiredPerSubject, met };
-      
-      if (current < lowestValue) {
-        lowestValue = current;
-        lowestSubject = subject;
-      }
-    });
-    
-    const canLevelUp = nextLevel === null || SUBJECTS.every(s => subjectProgress[s].met);
-    
-    let message = "";
-    if (nextLevel === null) {
-      message = "You've reached the highest level!";
-    } else if (canLevelUp) {
-      message = `Ready to become ${nextLevel}!`;
-    } else {
-      const subjectsNeeded = SUBJECTS.filter(s => !subjectProgress[s].met);
-      const subjectNames = subjectsNeeded.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
-      message = `Need more correct answers in: ${subjectNames}`;
-    }
+  const getLevelInfo = useCallback((): LevelInfo => {
+    const { grade, level, globalLevel } = getLevelFromPoints(progress.lessonsXp);
+    const gradeInfo = GRADES[grade];
+    const rank = getRankForLevel(grade, level);
+    const xpProgress = getXpForNextLevel(progress.lessonsXp);
     
     return {
-      canLevelUp,
-      currentLevel,
-      nextLevel,
-      requiredPerSubject,
-      subjectProgress,
-      lowestSubject,
-      message,
+      globalLevel,
+      grade,
+      gradeLevel: level,
+      rank,
+      gradeInfo,
+      xpProgress,
     };
-  }, [progress.flashcardsBySubject]);
+  }, [progress.lessonsXp]);
 
-  const getRewardLevel = useCallback(() => {
-    const balancedProgress = getBalancedProgress();
-    const levelColors: Record<string, { icon: string; color: string }> = {
-      "Super Star Kid": { icon: "star", color: "#F59E0B" },
-      "Amazing Kid": { icon: "award", color: "#8B5CF6" },
-      "Awesome Kid": { icon: "sun", color: "#3B82F6" },
-      "Great Kid": { icon: "thumbs-up", color: "#10B981" },
-      "Good Kid": { icon: "smile", color: "#FB923C" },
-      "New Kid": { icon: "user", color: "#9CA3AF" },
+  const getGraduationProgress = useCallback((): GraduationProgress => {
+    const levelInfo = getLevelInfo();
+    const gradeIndex = GRADE_ORDER.indexOf(levelInfo.grade);
+    
+    const baseRequirements = {
+      lessons: (gradeIndex + 1) * 100,
+      chores: (gradeIndex + 1) * 10,
+      outdoor: (gradeIndex + 1) * 5,
+      affirmations: (gradeIndex + 1) * 20,
     };
     
-    const { icon, color } = levelColors[balancedProgress.currentLevel] || levelColors["New Kid"];
-    const nextAt = balancedProgress.nextLevel ? LEVEL_THRESHOLDS[balancedProgress.nextLevel as keyof typeof LEVEL_THRESHOLDS] : null;
-    const currentThreshold = LEVEL_THRESHOLDS[balancedProgress.currentLevel as keyof typeof LEVEL_THRESHOLDS] || 0;
-    
-    const minCorrect = Math.min(...SUBJECTS.map(s => progress.flashcardsBySubject[s]?.correct || 0));
-    const effectiveProgress = minCorrect * SUBJECTS.length;
-    
-    let progressPercent = 0;
-    if (nextAt !== null) {
-      progressPercent = Math.min(((effectiveProgress - currentThreshold) / (nextAt - currentThreshold)) * 100, 100);
-    } else {
-      progressPercent = 100;
-    }
-    
-    return {
-      level: balancedProgress.currentLevel,
-      icon,
-      color,
-      nextAt,
-      progress: progressPercent,
+    const requirements = {
+      lessons: {
+        current: progress.lessonsXp,
+        required: baseRequirements.lessons,
+        met: progress.lessonsXp >= baseRequirements.lessons,
+      },
+      chores: {
+        current: progress.totalChoresCompleted,
+        required: baseRequirements.chores,
+        met: progress.totalChoresCompleted >= baseRequirements.chores,
+      },
+      outdoor: {
+        current: progress.totalOutdoorActivities,
+        required: baseRequirements.outdoor,
+        met: progress.totalOutdoorActivities >= baseRequirements.outdoor,
+      },
+      affirmations: {
+        current: progress.totalAffirmationsViewed,
+        required: baseRequirements.affirmations,
+        met: progress.totalAffirmationsViewed >= baseRequirements.affirmations,
+      },
     };
-  }, [getBalancedProgress, progress.flashcardsBySubject]);
+    
+    const progressValues = Object.values(requirements).map(r => 
+      Math.min(1, r.current / r.required)
+    );
+    const overallProgress = progressValues.reduce((a, b) => a + b, 0) / progressValues.length;
+    
+    const canGraduate = Object.values(requirements).every(r => r.met);
+    
+    return { canGraduate, requirements, overallProgress };
+  }, [progress, getLevelInfo]);
 
-  const resetProgress = useCallback(async () => {
+  const resetProgress = useCallback(() => {
     setProgress(defaultProgress);
-    await AsyncStorage.removeItem(STORAGE_KEY);
-  }, []);
+    saveProgress(defaultProgress);
+  }, [saveProgress]);
+
+  const value: ProgressContextType = {
+    progress,
+    isLoading,
+    addLessonResult,
+    addChoreCompleted,
+    addOutdoorActivity,
+    addAffirmationViewed,
+    getTodayStats,
+    getThisWeekStats,
+    getNewAchievements,
+    getSubjectDifficulty,
+    getLevelInfo,
+    getGraduationProgress,
+    isChoreCompleted,
+    isOutdoorCompleted,
+    toggleChore,
+    toggleOutdoor,
+    resetProgress,
+    customAffirmations,
+    addCustomAffirmation,
+    removeCustomAffirmation,
+  };
 
   return (
-    <ProgressContext.Provider
-      value={{
-        progress,
-        isLoading,
-        addFlashcardResult,
-        addChoreCompleted,
-        addOutdoorActivity,
-        addAffirmationViewed,
-        getTodayStats,
-        getThisWeekStats,
-        getNewAchievements,
-        getSubjectDifficulty,
-        getBalancedProgress,
-        getRewardLevel,
-        resetProgress,
-      }}
-    >
+    <ProgressContext.Provider value={value}>
       {children}
     </ProgressContext.Provider>
   );
 }
 
-export { DifficultyTier, SubjectId, SUBJECTS, DIFFICULTY_THRESHOLDS };
+export { DIFFICULTY_THRESHOLDS, SUBJECT_IDS as SUBJECTS };
