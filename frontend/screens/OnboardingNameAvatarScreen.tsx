@@ -1,15 +1,6 @@
-import React, { useState } from "react";
-import {
-  View,
-  StyleSheet,
-  TextInput,
-  Image,
-  Pressable,
-  ScrollView,
-  Platform,
-} from "react-native";
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { createChild } from "@/services/childrenService";
+import { useState } from "react";
+import { View, StyleSheet, TextInput, Image, Pressable, ScrollView } from "react-native";
+import { useRoute, RouteProp } from "@react-navigation/native";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Button } from "@/components/Button";
@@ -17,7 +8,6 @@ import { OnboardingParamList } from "@/navigation/OnboardingNavigator";
 import { Spacing, Typography, BorderRadius } from "@/constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/hooks/useTheme";
-import { DatePicker } from "@/components/DatePicker";
 
 const avatars = [
   { id: "astronaut", source: require("@/assets/avatars/astronaut_avatar.png") },
@@ -26,53 +16,20 @@ const avatars = [
   { id: "explorer", source: require("@/assets/avatars/explorer_avatar.png") },
   { id: "scientist", source: require("@/assets/avatars/scientist_avatar.png") },
   { id: "musician", source: require("@/assets/avatars/musician_avatar.png") },
-] as const;
+];
 
-type Props = NativeStackScreenProps<OnboardingParamList, "NameAvatar"> & {
-  onComplete: (childId: string) => void | Promise<void>;
-};
+type NameAvatarScreenRouteProp = RouteProp<OnboardingParamList, "NameAvatar">;
 
-export default function OnboardingNameAvatarScreen({ route, onComplete }: Props) {
+export default function OnboardingNameAvatarScreen() {
+  const route = useRoute<NameAvatarScreenRouteProp>();
+  const { onComplete } = route.params;
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-
-  const { interests } = route.params;
-
   const [name, setName] = useState("");
-  const [birthday, setBirthday] = useState<Date | null>(null);
-  const [showPicker, setShowPicker] = useState(false);
-  const [selectedAvatar, setSelectedAvatar] = useState<(typeof avatars)[number]["id"]>(
-    "astronaut"
-  );
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedAvatar, setSelectedAvatar] = useState("astronaut");
 
-  const handleFinish = async () => {
-    setSubmitting(true);
-    setError(null);
-
-    if (!birthday) {
-      setError("Please pick your birthday");
-      setSubmitting(false);
-      return;
-    }
-
-    try {
-      const birthdayIso = birthday.toISOString().slice(0, 10); // YYYY-MM-DD
-      const created = await createChild({
-        name: name.trim(),
-        birthday: birthdayIso,
-        avatar: selectedAvatar,
-        interests: interests ?? [],
-      });
-
-      onComplete(created.id);
-      setSubmitting(false);
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to create child");
-      setSubmitting(false);
-      return;
-    }
+  const handleFinish = () => {
+    onComplete();
   };
 
   return (
@@ -93,12 +50,11 @@ export default function OnboardingNameAvatarScreen({ route, onComplete }: Props)
         <ThemedText style={styles.subtitle}>
           Choose your avatar and tell us your name
         </ThemedText>
-
+        
         <View style={styles.section}>
           <ThemedText type="headline" style={styles.sectionTitle}>
             Pick Your Avatar
           </ThemedText>
-
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -112,7 +68,9 @@ export default function OnboardingNameAvatarScreen({ route, onComplete }: Props)
                   styles.avatarContainer,
                   {
                     borderColor:
-                      selectedAvatar === avatar.id ? theme.primary : "transparent",
+                      selectedAvatar === avatar.id
+                        ? theme.primary
+                        : "transparent",
                   },
                 ]}
               >
@@ -126,7 +84,6 @@ export default function OnboardingNameAvatarScreen({ route, onComplete }: Props)
           <ThemedText type="headline" style={styles.sectionTitle}>
             What's Your Name?
           </ThemedText>
-
           <TextInput
             value={name}
             onChangeText={setName}
@@ -143,60 +100,12 @@ export default function OnboardingNameAvatarScreen({ route, onComplete }: Props)
           />
         </View>
 
-        <View style={styles.section}>
-          <ThemedText type="headline" style={styles.sectionTitle}>
-            When is your birthday?
-          </ThemedText>
-
-          <Pressable
-            onPress={() => setShowPicker(true)}
-            style={[
-              styles.input,
-              {
-                justifyContent: "center",
-                backgroundColor: theme.backgroundDefault,
-                borderColor: theme.backgroundSecondary,
-              },
-            ]}
-          >
-            <ThemedText style={{ color: birthday ? theme.text : theme.textSecondary }}>
-              {birthday ? birthday.toLocaleDateString() : "Tap to pick your birthday"}
-            </ThemedText>
-          </Pressable>
-
-          {showPicker ? (
-            <DatePicker
-              value={birthday ?? new Date(2018, 0, 1)}
-              maximumDate={new Date()}
-              onChange={(selectedDate) => {
-                setBirthday(selectedDate);
-                if (Platform.OS !== "ios") setShowPicker(false);
-              }}
-              textColor={theme.text}
-              bgColor={theme.backgroundDefault}
-              borderColor={theme.backgroundSecondary}
-            />
-          ) : null}
-
-          {showPicker && Platform.OS === "ios" ? (
-            <View style={{ marginTop: Spacing.md }}>
-              <Button onPress={() => setShowPicker(false)}>Done</Button>
-            </View>
-          ) : null}
-        </View>
-
-        {error ? (
-          <ThemedText style={{ color: theme.error, marginBottom: Spacing.md }}>
-            {error}
-          </ThemedText>
-        ) : null}
-
         <Button
           onPress={handleFinish}
-          disabled={name.trim().length === 0 || !birthday || submitting}
+          disabled={name.trim().length === 0}
           style={styles.button}
         >
-          {submitting ? "Saving..." : "Finish Setup"}
+          Finish Setup
         </Button>
       </ScrollView>
     </ThemedView>

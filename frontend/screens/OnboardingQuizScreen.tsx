@@ -11,7 +11,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/hooks/useTheme";
 import { ProgressBar } from "@/components/ProgressBar";
 
-type QuizScreenNavigationProp = NativeStackNavigationProp<OnboardingParamList>;
+type QuizScreenNavigationProp = NativeStackNavigationProp<
+  OnboardingParamList,
+  "Quiz"
+>;
 
 const interests = [
   { id: "animals", label: "Animals", icon: "🐾" },
@@ -105,11 +108,7 @@ export default function OnboardingQuizScreen() {
         ]}
       >
         <Button
-          onPress={() =>
-            navigation.navigate("NameAvatar", {
-              interests: selected,
-            })
-          }
+          onPress={() => navigation.navigate("NameAvatar")}
           disabled={selected.length === 0}
         >
           Next
