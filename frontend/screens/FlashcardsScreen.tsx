@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { View, StyleSheet, Pressable, Modal, Dimensions, TextInput, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from "react-native";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { View, StyleSheet, Pressable, Modal, Dimensions, TextInput, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Animated, {
   useSharedValue,
@@ -14,13 +14,14 @@ import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { AsyncStatus } from "@/components/AsyncStatus";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useTheme } from "@/hooks/useTheme";
-import { useProgress, DifficultyTier, SubjectId, SUBJECTS, DIFFICULTY_THRESHOLDS } from "@/contexts/ProgressContext";
+import { DifficultyTier, SubjectId, SUBJECTS, DIFFICULTY_THRESHOLDS } from "@/contexts/ProgressContext";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { Spacing, BorderRadius, Typography } from "@/constants/theme";
 import { getSubjects } from "@/services/subjectsService";
 import { getFlashcards } from "@/services/flashcardsService";
 import { Flashcard, Subject } from "@/types/models";
 import { useCurrentChildId } from "@/contexts/ChildContext";
+import { useFocusEffect } from "@react-navigation/native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -40,7 +41,6 @@ interface FlashcardPracticeModalProps {
 
 function FlashcardPracticeModal({ visible, subject, difficulty, childId, onClose }: FlashcardPracticeModalProps) {
   const { theme } = useTheme();
-  const { addFlashcardResult } = useProgress();
   const { postEvent, flushDebouncedRefresh } = useDashboard();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
@@ -117,8 +117,7 @@ function FlashcardPracticeModal({ visible, subject, difficulty, childId, onClose
 
     setIsCorrect(correct);
     setHasChecked(true);
-    
-    addFlashcardResult(subject.id, correct);
+
 
     // API-first progress event (DashboardContext is read-only; it will refresh)
     postEvent({
@@ -406,7 +405,7 @@ function FlashcardPracticeModal({ visible, subject, difficulty, childId, onClose
 export default function FlashcardsScreen() {
   const { theme } = useTheme();
   const { childId } = useCurrentChildId();
-  const { progress, getSubjectDifficulty, getBalancedProgress } = useProgress();
+  const { data: dashboardData, source: dashboardSource, status: dashboardStatus, refreshDashboard } = useDashboard();
   const [practiceSubject, setPracticeSubject] = useState<Subject | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyTier>("easy");
@@ -436,11 +435,33 @@ export default function FlashcardsScreen() {
     };
   }, [childId]);
 
-  const balancedProgress = getBalancedProgress();
+  // Trigger a background refresh when this screen mounts or when the child changes.
+  // This ensures we eventually transition dashboard.source from cache -> network.
+  useEffect(() => {
+    if (!childId) return;
+    refreshDashboard({ force: false }).catch(() => {});
+  }, [childId, refreshDashboard]);
+
+  // Also refresh when the screen is focused (e.g. returning from other tabs).
+  useFocusEffect(
+    useCallback(() => {
+      if (!childId) return;
+      refreshDashboard({ force: false }).catch(() => {});
+    }, [childId, refreshDashboard]),
+  );
+
+  const showServerLoadingHint =
+    // Always surface fallback origin
+    dashboardSource === "fallback" ||
+    // Only show "Loading from server" when we're actively fetching and don't have usable data yet.
+    ((dashboardStatus === "loading" || dashboardStatus === "refreshing") && !dashboardData);
+
+  const balancedProgress = dashboardData?.balanced;
+  const flashcardsBySubject = dashboardData?.flashcardsBySubject;
 
   const handlePractice = (subject: Subject) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const difficulty = getSubjectDifficulty(subject.id);
+    const difficulty = (flashcardsBySubject?.[subject.id]?.difficulty ?? "easy") as DifficultyTier;
     setSelectedDifficulty(difficulty);
     setPracticeSubject(subject);
     setModalVisible(true);
@@ -449,14 +470,16 @@ export default function FlashcardsScreen() {
   const handleCloseModal = () => {
     setModalVisible(false);
     setPracticeSubject(null);
+    // ensure local difficulty state doesn't leak to next subject
+    setSelectedDifficulty("easy");
   };
 
   const getSubjectProgress = (subjectId: SubjectId) => {
-    const stats = progress.flashcardsBySubject[subjectId];
+    const stats = flashcardsBySubject?.[subjectId];
     return {
-      correct: stats?.correct || 0,
-      completed: stats?.completed || 0,
-      difficulty: stats?.difficulty || "easy",
+      correct: stats?.correct ?? 0,
+      completed: stats?.completed ?? 0,
+      difficulty: (stats?.difficulty ?? "easy") as DifficultyTier,
     };
   };
 
@@ -480,17 +503,30 @@ export default function FlashcardsScreen() {
               Level Progress
             </ThemedText>
           </View>
+
+          {showServerLoadingHint ? (
+            <ThemedText style={[styles.balanceMessage, { color: theme.textSecondary }]}>
+              Loading from server...
+            </ThemedText>
+          ) : null}
+
           <ThemedText style={[styles.balanceMessage, { color: theme.textSecondary }]}>
-            {balancedProgress.message}
+            {balancedProgress?.message ?? ""}
           </ThemedText>
+
           <View style={styles.subjectProgressContainer}>
-            {SUBJECTS.map((subjectId) => {
-              const subject = subjects.find(s => s.id === subjectId);
-              if (!subject) return null;
-              const subjectProg = balancedProgress.subjectProgress[subjectId];
-              const progressPercent = balancedProgress.requiredPerSubject > 0 
-                ? Math.min((subjectProg.current / balancedProgress.requiredPerSubject) * 100, 100)
-                : 100;
+            {balancedProgress
+              ? SUBJECTS.map((subjectId) => {
+                  const subject = subjects.find((s) => s.id === subjectId);
+                  if (!subject) return null;
+                  const subjectProg = balancedProgress.subjectProgress[subjectId];
+                  const progressPercent =
+                    balancedProgress.requiredPerSubject > 0
+                      ? Math.min(
+                          (subjectProg.current / balancedProgress.requiredPerSubject) * 100,
+                          100,
+                        )
+                      : 100;
               
               return (
                 <View key={subjectId} style={styles.subjectProgressItem}>
@@ -519,7 +555,8 @@ export default function FlashcardsScreen() {
                   </View>
                 </View>
               );
-            })}
+              })
+              : null}
           </View>
         </View>
         

@@ -2,7 +2,7 @@
 
 ## Why this exists
 
-We are migrating to a backend-driven dashboard so that **one atomic backend response** (GET `/dashboard`) becomes the single source of truth for all dashboard/progress UI. This reduces drift between multiple client-side progress models, prevents partial UI updates from conflicting local state, and simplifies refresh/offline behavior.
+We are migrating to a backend-driven dashboard so that **one atomic backend response** (GET `/children/{childId}/dashboard`) becomes the single source of truth for all dashboard/progress UI. This reduces drift between multiple client-side progress models, prevents partial UI updates from conflicting local state, and simplifies refresh/offline behavior.
 
 
 ---
@@ -63,19 +63,21 @@ Record device/OS/build info and the results.
 - [ ] Offline mode:
   - [ ] With cache: renders cached dashboard and shows non-blocking error on refresh
   - [ ] Without cache: shows retry-able offline/empty state
-- [ ] Flashcard/lesson flow (if in scope):
-  - [ ] Events POST successfully
-  - [ ] Refresh is debounced (no request storm)
-  - [ ] Leaving flow flushes a final refresh
+- [ ] Activity completion flows (if in scope):
+  - [ ] Chores modal: completing a chore posts an event; **no immediate optimistic increment** in UI
+  - [ ] Outdoor modal: completing an activity posts an event; **no immediate optimistic increment** in UI
+  - [ ] Affirmations modal/swipe: viewing posts at most once per item (deduped); **no immediate optimistic increment** in UI
+  - [ ] Flashcards modal/flow: answers post events; refresh is debounced and flushes on exit
+  - [ ] Verify counts/points change **only after** dashboard refresh (e.g., return to dashboard or manual refresh)
 - [ ] Error injection:
-  - [ ] Simulate 500/timeout on `GET /dashboard` → last known good `data` retained
+  - [ ] Simulate 500/timeout on `GET /children/{childId}/dashboard` → last known good `data` retained
   - [ ] Simulate failure on event POST → flow does not crash and user can continue/retry
 
 ### Screenshots / log evidence checklist
 
 Attach evidence (or link to logs) for the relevant items.
 
-- [ ] Network inspector screenshot/log showing `GET /dashboard` response
+- [ ] Network inspector screenshot/log showing `GET /children/{childId}/dashboard` response
 - [ ] Network inspector screenshot/log showing representative event POST(s)
 - [ ] Screenshot(s) of Profile/dashboard UI with backend data
 - [ ] Screenshot(s) of error/empty states (offline / server error)
@@ -96,7 +98,7 @@ Attach evidence (or link to logs) for the relevant items.
 - Notes: `<text>`
 
 ```
-+--------------------+         GET /dashboard         +-------------------+
++--------------------+  GET /children/{childId}/dashboard  +-------------------+
 |   React Screens    | <----------------------------> |      Backend      |
 | (Profile, etc.)    |                                 |  atomic dashboard |
 +---------+----------+                                 +---------+---------+
@@ -142,13 +144,15 @@ This guide is a **checklist-driven implementation plan** for integrating a backe
 ## Scope
 
 - Introduce `DashboardContext` (API-first) with cache-first hydration.
-- Add/standardize `dashboardService` (GET `/dashboard`) and `eventsService` (POST progress events).
+- Add/standardize `dashboardService` (GET `/children/{childId}/dashboard` or `GET /v1/children/{childId}/dashboard` depending on API base path) and `eventsService` (POST progress events).
 - Migrate consumers (starting with `ProfileScreen`) from `ProgressContext` to `DashboardContext`.
 - Keep a **temporary fallback** to the existing `ProgressContext` during migration.
   - During migration, **fallback-mapped values may diverge** from backend dashboard values.
   - This divergence is **acceptable** as long as it is clearly marked via `source: "fallback"` and is used only when backend data is unavailable/flagged off.
 - Define refresh strategy (including **debounced refresh** for flashcards), caching policy, offline/error behavior.
-- Explicitly: `ProgressContext` is **deprecated** — no new features should be added to it; goal is eventual removal (Phase 3).
+- Explicitly: `ProgressContext` is **deprecated**.
+  - **Current usage:** only for shared constants (e.g., `SUBJECTS`).
+  - No new features should be added to it; goal is eventual removal (Phase 3).
 
 Non-goals (for this document):
 - Designing backend endpoints/schemas (only integrate what backend provides).
@@ -230,88 +234,83 @@ This section is the **exact, minimal file-edit sequence** for this repo. Follow 
 These are the currently known blockers. **Do not proceed** with context wiring/screens until all three are resolved and verified end-to-end.
 
 - [ ] **Wrong endpoints**: ensure the client services target the backend’s actual routes for:
-  - `GET /dashboard` (atomic dashboard)
+  - `GET /children/{childId}/dashboard` (atomic dashboard)
   - progress event POST endpoint: `POST /children/{childId}/events/{kind}`
 - [ ] **Wrong event schema**: ensure `eventsService` sends the backend-required payload (field names/types), and that backend accepts it.
 - [x] **Optimistic mutations removed**: `DashboardContext` is read-only for dashboard/progress numbers/tiles. The only supported update mechanism is **POST event → re-fetch dashboard**.
 
 **Acceptance criteria (blockers resolved)**
-- [ ] A network capture shows `GET /dashboard` hitting the correct route and returning the expected payload.
+- [ ] A network capture shows `GET /children/{childId}/dashboard` hitting the correct route and returning the expected payload.
 - [ ] A network capture shows event POST hitting `POST /children/{childId}/events/{kind}` with the correct payload and receiving a 2xx response.
 - [x] UI dashboard/progress values change **only** after a successful dashboard refresh (not by local mutation).
 
 ### File edit sequence (checklist)
 
-1) **`frontend/services/dashboardService.ts`**
-   - [x] Verify the base URL and **exact endpoint path** for the dashboard.
-     - Implemented route: `GET /children/{childId}/dashboard`
-   - [x] Ensure response typing/normalization matches the backend dashboard payload.
-     - Service coerces/validates fields into `DashboardData`.
-   - [ ] Support cancellation if used (not currently implemented).
+> Status legend: ✅ done · 🟡 partial · ⬜ todo
 
-   **Acceptance criteria**
-   - [x] `getDashboard(childId)` makes exactly one request to `/children/{childId}/dashboard` and returns typed data.
+1) **`frontend/services/dashboardService.ts`** ✅
+   - Uses atomic dashboard endpoint: `GET /children/{childId}/dashboard`.
+   - Returns typed `DashboardData`.
+   - ⬜ (Optional) cancellation support if you see overlapping fetches.
 
-2) **`frontend/services/eventsService.ts`**
-   - [x] Verify the **exact POST endpoint path** used for events.
-     - Implemented route: `POST /children/{childId}/events/{kind}`
-   - [x] Implement/adjust `postProgressEvent(...)` payload shape to match the backend schema.
-     - Route params include: `childId`, `kind`
-     - Body includes event fields per kind (and `occurredAt`/metadata if supported by backend).
+2) **`frontend/services/eventsService.ts`** ✅
+   - Posts progress events to: `POST /children/{childId}/events/{kind}`.
+   - Payload shape aligned with backend for the implemented kinds.
 
-   **Acceptance criteria**
-   - [x] A representative event can be posted successfully from the app (2xx) to `/children/{childId}/events/{kind}`.
+3) **`frontend/contexts/DashboardContext.tsx`** 🟡
+   - ✅ Implements `data/status/error/lastUpdatedAt/source` with cache-first hydration.
+   - ✅ Read-only for dashboard fields (no optimistic dashboard mutations).
+   - ✅ Debounced refresh for flashcards + `flushDebouncedRefresh()`.
+   - ✅ Cache key versioning implemented (see **Caching policy**).
+   - ⬜ Define and implement a staleness/TTL policy (currently not enforced).
+   - ⬜ Remove or gate debug logs if any remain (keep behind `__DEV__` or a logging flag).
 
+4) **Provider wiring (app root)** ✅
+   - `DashboardProvider` wraps navigation tree (repo wiring: `frontend/App.tsx`).
 
-3) **`frontend/contexts/DashboardContext.tsx`**
-   - [ ] Implement `DashboardContext` state (`data/status/error/lastUpdatedAt/source`).
-   - [ ] Implement cache-first hydration + stale-while-revalidate.
-   - [ ] Implement `refreshDashboard()` using `dashboardService.getDashboard()`.
-   - [ ] Implement `postEventAndRefresh()` using `eventsService.postEvent()` then `refreshDashboard()`.
-   - [ ] Ensure **no optimistic mutations** of dashboard data.
+5) **Read-path migration**
 
-   **Acceptance criteria**
-   - [ ] On refresh failure, last known good `data` remains available.
-   - [ ] `postEventAndRefresh()` does not update dashboard fields until after a dashboard fetch.
+   **`frontend/screens/ProfileScreen.tsx`** 🟡
+   - ✅ Core completion displays are already dashboard-driven.
+   - ⬜ If desired, migrate remaining UI elements off `ProgressContext`:
+     - achievements
+     - weekly goals / weekly stats
+     - level progress / balanced progress widgets
 
-4) **Provider wiring (app root)**
-   - [x] Wrap the app/navigation tree in `DashboardProvider`.
-   - [x] Wiring point in this repo:
-     - `frontend/App.tsx`
-   - [x] Provider order verified (does not break auth/user/child selection dependencies).
+   **`frontend/screens/FlashcardsScreen.tsx`** ✅
+   - ✅ Completion/progress display reads migrated to `DashboardContext`.
+   - ✅ Removed `ProgressContext` display reads for completion.
 
-   **Acceptance criteria**
-   - [x] No runtime errors on app start; dashboard context is available to screens.
+6) **Activity / learning flow screens (event sources + stat bars)**
 
+   **Option A migration batches — current progress**
 
-5) **`frontend/screens/ProfileScreen.tsx`**
-   - [x] Replace reads from `ProgressContext` with `useDashboard()` (while keeping fallback mapping in the context during migration).
-   - [x] Add pull-to-refresh trigger calling `refreshDashboard()`.
-   - [x] Error UI retains last known good values (non-blocking error on refresh failure).
-   - [x] Still keeps `ProgressContext` fallbacks (via `DashboardContext` source=`"fallback"`) during migration.
+   **Batch 1 (✅ complete): stat bars now dashboard-driven**
+   - ✅ `frontend/screens/ChoresScreen.tsx` top stat bar uses `useDashboard().data`
+   - ✅ `frontend/screens/OutdoorScreen.tsx` top stat bar uses `useDashboard().data`
+   - ✅ `frontend/screens/AffirmationsScreen.tsx` top stat bar uses `useDashboard().data`
 
-   **Acceptance criteria**
-   - [x] Profile renders from cache when available; refresh updates values from backend.
+   **Batch 1.5–1.7 (✅ complete): Affirmations swipe posting fixes**
+   - ✅ Stable callbacks (avoid re-creating handlers during scroll)
+   - ✅ `onScroll` index detection for determining the active card
+   - ✅ Per-child de-dupe reset so events can post correctly when switching children
 
+   **Write-path (✅ complete for these flows):**
+- ✅ Flashcard answer → post event → debounced refresh
+- ✅ Chore completed (including modal flow) → post event → refresh
+- ✅ Outdoor activity completed (including modal flow) → post event → refresh
+- ✅ Affirmation viewed (including modal flow) → post event → refresh
 
-6) **Activity / learning flow screens (event sources)**
-   - Primary event sources in this repo include:
-     - `frontend/screens/FlashcardsScreen.tsx`
-     - `frontend/screens/ChoresScreen.tsx`
-     - `frontend/screens/OutdoorScreen.tsx`
-     - `frontend/screens/AffirmationsScreen.tsx`
-   - [x] Activity screens post events via `useDashboard().postEvent(...)`.
-   - [x] Debounced refresh flush is implemented:
-     - on flashcards close
-     - on app background via `AppState` in `DashboardProvider`
-   - [ ] **Option A (required)**: update the *top-of-screen stat displays* on these screens to render from `useDashboard().data` instead of `getTodayStats()` / `progress.*`.
-     - Current issue: dashboard backend is stable, but these screens still show stale values because they display from `ProgressContext`.
+**Implementation notes (Affirmations swipe):**
+- Uses `onScroll` index detection to determine the active card.
+- De-dupes **per session** and **per child** so each affirmation posts at most once per viewing session, and switching children resets dedupe state.
 
-   **Acceptance criteria**
-   - [x] High-frequency interactions do not create request storms.
-   - [x] A final refresh occurs at the end of the flashcard flow.
-   - [x] A final refresh is flushed when the app backgrounds.
-   - [ ] Stat displays (Today/Total/Points) match backend dashboard after refresh.
+**Acceptance criteria (updated)**
+- ✅ Stat displays (Today/Total/Points) on Chores/Outdoor/Affirmations reflect backend dashboard **after refresh**.
+- ✅ Activity flows **post events only**; there is no local progress aggregation or optimistic `ProgressContext` mutations.
+- ✅ No optimistic UI updates: counts/points do not change until the next successful `GET /children/{childId}/dashboard` (e.g., after leaving flow or manual refresh).
+- ✅ Flashcards completion UI reflects backend dashboard (no `ProgressContext` display reads).
+- ✅ Affirmations swipe flow posts exactly once per item (deduped) and continues to work after child switch.
 
 ---
 
@@ -394,52 +393,43 @@ These are the currently known blockers. **Do not proceed** with context wiring/s
 
 ### 0.5 Caching policy
 
-- [x] Cache store used (as implemented): `@react-native-async-storage/async-storage`
-- [x] Cache key (as implemented): `dashboard:v1:user:<userId>:child:<childId>`
-- [x] Cached value shape (as implemented): `{ dashboard: DashboardData, lastUpdatedAt: string }`
-- [ ] Define staleness policy (e.g., 5–15 minutes) and implement stale detection (not currently implemented).
+- ✅ Cache store used (as implemented): `@react-native-async-storage/async-storage`
+- ✅ Cache key versioning implemented (as documented/implemented):
+  - Key: `dashboard:v1:user:<userId>:child:<childId>`
+  - Bump the `v1` prefix if the cached payload shape changes.
+- ✅ Cached value shape (as implemented): `{ dashboard: DashboardData, lastUpdatedAt: string }`
+- ⬜ Staleness policy is **not yet defined/enforced**.
+  - Remaining work: define a TTL (e.g., 5–15 minutes) and when to revalidate (foreground, focus, pull-to-refresh), and implement stale detection.
 
 **Acceptance criteria**
-- [ ] Cache read/write is resilient (no crashes on corrupt/missing values).
-- [ ] Staleness logic triggers refresh on app foreground/screen focus when stale.
-
----
+- ✅ Cache read/write is resilient (no crashes on corrupt/missing values).
+- ⬜ Staleness logic triggers refresh on app foreground/screen focus when stale.
 
 ## Phase 1 — Read-path migration (ProfileScreen first)
 
-### 1.1 Migrate `ProfileScreen` to `DashboardContext`
+### 1.1 ProfileScreen status
 
-- [x] Update `ProfileScreen` to read core completion counters from `useDashboard()`.
-  - File: `frontend/screens/ProfileScreen.tsx`
-- [ ] **Option A (required)**: remove remaining *displayed stats* reads from `ProgressContext` on Profile.
-  - Specifically migrate these UI sections to **dashboard-backed fields only**:
-    - weekly stats (`getThisWeekStats()`)
-    - achievements lists
-    - balanced progress + reward level
-- [x] Add pull-to-refresh calling `refreshDashboard()`.
-- [x] Loading/error UI behavior:
-  - [x] If `data` exists and refresh fails: show non-blocking inline message.
-  - [x] If no `data` and fetch fails: falls back to derived ProgressContext dashboard shape.
+- ✅ `ProfileScreen` core completion counters are already reading from `useDashboard()`.
+- 🟡 `ProfileScreen` still may read `ProgressContext` for **non-core** display sections.
+  - Remaining work (optional / if desired): remove `ProgressContext` usage for:
+    - achievements
+    - weekly goals / weekly stats
+    - level progress / balanced progress widgets
 
 **Acceptance criteria**
-- [x] Profile screen renders quickly from cache when available.
-- [x] Pull-to-refresh triggers network call and updates UI.
-- [ ] No `ProgressContext` reads remain for completion/stats display once `DashboardData` has been expanded to include week/bySubject/streaks/achievements/balanced/reward.
+- ✅ Profile renders from cache when available; refresh updates values from backend.
+- ⬜ If the optional migration is performed: Profile has **no** `ProgressContext` reads for dashboard/progress display.
 
----
+### 1.2 Other read-only consumers
 
-### 1.2 Migrate additional read-only consumers
-
-- [ ] Identify other screens/components that read progress/dashboard data.
-  - **File path(s)**: _TBD_ (add list)
-- [ ] Replace reads from `ProgressContext` with `DashboardContext`.
-
-**Acceptance criteria**
-- [ ] No screen requires `ProgressContext` solely for dashboard rendering (except where still in migration scope).
+- ✅ `FlashcardsScreen` completion/progress display migrated to `DashboardContext`.
+- ⬜ Identify any remaining components that render progress from `ProgressContext` and migrate them.
 
 ---
 
 ## Phase 2 — Write-path migration (events + refresh)
+
+**Status (progressed):** activity flows now **post events only** and rely on **dashboard refresh** for UI updates. There is **no local progress aggregation** and **no optimistic `ProgressContext` mutations** in the migrated flows.
 
 ### 2.1 Route progress-affecting flows through `eventsService`
 
@@ -458,10 +448,9 @@ These are the currently known blockers. **Do not proceed** with context wiring/s
   - Debounced for flashcards, immediate for other event kinds.
 
 **Acceptance criteria**
-- [x] Backend becomes the authority for progress updates (POST event → refresh dashboard).
-- [ ] UI stat displays should not rely on `ProgressContext` (Option A read migration).
-
----
+- [x] Backend is the authority for progress updates (POST event → refresh dashboard).
+- [x] Migrated activity flows do not perform optimistic local increments; UI values change only after refresh.
+- [x] Modal-based completion flows (Chores/Outdoor/Affirmations/Flashcards modal) do not call `ProgressContext` mutation APIs.
 
 ### 2.2 Implement debounced refresh for flashcards
 
@@ -477,7 +466,6 @@ These are the currently known blockers. **Do not proceed** with context wiring/s
 - [x] Flashcard answering does not cause request storms.
 - [x] A final refresh occurs at the end of the flashcard flow.
 - [x] A final refresh occurs when the app backgrounds.
-
 
 ---
 
@@ -538,10 +526,17 @@ These are the currently known blockers. **Do not proceed** with context wiring/s
 - [ ] Offline mode:
   - [ ] cached dashboard renders
   - [ ] no-cache shows offline empty state
+- [ ] Activity flows (Chores/Outdoor/Affirmations/Flashcards modal):
+  - [ ] events POST successfully
+  - [ ] **no optimistic UI updates** occur during/after completion actions
+  - [ ] counts/points change only after the next successful dashboard refresh (manual refresh or returning to dashboard)
 - [ ] Flashcard flow:
   - [ ] answering posts events
   - [ ] dashboard refresh is debounced
   - [ ] leaving flow flushes refresh
+- [ ] Affirmations swipe:
+  - [ ] uses `onScroll` to determine active card
+  - [ ] per-session + per-child dedupe prevents duplicate posts
 
 ### Regression
 
@@ -577,14 +572,23 @@ These are the currently known blockers. **Do not proceed** with context wiring/s
 
 All items below must be checked before closing the integration.
 
-- [ ] `DashboardContext` is implemented, documented, and used by all dashboard/progress UI.
-- [ ] `dashboardService` + `eventsService` are the only API touchpoints for dashboard/events.
-- [ ] Cache-first hydration works and staleness policy is enforced.
-- [ ] Refresh strategies are implemented (immediate + debounced + flush).
-- [ ] Offline/error behavior matches this guide.
-- [ ] Test checklist completed (unit + integration/E2E as applicable).
-- [ ] Feature flag and fallback are removed (or explicitly documented if retained).
-- [ ] No remaining references to legacy progress data sources for dashboard UI.
+- ✅ `DashboardContext` is implemented, documented, and used by the migrated dashboard/progress UI.
+- ✅ `dashboardService` + `eventsService` are the only API touchpoints for dashboard/events.
+- 🟡 Cache-first hydration works; **staleness policy still needs definition/enforcement**.
+- ✅ Refresh strategies are implemented (immediate + debounced + flush).
+- ✅ Option A migration progress (batches):
+  - ✅ Batch 1: Chores/Outdoor/Affirmations stat bars read from `DashboardContext`
+  - ✅ Batch 1.5–1.7: Affirmations swipe posting stabilized (stable callbacks, `onScroll` index detection, per-session + per-child dedupe)
+  - ✅ Batch 3: FlashcardsScreen completion display migrated to `DashboardContext` (removed `ProgressContext` display reads)
+- ✅ Phase 2 write-path migration progressed:
+  - ✅ Activity flows post events only
+  - ✅ No optimistic `ProgressContext` mutations in Chores/Outdoor/Affirmations/Flashcards modal flows
+- 🟡 Legacy cleanup still pending:
+  - remove remaining `ProgressContext` usage on Profile for achievements/weekly goals/level widgets (if still present)
+  - remove `ProgressContext` entirely once remaining dependencies (constants like `SUBJECTS`) are relocated
+- 🟡 Housekeeping still pending:
+  - decide whether to remove debug logs or keep them gated
+  - add/expand tests (unit + integration)
 
 ---
 

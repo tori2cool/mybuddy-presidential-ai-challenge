@@ -43,7 +43,6 @@ import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
 import { IconButton } from "@/components/IconButton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useProgress } from "@/contexts/ProgressContext";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { Spacing, Typography } from "@/constants/theme";
 import { getAffirmations } from "@/services/affirmationsService";
@@ -54,7 +53,6 @@ const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function AffirmationsScreen() {
   const insets = useSafeAreaInsets();
-  const { addAffirmationViewed } = useProgress();
   const { data: dashboard, postEvent } = useDashboard();
   const { childId } = useCurrentChildId();
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -89,8 +87,6 @@ export default function AffirmationsScreen() {
   const postedViewedIdsRef = useRef<Set<string>>(new Set());
 
   const affirmationsToday = dashboard?.today?.affirmationsViewed ?? 0;
-  const affirmationsTotal = dashboard?.totals?.affirmationsViewed ?? 0;
-
   const toggleFavorite = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setFavorites((prev) =>
@@ -111,8 +107,6 @@ export default function AffirmationsScreen() {
 
       debug("markViewed: posting", { childId, affirmationId });
 
-      // Optional local progress tracking (not used for display; DashboardContext is source of truth).
-      addAffirmationViewed();
 
       if (childId) {
         postEvent({
@@ -128,7 +122,7 @@ export default function AffirmationsScreen() {
         debug("markViewed: skipped (missing childId)", { affirmationId });
       }
     },
-    [addAffirmationViewed, childId, postEvent, debug],
+    [childId, postEvent, debug],
   );
 
   // Keep FlatList callback stable while always using the latest markViewed.
@@ -244,6 +238,14 @@ export default function AffirmationsScreen() {
 
   useEffect(() => {
     debug("childId", { childId });
+  }, [childId, debug]);
+
+  // Reset per-session dedupe state when switching children so views are counted
+  // once per session per child.
+  useEffect(() => {
+    postedViewedIdsRef.current.clear();
+    lastViewedIndexRef.current = -1;
+    debug("reset view dedupe state", { childId });
   }, [childId, debug]);
 
   useEffect(() => {

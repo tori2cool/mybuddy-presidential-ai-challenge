@@ -13,6 +13,8 @@ import { ThemedView } from "@/components/ThemedView";
 import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { useTheme } from "@/hooks/useTheme";
 import { SUBJECTS, SubjectId } from "@/contexts/ProgressContext";
+// NOTE: Completion/progress display numbers on this screen come from DashboardContext only.
+// This screen should not use ProgressContext data beyond SUBJECTS/SubjectId constants.
 import { useDashboard } from "@/contexts/DashboardContext";
 import { Spacing, BorderRadius, Typography } from "@/constants/theme";
 import { useCurrentChildId } from "@/contexts/ChildContext";
@@ -226,10 +228,21 @@ export default function ProfileScreen() {
               Current Level
             </ThemedText>
             <View style={styles.currentLevelRow}>
-              <View style={[styles.levelBadgeSmall, { backgroundColor: reward.color }]}>
-                <Feather name={reward.icon as any} size={14} color="white" />
-                <ThemedText style={styles.levelTextSmall}>{reward.level}</ThemedText>
-              </View>
+              <View
+              style={[
+                styles.levelBadgeSmall,
+                { backgroundColor: reward?.color ?? theme.primary },
+              ]}
+            >
+              <Feather
+                name={(reward?.icon ?? "award") as any}
+                size={14}
+                color="white"
+              />
+              <ThemedText style={styles.levelTextSmall}>
+                {reward?.level ?? ""}
+              </ThemedText>
+            </View>
               {balancedProgress?.nextLevel ? (
                 <View style={styles.nextLevelInfo}>
                   <Feather name="arrow-right" size={16} color={theme.textSecondary} />
@@ -465,7 +478,7 @@ export default function ProfileScreen() {
         </View>
 
         <ThemedText type="headline" style={styles.sectionTitle}>
-          Achievements ({unlockedAchievements.length}/{unlockedAchievements.length + lockedAchievements.length})
+          Achievements ({unlockedAchievements.length}/{(dashboard?.achievementsUnlocked?.length ?? 0) + (dashboard?.achievementsLocked?.length ?? 0)})
         </ThemedText>
 
         {unlockedAchievements.length > 0 ? (

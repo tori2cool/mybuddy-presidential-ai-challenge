@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Feather } from "@expo/vector-icons";
@@ -11,7 +11,6 @@ import { IconButton } from "@/components/IconButton";
 import { AsyncStatus } from "@/components/AsyncStatus";
 
 import { useTheme } from "@/hooks/useTheme";
-import { useProgress } from "@/contexts/ProgressContext";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
@@ -22,7 +21,6 @@ import { useCurrentChildId } from "@/contexts/ChildContext";
 export default function ChoresScreen() {
   const { theme } = useTheme();
   const { childId } = useCurrentChildId();
-  const { addChoreCompleted } = useProgress();
   const { data: dashboard, postEvent } = useDashboard();
 
   const [chores, setChores] = useState<Chore[]>([]);
@@ -30,9 +28,6 @@ export default function ChoresScreen() {
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState<string[]>([]);
   const [extraChores, setExtraChores] = useState<Chore[]>([]);
-
-  // Track which chores have already incremented progress
-  const trackedChores = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!childId) return;
@@ -68,16 +63,12 @@ export default function ChoresScreen() {
     if (!wasCompleted) {
       // First time marking as completed in this toggle
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (!trackedChores.current.has(id)) {
-        addChoreCompleted();
-        trackedChores.current.add(id);
-        if (childId) {
-          const chore = allChores.find((c) => c.id === id);
-          postEvent({
-            kind: "chore",
-            body: { choreId: id, isExtra: chore?.isExtra ?? false },
-          }).catch(() => {});
-        }
+      if (childId) {
+        const chore = allChores.find((c) => c.id === id);
+        postEvent({
+          kind: "chore",
+          body: { choreId: id, isExtra: chore?.isExtra ?? false },
+        }).catch(() => {});
       }
     }
 
