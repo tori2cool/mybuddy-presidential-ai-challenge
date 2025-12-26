@@ -3,42 +3,9 @@ from __future__ import annotations
 from sqlalchemy import UniqueConstraint, DateTime
 from datetime import datetime, date, timezone
 from typing import Optional, List
-from sqlalchemy import Column, ForeignKey, Integer, Boolean, String, func, Index, text
-from sqlalchemy.dialects.postgresql import JSONB, insert
-from sqlalchemy.orm import Session
+from sqlalchemy import Column, ForeignKey, Integer, Boolean, String, func, Index, text, literal_column
 from sqlmodel import Field, SQLModel
-
-def record_child_event(
-    session: Session,
-    *,
-    child_id: str,
-    kind: str,
-    meta: dict | None = None,
-) -> bool:
-    """
-    Returns True if a row was inserted.
-    Returns False if it already existed for today.
-    """
-
-    stmt = (
-        insert(ChildActivityEvent)
-        .values(
-            child_id=child_id,
-            kind=kind,
-            meta=meta,
-        )
-        .on_conflict_do_nothing(
-            index_elements=["child_id", "kind"],
-            index_where=text("date(created_at) = date(now())"),
-        )
-        .returning(ChildActivityEvent.id)
-    )
-
-    result = session.execute(stmt).scalar()
-    session.commit()
-
-    return result is not None
-
+from sqlalchemy.dialects.postgresql import JSONB
 # ---------- MIXINS ----------
 
 class TimeStampedMixin(SQLModel):
@@ -91,16 +58,25 @@ class ChildActivityEvent(SQLModel, table=True):
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            index=True,
+            server_default=text("timezone('utc', now())"),
+        ),
     )
+
     meta: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+
     __table_args__ = (
         Index(
-            "uq_child_kind_per_day",
+            "uq_child_kind_dedupe_per_day",
             "child_id",
             "kind",
-            text("((created_at AT TIME ZONE 'UTC')::date)"),
+            literal_column("((created_at AT TIME ZONE 'UTC')::date)"),
+            literal_column("(coalesce(meta->>'dedupeKey',''))"),
             unique=True,
+            postgresql_where=text("(meta ? 'dedupeKey') AND (meta->>'dedupeKey' <> '')"),
         ),
     )
 

@@ -226,6 +226,7 @@ async def flashcard_answered(
         child_id=child.id,
         kind="flashcard_answered",
         meta={
+            "dedupeKey": f"flashcard:{payload.flashcardId}",
             "subjectId": payload.subjectId,
             "correct": payload.correct,
             "flashcardId": payload.flashcardId,
@@ -250,7 +251,12 @@ async def chore_completed(
         session,
         child_id=child.id,
         kind="chore_completed",
-        meta={"choreId": payload.choreId, "isExtra": payload.isExtra, "points": points},
+        meta={
+            "dedupeKey": f"chore:{payload.choreId}",
+            "choreId": payload.choreId,
+            "isExtra": payload.isExtra,
+            "points": points,
+        },
     )
 
     new_ids = await _unlock_from_current_state(session, child)
@@ -269,7 +275,12 @@ async def outdoor_completed(
         session,
         child_id=child.id,
         kind="outdoor_completed",
-        meta={"outdoorActivityId": payload.outdoorActivityId, "isDaily": payload.isDaily, "points": points},
+        meta={
+            "dedupeKey": f"outdoor:{payload.outdoorActivityId}",
+            "outdoorActivityId": payload.outdoorActivityId,
+            "isDaily": payload.isDaily,
+            "points": points,
+        },
     )
 
     new_ids = await _unlock_from_current_state(session, child)
@@ -288,7 +299,11 @@ async def affirmation_viewed(
         session,
         child_id=child.id,
         kind="affirmation_viewed",
-        meta={"affirmationId": payload.affirmationId, "points": points},
+        meta={
+            "dedupeKey": f"affirmation:{payload.affirmationId}",
+            "affirmationId": payload.affirmationId,
+            "points": points,
+        },
     )
 
     new_ids = await _unlock_from_current_state(session, child)
