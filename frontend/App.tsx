@@ -8,7 +8,7 @@ import { StatusBar } from "expo-status-bar";
 
 import RootNavigator from "@/navigation/RootNavigator";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ProgressProvider } from "@/contexts/ProgressContext";
+
 import { ChildProvider } from "@/contexts/ChildContext";
 import { DashboardProvider } from "@/contexts/DashboardContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -34,9 +34,8 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <ProgressProvider>
-          <ChildProvider>
-            <DashboardProvider>
+        <ChildProvider>
+          <DashboardProvider>
               <SafeAreaProvider>
                 <GestureHandlerRootView style={styles.root}>
                   <KeyboardProvider>
@@ -46,7 +45,6 @@ export default function App() {
               </SafeAreaProvider>
             </DashboardProvider>
           </ChildProvider>
-        </ProgressProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

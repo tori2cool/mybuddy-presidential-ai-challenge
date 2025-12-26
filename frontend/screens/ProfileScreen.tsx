@@ -12,9 +12,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { useTheme } from "@/hooks/useTheme";
-import { SUBJECTS, SubjectId } from "@/contexts/ProgressContext";
 // NOTE: Completion/progress display numbers on this screen come from DashboardContext only.
-// This screen should not use ProgressContext data beyond SUBJECTS/SubjectId constants.
 import { useDashboard } from "@/contexts/DashboardContext";
 import { Spacing, BorderRadius, Typography } from "@/constants/theme";
 import { useCurrentChildId } from "@/contexts/ChildContext";
@@ -33,6 +31,10 @@ const DIFFICULTY_LABELS = {
   medium: { label: "Medium", color: "#F59E0B" },
   hard: { label: "Hard", color: "#EF4444" },
 };
+
+type SubjectId = "math" | "science" | "reading" | "history";
+
+const SUBJECTS: SubjectId[] = ["math", "science", "reading", "history"];
 
 export default function ProfileScreen() {
   const { theme } = useTheme();

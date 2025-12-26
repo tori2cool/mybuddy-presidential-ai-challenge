@@ -15,6 +15,7 @@ from ..schemas.progress import (
     EventAckOut,
 )
 from ..schemas.dashboard import DashboardOut, AchievementOut
+from ..models import AchievementDefinition
 from ..services import progress_rules as rules
 from ..services.progress_queries import (
     insert_event,
@@ -25,12 +26,15 @@ from ..services.progress_queries import (
     compute_streaks,
     unlock_achievements,
     get_unlocked_achievements_map,
+    list_subject_ids,
 )
 
 router = APIRouter(prefix="/v1", tags=["mybuddy-progress"])
 
-def _achievement_catalog() -> dict[str, rules.AchievementDef]:
-    return {a.id: a for a in rules.ACHIEVEMENTS}
+async def _achievement_catalog(session: AsyncSession) -> dict[str, AchievementDefinition]:
+    from sqlalchemy import select
+    result = await session.execute(select(AchievementDefinition))
+    return {a.id: a for a in result.scalars().all()}
 
 async def _build_dashboard(session: AsyncSession, child: Child) -> DashboardOut:
     totals = await compute_totals(session, child_id=child.id)
@@ -39,20 +43,35 @@ async def _build_dashboard(session: AsyncSession, child: Child) -> DashboardOut:
     by_subject = await compute_flashcards_by_subject(session, child_id=child.id)
     streaks = await compute_streaks(session, child_id=child.id)
 
-    core_subjects = list(rules.SUBJECTS)
+    # Fetch database-driven config
+    core_subjects = await list_subject_ids(session)
+    level_thresholds = await rules.fetch_level_thresholds(session)
+    level_metadata = await rules.fetch_level_metadata(session)
+    points_values = await rules.fetch_points_values(session)
+
     subject_correct = {s: by_subject.get(s, {}).get("correct", 0) for s in core_subjects}
     subject_difficulty = {s: by_subject.get(s, {}).get("difficulty", "easy") for s in core_subjects}
 
-    balanced = rules.compute_balanced_progress(subject_correct, subjects=core_subjects)
-    reward = rules.reward_for_level(balanced["currentLevel"], subject_correct, subjects=core_subjects)
+    balanced = rules.compute_balanced_progress(
+        subject_correct=subject_correct,
+        subjects=core_subjects,
+        level_thresholds=level_thresholds,
+    )
+    reward = rules.reward_for_level(
+        current_level=balanced["currentLevel"],
+        subject_correct=subject_correct,
+        subjects=core_subjects,
+        level_thresholds=level_thresholds,
+        level_metadata=level_metadata,
+    )
 
     unlocked_map = await get_unlocked_achievements_map(session, child_id=child.id)
-    catalog = _achievement_catalog()
+    catalog = await _achievement_catalog(session)
 
     unlocked = []
     locked = []
-    for a in rules.ACHIEVEMENTS:
-        unlocked_at = unlocked_map.get(a.id)
+    for a_id, a in catalog.items():
+        unlocked_at = unlocked_map.get(a_id)
         if unlocked_at is not None:
             unlocked.append(
                 AchievementOut(
@@ -102,28 +121,89 @@ async def _build_dashboard(session: AsyncSession, child: Child) -> DashboardOut:
     )
 
 async def _unlock_from_current_state(session: AsyncSession, child: Child) -> list[str]:
+    """Unlock achievements based on current state."""
+    from sqlalchemy import select
+
     totals = await compute_totals(session, child_id=child.id)
     today = await compute_today_stats(session, child_id=child.id)
     by_subject = await compute_flashcards_by_subject(session, child_id=child.id)
     streaks = await compute_streaks(session, child_id=child.id)
 
-    core_subjects = list(rules.SUBJECTS)
+    # Fetch database-driven config
+    core_subjects = await list_subject_ids(session)
+    level_thresholds = await rules.fetch_level_thresholds(session)
+    points_values = await rules.fetch_points_values(session)
+
     subject_correct = {s: by_subject.get(s, {}).get("correct", 0) for s in core_subjects}
     subject_difficulty = {s: by_subject.get(s, {}).get("difficulty", "easy") for s in core_subjects}
 
-    unlockable = rules.evaluate_achievement_conditions(
-        total_points=totals["totalPoints"],
-        current_streak=streaks["currentStreak"],
-        total_flashcards=totals["totalFlashcardsCompleted"],
-        total_chores=totals["totalChoresCompleted"],
-        total_outdoor=totals["totalOutdoorActivities"],
-        today_has_flashcards=today["hasFlashcards"],
-        today_has_chores=today["hasChores"],
-        today_has_outdoor=today["hasOutdoor"],
-        subject_difficulty=subject_difficulty,
-        subject_correct=subject_correct,
-    )
-    new_ids = await unlock_achievements(session, child_id=child.id, achievement_ids=unlockable)
+    # Calculate totals for achievement checks
+    total_flashcards = totals.get("totalFlashcardsCompleted", 0)
+    total_chores = totals.get("totalChoresCompleted", 0)
+    total_outdoor = totals.get("totalOutdoorActivities", 0)
+
+    # Check for unlockable achievements
+    unlockable_ids = []
+    
+    # Points-based achievements
+    for achievement_id, threshold in [(a.id, a.points_threshold) for a in (await session.execute(select(AchievementDefinition).where(AchievementDefinition.points_threshold.is_not(None)))).scalars().all()]:
+        if threshold and totals["totalPoints"] >= threshold:
+            unlockable_ids.append(achievement_id)
+    
+    # Streak-based achievements
+    for achievement_id, threshold in [(a.id, a.streak_days_threshold) for a in (await session.execute(select(AchievementDefinition).where(AchievementDefinition.streak_days_threshold.is_not(None)))).scalars().all()]:
+        if threshold and streaks["currentStreak"] >= threshold:
+            unlockable_ids.append(achievement_id)
+    
+    # First flashcard
+    if total_flashcards >= 1 and "first_flashcard" not in unlockable_ids:
+        unlockable_ids.append("first_flashcard")
+    
+    # First chore
+    if total_chores >= 1 and "first_chore" not in unlockable_ids:
+        unlockable_ids.append("first_chore")
+    
+    # First outdoor
+    if total_outdoor >= 1 and "first_outdoor" not in unlockable_ids:
+        unlockable_ids.append("first_outdoor")
+    
+    # Flashcard counts
+    if total_flashcards >= 10 and "flashcards_10" not in unlockable_ids:
+        unlockable_ids.append("flashcards_10")
+    if total_flashcards >= 50 and "flashcards_50" not in unlockable_ids:
+        unlockable_ids.append("flashcards_50")
+    
+    # Chore counts
+    if total_chores >= 7 and "chores_7" not in unlockable_ids:
+        unlockable_ids.append("chores_7")
+    
+    # Outdoor counts
+    if total_outdoor >= 5 and "outdoor_5" not in unlockable_ids:
+        unlockable_ids.append("outdoor_5")
+    
+    # Subject difficulty achievements
+    if subject_difficulty.get("math") in ("medium", "hard") and "medium_math" not in unlockable_ids:
+        unlockable_ids.append("medium_math")
+    if subject_difficulty.get("science") in ("medium", "hard") and "medium_science" not in unlockable_ids:
+        unlockable_ids.append("medium_science")
+    if subject_difficulty.get("reading") in ("medium", "hard") and "medium_reading" not in unlockable_ids:
+        unlockable_ids.append("medium_reading")
+    if subject_difficulty.get("history") in ("medium", "hard") and "medium_history" not in unlockable_ids:
+        unlockable_ids.append("medium_history")
+    
+    # Hard difficulty
+    if any(diff == "hard" for diff in subject_difficulty.values()) and "hard_unlocked" not in unlockable_ids:
+        unlockable_ids.append("hard_unlocked")
+    
+    # Balanced learner
+    if all(subject_correct.get(s, 0) >= 10 for s in core_subjects) and "balanced_learner" not in unlockable_ids:
+        unlockable_ids.append("balanced_learner")
+    
+    # Perfect day
+    if today["hasFlashcards"] and today["hasChores"] and today["hasOutdoor"] and "perfect_day" not in unlockable_ids:
+        unlockable_ids.append("perfect_day")
+    
+    new_ids = await unlock_achievements(session, child_id=child.id, achievement_ids=unlockable_ids)
     return new_ids
 
 @router.get("/children/{child_id}/dashboard", response_model=DashboardOut)
@@ -139,7 +219,8 @@ async def flashcard_answered(
     child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
-    points = rules.POINTS["flashcard_correct"] if payload.correct else rules.POINTS["flashcard_wrong"]
+    points_values = await rules.fetch_points_values(session)
+    points = points_values["flashcard_correct"] if payload.correct else points_values["flashcard_wrong"]
     await insert_event(
         session,
         child_id=child.id,
@@ -163,7 +244,8 @@ async def chore_completed(
     child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
-    points = rules.POINTS["chore_completed"]
+    points_values = await rules.fetch_points_values(session)
+    points = points_values["chore_completed"]
     await insert_event(
         session,
         child_id=child.id,
@@ -181,7 +263,8 @@ async def outdoor_completed(
     child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
-    points = rules.POINTS["outdoor_completed"]
+    points_values = await rules.fetch_points_values(session)
+    points = points_values["outdoor_completed"]
     await insert_event(
         session,
         child_id=child.id,
@@ -199,7 +282,8 @@ async def affirmation_viewed(
     child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
-    points = rules.POINTS["affirmation_viewed"]
+    points_values = await rules.fetch_points_values(session)
+    points = points_values["affirmation_viewed"]
     await insert_event(
         session,
         child_id=child.id,

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from ..models import ChildActivityEvent, ChildAchievement, Subject
-from .progress_rules import SUBJECTS, SubjectId, calculate_difficulty
+from .progress_rules import calculate_difficulty
 
 EventKind = Literal["flashcard_answered", "chore_completed", "outdoor_completed", "affirmation_viewed"]
 
@@ -23,6 +23,7 @@ def _today_utc_date() -> date_type:
     return _utc_now().date()
 
 def _week_start_utc(d: date_type) -> date_type:
+    # if frontend only displays backend data we probably don't need to shift.
     # matches your JS getWeekStart(): uses Sunday as start (getDay() where Sunday=0)
     # In Python, weekday(): Monday=0..Sunday=6
     # We want Sunday start => shift by (weekday+1) % 7
@@ -61,7 +62,7 @@ async def unlock_achievements(session: AsyncSession, *, child_id: str, achieveme
     return new_ids
 
 
-async def list_subject_ids(session: AsyncSession) -> list[SubjectId]:
+async def list_subject_ids(session: AsyncSession) -> list[str]:
     rows = (await session.execute(select(Subject.id))).all()
     return [r[0] for r in rows]
 
@@ -189,11 +190,11 @@ async def compute_week_stats(session: AsyncSession, *, child_id: str) -> dict:
         "accuracyPct": accuracy,
     }
 
-async def compute_flashcards_by_subject(session: AsyncSession, *, child_id: str) -> Dict[SubjectId, dict]:
+async def compute_flashcards_by_subject(session: AsyncSession, *, child_id: str) -> Dict[str, dict]:
     # Initialize with all DB subjects (model 1) so the client can render 0s.
     subject_ids = await list_subject_ids(session)
 
-    by_subject: Dict[SubjectId, dict] = {
+    by_subject: Dict[str, dict] = {
         s: {"completed": 0, "correct": 0, "difficulty": "easy"} for s in subject_ids
     }
 

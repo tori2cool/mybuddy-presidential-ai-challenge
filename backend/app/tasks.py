@@ -9,13 +9,7 @@ import redis
 from .celery_app import celery_app
 from .config import settings
 from .db import AsyncSessionLocal
-from .seed import (
-    seed_affirmations_if_empty,
-    seed_subjects_if_empty,
-    seed_flashcards_if_empty,
-    seed_chores_if_empty,
-    seed_outdoor_activities_if_empty,
-)
+from .seed import seed
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +26,9 @@ def seed_content() -> dict:
 
     async def _run() -> dict:
         async with AsyncSessionLocal() as session:
-            inserted = {
-                "affirmations": await seed_affirmations_if_empty(session),
-                "subjects": await seed_subjects_if_empty(session),
-                "flashcards": await seed_flashcards_if_empty(session),
-                "chores": await seed_chores_if_empty(session),
-                "outdoor_activities": await seed_outdoor_activities_if_empty(session),
-            }
-            return inserted
+            # Run the new seed function
+            await seed()
+            return {"seeded": True}
 
     result = asyncio.run(_run())
     logger.info("seed_content completed: %s", result)

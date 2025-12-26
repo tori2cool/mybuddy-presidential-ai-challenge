@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 from .config import settings
-from .seed import seed_affirmations_if_empty
 
 # Async engine using DATABASE_URL from settings
 engine: AsyncEngine = create_async_engine(

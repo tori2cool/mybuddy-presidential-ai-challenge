@@ -14,7 +14,15 @@ import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { AsyncStatus } from "@/components/AsyncStatus";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useTheme } from "@/hooks/useTheme";
-import { DifficultyTier, SubjectId, SUBJECTS, DIFFICULTY_THRESHOLDS } from "@/contexts/ProgressContext";
+import { DifficultyTier, SubjectId } from "@/types/models";
+
+const SUBJECTS: SubjectId[] = ["math", "science", "reading", "history"];
+
+const DIFFICULTY_THRESHOLDS = {
+  easy: 0,
+  medium: 20,
+  hard: 40,
+} as const;
 import { useDashboard } from "@/contexts/DashboardContext";
 import { Spacing, BorderRadius, Typography } from "@/constants/theme";
 import { getSubjects } from "@/services/subjectsService";

@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .db import init_db
+from .seed import seed
 from .middleware import logging_middleware
 from .routers.core import router as core_router
 from .routers.content import router as content_router
