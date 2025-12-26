@@ -12,7 +12,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASS}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"  # DEV ONLY – do not expose Postgres directly in production
+      - "5432:5432"  # DEV ONLY - do not expose Postgres directly in production
     volumes:
       # Local directory -> container data dir
       - pgdata:/var/lib/postgresql/data
@@ -25,7 +25,7 @@ services:
     container_name: app-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"  # DEV ONLY – do not expose Redis directly in production
+      - "6379:6379"  # DEV ONLY - do not expose Redis directly in production
     # Optional but recommended if you want Redis persistence:
     volumes:
       - redisdata:/data
