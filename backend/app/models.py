@@ -3,9 +3,41 @@ from __future__ import annotations
 from sqlalchemy import UniqueConstraint, DateTime
 from datetime import datetime, date, timezone
 from typing import Optional, List
-from sqlalchemy import Column, ForeignKey, Integer, Boolean, String, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, ForeignKey, Integer, Boolean, String, func, Index, text
+from sqlalchemy.dialects.postgresql import JSONB, insert
+from sqlalchemy.orm import Session
 from sqlmodel import Field, SQLModel
+
+def record_child_event(
+    session: Session,
+    *,
+    child_id: str,
+    kind: str,
+    meta: dict | None = None,
+) -> bool:
+    """
+    Returns True if a row was inserted.
+    Returns False if it already existed for today.
+    """
+
+    stmt = (
+        insert(ChildActivityEvent)
+        .values(
+            child_id=child_id,
+            kind=kind,
+            meta=meta,
+        )
+        .on_conflict_do_nothing(
+            index_elements=["child_id", "kind"],
+            index_where=text("date(created_at) = date(now())"),
+        )
+        .returning(ChildActivityEvent.id)
+    )
+
+    result = session.execute(stmt).scalar()
+    session.commit()
+
+    return result is not None
 
 # ---------- MIXINS ----------
 
@@ -61,13 +93,17 @@ class ChildActivityEvent(SQLModel, table=True):
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
     )
-
-    # flexible payload:
-    # flashcard: {"subjectId":"math","correct":true,"flashcardId":"..."}
-    # chore: {"choreId":"..."}
-    # outdoor: {"outdoorActivityId":"..."}
-    # affirmation: {"affirmationId":"..."}
     meta: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+    __table_args__ = (
+        Index(
+            "uq_child_kind_per_day",
+            "child_id",
+            "kind",
+            text("((created_at AT TIME ZONE 'UTC')::date)"),
+            unique=True,
+        ),
+    )
+
 
 class Child(SQLModel, table=True):
     """

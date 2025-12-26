@@ -14,7 +14,6 @@ services:
     ports:
       - "5432:5432"  # DEV ONLY – do not expose Postgres directly in production
     volumes:
-      # Local directory -> container data dir
       - pgdata:/var/lib/postgresql/data
 
   # ---------------------------
@@ -26,7 +25,6 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"  # DEV ONLY – do not expose Redis directly in production
-    # Optional but recommended if you want Redis persistence:
     volumes:
       - redisdata:/data
 
@@ -68,7 +66,7 @@ services:
       --port 8000
 
   # ---------------------------
-  # Celery worker
+  # Celery worker (run as non-root)
   # ---------------------------
   worker:
     build:
@@ -76,6 +74,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: app-worker
     restart: unless-stopped
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
     depends_on:
       - backend
       - redis
@@ -96,7 +95,7 @@ services:
       --loglevel=INFO
 
   # ---------------------------
-  # Celery beat (optional)
+  # Celery beat (optional) (run as non-root)
   # ---------------------------
   beat:
     build:
@@ -104,6 +103,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: app-beat
     restart: unless-stopped
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
     depends_on:
       - worker
       - redis
@@ -121,6 +121,7 @@ services:
     command: >
       celery -A app.celery_app.celery_app beat
       --loglevel=INFO
+      --schedule=/tmp/celerybeat-schedule
 
 # ---------------------------
 # Volumes

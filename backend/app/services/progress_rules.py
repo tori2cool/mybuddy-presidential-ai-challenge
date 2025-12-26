@@ -6,12 +6,10 @@ No hardcoded constants.
 """
 
 from __future__ import annotations
-from typing import Dict, List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
-# ========== TYPE DEFINITIONS ==========
-# SubjectId = str (from models.py)
-# DifficultyTier = Literal["easy", "medium", "hard"] (from models.py)
+from typing import Dict, List, Literal
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 # ========== FETCH FUNCTIONS (NO CONSTANTS) ==========
@@ -82,7 +80,21 @@ def compute_balanced_progress(
     """
     n_subjects = len(subjects)
 
+    # Safe default when there are no subjects configured / available yet.
     if n_subjects == 0:
+        return {
+            "canLevelUp": False,
+            "currentLevel": "New Kid",
+            "nextLevel": None,
+            "requiredPerSubject": 0,
+            "subjectProgress": {},
+            "message": "Keep practicing!",
+        }
+
+    min_correct = min(subject_correct.get(s, 0) for s in subjects)
+
+    # If there are no thresholds (misconfigured DB), fall back safely.
+    if not level_thresholds:
         return {
             "canLevelUp": False,
             "currentLevel": "New Kid",
@@ -92,25 +104,37 @@ def compute_balanced_progress(
             "message": "Keep practicing!",
         }
 
-    min_correct = min(subject_correct.get(s, 0) for s in subjects)
+    levels_desc = sorted(level_thresholds.items(), key=lambda kv: kv[1], reverse=True)
 
-    levels = sorted(level_thresholds.items(), key=lambda kv: kv[1], reverse=True)
-
-    for level_name, threshold in levels:
+    for level_name, threshold in levels_desc:
         required_per_subject = (threshold + n_subjects - 1) // n_subjects
         if min_correct >= required_per_subject:
+            # Determine nextLevel (the one above current, in ascending order)
+            levels_asc = sorted(level_thresholds.items(), key=lambda kv: kv[1])
+            next_level = None
+            for i, (ln, _) in enumerate(levels_asc):
+                if ln == level_name and i < len(levels_asc) - 1:
+                    next_level = levels_asc[i + 1][0]
+                    break
+
             return {
                 "canLevelUp": True,
                 "currentLevel": level_name,
+                "nextLevel": next_level,
                 "requiredPerSubject": required_per_subject,
                 "subjectProgress": {s: {"current": subject_correct.get(s, 0)} for s in subjects},
                 "message": f"Ready for {level_name}!",
             }
 
+    # None matched => still "New Kid" (or lowest level). Use the smallest threshold for requiredPerSubject.
+    smallest_threshold = min(level_thresholds.values())
+    required_per_subject = (smallest_threshold + n_subjects - 1) // n_subjects
+
     return {
         "canLevelUp": False,
         "currentLevel": "New Kid",
-        "requiredPerSubject": (levels[-1][1] + n_subjects - 1) // n_subjects,
+        "nextLevel": None,
+        "requiredPerSubject": required_per_subject,
         "subjectProgress": {s: {"current": subject_correct.get(s, 0)} for s in subjects},
         "message": "Keep practicing!",
     }
@@ -126,27 +150,66 @@ def reward_for_level(
     """
     Calculate reward level info.
     All parameters come from database.
+
+    IMPORTANT: Must never crash when:
+      - subjects is empty (brand-new child / no subjects configured yet)
+      - level_thresholds is empty (DB misconfigured or not seeded)
+      - current_level not present in thresholds
     """
+
+    metadata = level_metadata.get(current_level, {"icon": "star", "color": "#9CA3AF"})
+
+    # If there are no subjects, we cannot compute "balanced min across subjects".
+    # Return a safe "0 progress" reward.
+    if not subjects:
+        return {
+            "level": current_level,
+            "icon": metadata.get("icon", "star"),
+            "color": metadata.get("color", "#9CA3AF"),
+            "nextAt": None,
+            "progress": 0,
+        }
+
+    # If thresholds are missing, also return safe default.
+    if not level_thresholds:
+        return {
+            "level": current_level,
+            "icon": metadata.get("icon", "star"),
+            "color": metadata.get("color", "#9CA3AF"),
+            "nextAt": None,
+            "progress": 0,
+        }
+
     min_correct = min(subject_correct.get(s, 0) for s in subjects)
     effective_progress = min_correct * len(subjects)
 
+    # Current threshold; if unknown current_level, treat as 0.
     current_threshold = level_thresholds.get(current_level, 0)
 
     sorted_levels = sorted(level_thresholds.items(), key=lambda kv: kv[1])
 
-    # Find next level
+    # Find next level's threshold
     next_at = None
     for i, (level_name, threshold) in enumerate(sorted_levels):
-        if level_name == current_level and i < len(sorted_levels) - 1:
-            next_at = sorted_levels[i + 1][1]
+        if level_name == current_level:
+            if i < len(sorted_levels) - 1:
+                next_at = sorted_levels[i + 1][1]
             break
 
     if next_at is None:
         pct = 100
     else:
-        pct = int(min(max(((effective_progress - current_threshold) / (next_at - current_threshold)) * 100, 0), 100))
-
-    metadata = level_metadata.get(current_level, {"icon": "star", "color": "#9CA3AF"})
+        denom = (next_at - current_threshold)
+        if denom <= 0:
+            # Bad/misordered thresholds; don't divide by zero or go negative.
+            pct = 0
+        else:
+            pct = int(
+                min(
+                    max(((effective_progress - current_threshold) / denom) * 100, 0),
+                    100,
+                )
+            )
 
     return {
         "level": current_level,
