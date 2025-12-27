@@ -7,13 +7,13 @@ import OnboardingNameAvatarScreen from "@/screens/OnboardingNameAvatarScreen";
 export type OnboardingParamList = {
   Welcome: undefined;
   Quiz: undefined;
-  NameAvatar: { interests: string[] };
+  NameAvatar: { onComplete: () => void };
 };
 
 const Stack = createNativeStackNavigator<OnboardingParamList>();
 
 interface OnboardingNavigatorProps {
-  onComplete: (childId: string) => void | Promise<void>;
+  onComplete: () => void;
 }
 
 export default function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
@@ -26,14 +26,11 @@ export default function OnboardingNavigator({ onComplete }: OnboardingNavigatorP
     >
       <Stack.Screen name="Welcome" component={OnboardingWelcomeScreen} />
       <Stack.Screen name="Quiz" component={OnboardingQuizScreen} />
-      <Stack.Screen name="NameAvatar" initialParams={{ interests: [] }}>
-        {(props) => (
-          <OnboardingNameAvatarScreen
-            {...props}
-            onComplete={onComplete}
-          />
-        )}
-      </Stack.Screen>
+      <Stack.Screen 
+        name="NameAvatar" 
+        component={OnboardingNameAvatarScreen}
+        initialParams={{ onComplete }}
+      />
     </Stack.Navigator>
   );
 }

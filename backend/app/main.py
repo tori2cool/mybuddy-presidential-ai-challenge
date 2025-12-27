@@ -10,6 +10,7 @@ from .routers.core import router as core_router
 from .routers.content import router as content_router
 from .routers.ws import router as ws_router
 from .routers.progress import router as progress_router
+from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,6 +18,18 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="MyBuddy Backend", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8082",
+        "http://localhost:19006",
+        "http://localhost:19000",
+        "https://mybuddy.suknet.org",
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.middleware("http")(logging_middleware)
 
 # Standardized routers

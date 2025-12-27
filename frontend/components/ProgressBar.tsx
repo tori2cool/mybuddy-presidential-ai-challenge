@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, ViewStyle } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,12 +8,14 @@ import Animated, {
 import { useTheme } from "@/hooks/useTheme";
 import { BorderRadius } from "@/constants/theme";
 
-interface ProgressBarProps {
+export interface ProgressBarProps {
   progress: number;
   height?: number;
+  color?: string;
+  style?: ViewStyle;
 }
 
-export function ProgressBar({ progress, height = 8 }: ProgressBarProps) {
+export function ProgressBar({ progress, height = 8, color, style }: ProgressBarProps) {
   const { theme } = useTheme();
   const animatedProgress = useSharedValue(0);
 
@@ -33,12 +35,13 @@ export function ProgressBar({ progress, height = 8 }: ProgressBarProps) {
       style={[
         styles.container,
         { height, backgroundColor: theme.backgroundSecondary },
+        style,
       ]}
     >
       <Animated.View
         style={[
           styles.fill,
-          { backgroundColor: theme.primary },
+          { backgroundColor: color || theme.primary },
           animatedStyle,
         ]}
       />
