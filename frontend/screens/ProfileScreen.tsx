@@ -4,13 +4,8 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { useTheme } from "@/hooks/useTheme";
-<<<<<<< HEAD
-// NOTE: Completion/progress display numbers on this screen come from DashboardContext only.
-import { useDashboard } from "@/contexts/DashboardContext";
-=======
 import { useProgress, SUBJECTS } from "@/contexts/ProgressContext";
 import { SUBJECTS as SUBJECT_INFO } from "@/constants/curriculum";
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
 import { Spacing, BorderRadius, Typography } from "@/constants/theme";
 
 const DIFFICULTY_LABELS = {
@@ -20,8 +15,6 @@ const DIFFICULTY_LABELS = {
 };
 
 type SubjectId = "math" | "science" | "reading" | "history";
-
-const SUBJECTS: SubjectId[] = ["math", "science", "reading", "history"];
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
@@ -108,36 +101,10 @@ export default function ProfileScreen() {
               {levelInfo.gradeInfo.name} - Level {levelInfo.gradeLevel}
             </ThemedText>
             <View style={styles.currentLevelRow}>
-<<<<<<< HEAD
-              <View
-              style={[
-                styles.levelBadgeSmall,
-                { backgroundColor: reward?.color ?? theme.primary },
-              ]}
-            >
-              <Feather
-                name={(reward?.icon ?? "award") as any}
-                size={14}
-                color="white"
-              />
-              <ThemedText style={styles.levelTextSmall}>
-                {reward?.level ?? ""}
-              </ThemedText>
-            </View>
-              {balancedProgress?.nextLevel ? (
-                <View style={styles.nextLevelInfo}>
-                  <Feather name="arrow-right" size={16} color={theme.textSecondary} />
-                  <ThemedText style={[styles.nextLevelText, { color: theme.textSecondary }]}>
-                    {balancedProgress.nextLevel}
-                  </ThemedText>
-                </View>
-              ) : null}
-=======
               <View style={[styles.levelBadgeSmall, { backgroundColor: levelInfo.gradeInfo.color }]}>
                 <Feather name="award" size={14} color="white" />
                 <ThemedText style={styles.levelTextSmall}>{levelInfo.rank}</ThemedText>
               </View>
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
             </View>
           </View>
 
@@ -347,11 +314,7 @@ export default function ProfileScreen() {
         </View>
 
         <ThemedText type="headline" style={styles.sectionTitle}>
-<<<<<<< HEAD
-          Achievements ({unlockedAchievements.length}/{(dashboard?.achievementsUnlocked?.length ?? 0) + (dashboard?.achievementsLocked?.length ?? 0)})
-=======
           Achievements ({unlockedAchievements.length}/{progress.achievements.length})
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
         </ThemedText>
 
         {unlockedAchievements.length > 0 ? (

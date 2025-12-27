@@ -6,17 +6,9 @@ import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
 import { IconButton } from "@/components/IconButton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-<<<<<<< HEAD
-import { useDashboard } from "@/contexts/DashboardContext";
-import { Spacing, Typography } from "@/constants/theme";
-import { getAffirmations } from "@/services/affirmationsService";
-import { Affirmation } from "@/types/models";
-import { useCurrentChildId } from "@/contexts/ChildContext";
-=======
 import { useProgress } from "@/contexts/ProgressContext";
 import { Spacing, Typography, Gradients, BorderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -49,13 +41,8 @@ const gradientOptions = [
 
 export default function AffirmationsScreen() {
   const insets = useSafeAreaInsets();
-<<<<<<< HEAD
-  const { data: dashboard, postEvent } = useDashboard();
-  const { childId } = useCurrentChildId();
-=======
   const { theme } = useTheme();
   const { addAffirmationViewed, progress, getTodayStats, customAffirmations, addCustomAffirmation, removeCustomAffirmation } = useProgress();
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
   const [favorites, setFavorites] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
@@ -72,18 +59,8 @@ export default function AffirmationsScreen() {
     isCustom: true,
   }));
 
-<<<<<<< HEAD
-  const lastViewedIndexRef = useRef<number>(-1);
-
-  // Track which affirmationIds have been posted as viewed during this session.
-  // (Set is stored in a ref to avoid stale-closure issues in viewability callbacks.)
-  const postedViewedIdsRef = useRef<Set<string>>(new Set());
-
-  const affirmationsToday = dashboard?.today?.affirmationsViewed ?? 0;
-=======
   const allAffirmations = [...customAffirmationItems, ...defaultAffirmations.map(a => ({ ...a, isCustom: false }))];
 
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
   const toggleFavorite = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setFavorites((prev) =>
@@ -100,51 +77,10 @@ export default function AffirmationsScreen() {
     }
   };
 
-<<<<<<< HEAD
-      // Exactly-once-per-session semantics.
-      if (postedViewedIdsRef.current.has(affirmationId)) {
-        debug("markViewed: deduped", { affirmationId });
-        return;
-      }
-      postedViewedIdsRef.current.add(affirmationId);
-
-      debug("markViewed: posting", { childId, affirmationId });
-
-
-      if (childId) {
-        postEvent({
-          kind: "affirmation",
-          body: { affirmationId },
-        }).catch((err) => {
-          debug("markViewed: postEvent failed", {
-            affirmationId,
-            err: String(err),
-          });
-        });
-      } else {
-        debug("markViewed: skipped (missing childId)", { affirmationId });
-      }
-    },
-    [childId, postEvent, debug],
-  );
-
-  // Keep FlatList callback stable while always using the latest markViewed.
-  const markViewedRef = useRef<(id: string) => void>(() => {});
-  useEffect(() => {
-    markViewedRef.current = markViewed;
-  }, [markViewed]);
-
-  useEffect(() => {
-    return () => {
-      onScrollRafThrottledRef.current?.cancel?.();
-    };
-  }, []);
-=======
   const handleDeleteCustom = (index: number) => {
     removeCustomAffirmation(index);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -162,36 +98,9 @@ export default function AffirmationsScreen() {
   ).current;
 
   useEffect(() => {
-<<<<<<< HEAD
-    affirmationsRef.current = affirmations;
-    debug("affirmations updated", {
-      childId,
-      affirmations_len: affirmations.length,
-      first_id: affirmations[0]?.id,
-    });
-  }, [affirmations, debug, childId]);
-
-  useEffect(() => {
-    debug("childId", { childId });
-  }, [childId, debug]);
-
-  // Reset per-session dedupe state when switching children so views are counted
-  // once per session per child.
-  useEffect(() => {
-    postedViewedIdsRef.current.clear();
-    lastViewedIndexRef.current = -1;
-    debug("reset view dedupe state", { childId });
-  }, [childId, debug]);
-
-  useEffect(() => {
-    if (!childId) {
-      // No child yet (dev auto-create will set one soon). Avoid calling API.
-      return;
-=======
     if (allAffirmations.length > 0 && !viewedIds.has(allAffirmations[0].id)) {
       setViewedIds(new Set([allAffirmations[0].id]));
       addAffirmationViewed();
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
     }
   }, []);
 

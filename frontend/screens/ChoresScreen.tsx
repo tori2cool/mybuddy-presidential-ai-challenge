@@ -1,86 +1,24 @@
-<<<<<<< HEAD
-import { useState, useEffect } from "react";
-import { View, StyleSheet } from "react-native";
-=======
 import { useState } from "react";
 import { View, StyleSheet, Pressable, ScrollView } from "react-native";
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { CheckboxItem } from "@/components/CheckboxItem";
 import { useTheme } from "@/hooks/useTheme";
-<<<<<<< HEAD
-import { useDashboard } from "@/contexts/DashboardContext";
-=======
 import { useProgress } from "@/contexts/ProgressContext";
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
 import { Spacing, BorderRadius } from "@/constants/theme";
 import { Feather } from "@expo/vector-icons";
 import { ALL_CHORES, CHORE_CATEGORIES, ChoreCategory, Chore } from "@/constants/choresData";
 
 export default function ChoresScreen() {
   const { theme } = useTheme();
-<<<<<<< HEAD
-  const { childId } = useCurrentChildId();
-  const { data: dashboard, postEvent } = useDashboard();
-=======
   const { isChoreCompleted, toggleChore, progress, getTodayStats } = useProgress();
   const [selectedCategory, setSelectedCategory] = useState<ChoreCategory | "all">("all");
   const [childAge] = useState(10);
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
 
   const todayStats = getTodayStats();
 
-<<<<<<< HEAD
-  useEffect(() => {
-    if (!childId) return;
-
-    let cancelled = false;
-
-    const loadChores = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getDailyChores(childId);
-        if (cancelled) return;
-        setChores(data);
-      } catch (e) {
-        console.error("Failed to load chores", e);
-        if (cancelled) return;
-        setError("Couldn't load chores. Please try again later.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    loadChores();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [childId]);
-
-  const toggleChore = (id: string) => {
-    const wasCompleted = completed.includes(id);
-
-    if (!wasCompleted) {
-      // First time marking as completed in this toggle
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (childId) {
-        const chore = allChores.find((c) => c.id === id);
-        postEvent({
-          kind: "chore",
-          body: { choreId: id, isExtra: chore?.isExtra ?? false },
-        }).catch(() => {});
-      }
-    }
-
-    setCompleted((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    );
-=======
   const filteredChores = ALL_CHORES.filter(chore => {
     const ageFilter = chore.ageMin <= childAge;
     const categoryFilter = selectedCategory === "all" || chore.category === selectedCategory;
@@ -90,7 +28,6 @@ export default function ChoresScreen() {
   const handleToggleChore = (chore: Chore) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     toggleChore(chore.id, chore.points);
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
   };
 
   const completedCount = filteredChores.filter(c => isChoreCompleted(c.id)).length;

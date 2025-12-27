@@ -9,58 +9,17 @@ import { StatusBar } from "expo-status-bar";
 import MainTabNavigator from "@/navigation/MainTabNavigator";
 import OnboardingNavigator from "@/navigation/OnboardingNavigator";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-<<<<<<< HEAD
-
-import { ChildProvider } from "@/contexts/ChildContext";
-import { DashboardProvider } from "@/contexts/DashboardContext";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-
-function AppInner() {
-  const { loading } = useAuth();
-
-  if (loading) {
-    return null;
-  }
-
-  return (
-    <>
-      <NavigationContainer>
-        <RootNavigator />
-      </NavigationContainer>
-      <StatusBar style="auto" />
-    </>
-  );
-}
-=======
 import { ProgressProvider } from "@/contexts/ProgressContext";
 import { BuddyProvider } from "@/contexts/BuddyContext";
 import { SchoolProvider } from "@/contexts/SchoolContext";
 import { FloatingBuddy } from "@/components/FloatingBuddy";
 import { BuddyChatSheet } from "@/components/BuddyChatSheet";
 import { BuddyCustomizer } from "@/components/BuddyCustomizer";
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
 
 export default function App() {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
 
   return (
-<<<<<<< HEAD
-    <ErrorBoundary>
-      <AuthProvider>
-        <ChildProvider>
-          <DashboardProvider>
-              <SafeAreaProvider>
-                <GestureHandlerRootView style={styles.root}>
-                  <KeyboardProvider>
-                    <AppInner />
-                  </KeyboardProvider>
-                </GestureHandlerRootView>
-              </SafeAreaProvider>
-            </DashboardProvider>
-          </ChildProvider>
-      </AuthProvider>
-    </ErrorBoundary>
-=======
   <ErrorBoundary>
     <ProgressProvider>
       <SchoolProvider>
@@ -90,7 +49,6 @@ export default function App() {
       </SchoolProvider>
     </ProgressProvider>
   </ErrorBoundary>
->>>>>>> 626e46d (added latest replit version & fixed folder structure)
   );
 }
 
