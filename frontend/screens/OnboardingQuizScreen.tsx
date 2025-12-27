@@ -108,7 +108,7 @@ export default function OnboardingQuizScreen() {
         ]}
       >
         <Button
-          onPress={() => navigation.navigate("NameAvatar")}
+          onPress={() => navigation.navigate("NameAvatar", { interests: selected })}
           disabled={selected.length === 0}
         >
           Next

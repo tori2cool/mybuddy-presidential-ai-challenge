@@ -7,6 +7,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useProgress, SUBJECTS } from "@/contexts/ProgressContext";
 import { SUBJECTS as SUBJECT_INFO } from "@/constants/curriculum";
 import { Spacing, BorderRadius, Typography } from "@/constants/theme";
+import { useCurrentChild } from "@/contexts/useCurrentChild";
 
 const DIFFICULTY_LABELS = {
   easy: { label: "Easy", color: "#10B981" },
@@ -17,6 +18,7 @@ const DIFFICULTY_LABELS = {
 export default function ProfileScreen() {
   const { theme } = useTheme();
   const { progress, getTodayStats, getThisWeekStats, getLevelInfo, getGraduationProgress, getSubjectDifficulty } = useProgress();
+  const { child, loading } = useCurrentChild();
 
   const todayStats = getTodayStats();
   const weekStats = getThisWeekStats();
@@ -42,9 +44,9 @@ export default function ProfileScreen() {
             source={require("@/assets/avatars/astronaut_avatar.png")}
             style={styles.avatar}
           />
-          <ThemedText type="title" style={styles.name}>
-            Buddy
-          </ThemedText>
+        <ThemedText type="title" style={styles.name}>
+          {loading ? "Loading..." : child?.name ?? "Buddy"}
+        </ThemedText>
           <View style={[styles.levelBadge, { backgroundColor: levelInfo.gradeInfo.color }]}>
             <Feather name="award" size={16} color="white" />
             <ThemedText style={styles.levelText}>{levelInfo.rank}</ThemedText>

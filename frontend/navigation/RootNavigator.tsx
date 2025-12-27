@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import LoginScreen from "@/screens/LoginScreen";
 import ChildSelectScreen from "@/screens/ChildSelectScreen";
-import MainTabNavigator from "@/navigation/MainTabNavigator";
+import MainScreen from "@/navigation/MainScreen";
 import OnboardingNavigator from "@/navigation/OnboardingNavigator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrentChildId } from "@/contexts/ChildContext";
@@ -53,7 +53,7 @@ export default function RootNavigator() {
             return <OnboardingNavigator onComplete={handleComplete} />;
           }}
         </Stack.Screen>
-        <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
+        <Stack.Screen name="Main" component={MainScreen} options={{ headerShown: false }} />
       </>
     );
   }, [setChildId]);
