@@ -11,7 +11,8 @@ import { ProgressProvider } from "@/contexts/ProgressContext";
 import { BuddyProvider } from "@/contexts/BuddyContext";
 import { SchoolProvider } from "@/contexts/SchoolContext";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ChildProvider } from "@/contexts/ChildContext"; // Assuming this exists from dev; add if missing
+import { ChildProvider } from "@/contexts/ChildContext";
+import { DashboardProvider } from "@/contexts/DashboardContext";
 
 import RootNavigator from "@/navigation/RootNavigator";
 
@@ -22,18 +23,20 @@ export default function App() {
         <ChildProvider>
           <ProgressProvider>
             <SchoolProvider>
-              <BuddyProvider>
-                <SafeAreaProvider>
-                  <GestureHandlerRootView style={styles.root}>
-                    <KeyboardProvider>
-                      <NavigationContainer>
-                        <RootNavigator />
-                      </NavigationContainer>
-                      <StatusBar style="auto" />
-                    </KeyboardProvider>
-                  </GestureHandlerRootView>
-                </SafeAreaProvider>
-              </BuddyProvider>
+              <DashboardProvider>
+                <BuddyProvider>
+                  <SafeAreaProvider>
+                    <GestureHandlerRootView style={styles.root}>
+                      <KeyboardProvider>
+                        <NavigationContainer>
+                          <RootNavigator />
+                        </NavigationContainer>
+                        <StatusBar style="auto" />
+                      </KeyboardProvider>
+                    </GestureHandlerRootView>
+                  </SafeAreaProvider>
+                </BuddyProvider>
+              </DashboardProvider>
             </SchoolProvider>
           </ProgressProvider>
         </ChildProvider>

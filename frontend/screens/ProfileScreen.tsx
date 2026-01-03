@@ -25,12 +25,12 @@ export default function ProfileScreen() {
   const levelInfo = getLevelInfo();
   const graduationProgress = getGraduationProgress();
 
-  const totalLessons = Object.values(progress.lessonsBySubject)
+  const totalflashcards = Object.values(progress.flashcardsBySubject)
     .reduce((acc, s) => acc + s.completed, 0);
-  const totalCorrect = Object.values(progress.lessonsBySubject)
+  const totalCorrect = Object.values(progress.flashcardsBySubject)
     .reduce((acc, s) => acc + s.correct, 0);
-  const accuracy = totalLessons > 0 
-    ? Math.round((totalCorrect / totalLessons) * 100) 
+  const accuracy = totalflashcards > 0 
+    ? Math.round((totalCorrect / totalflashcards) * 100) 
     : 0;
 
   const unlockedAchievements = progress.achievements.filter(a => a.unlockedAt);
@@ -137,14 +137,14 @@ export default function ProfileScreen() {
                     <Feather name="book" size={14} color="#8B5CF6" />
                   </View>
                   <ThemedText style={[styles.subjectName, { color: theme.text }]}>
-                    Lessons
+                    Flashcards
                   </ThemedText>
                 </View>
                 <View style={styles.subjectProgressCountRow}>
-                  <ThemedText style={[styles.subjectProgressCount, { color: graduationProgress.requirements.lessons.met ? "#10B981" : theme.textSecondary }]}>
-                    {graduationProgress.requirements.lessons.current}/{graduationProgress.requirements.lessons.required}
+                  <ThemedText style={[styles.subjectProgressCount, { color: graduationProgress.requirements.flashcards.met ? "#10B981" : theme.textSecondary }]}>
+                    {graduationProgress.requirements.flashcards.current}/{graduationProgress.requirements.flashcards.required}
                   </ThemedText>
-                  {graduationProgress.requirements.lessons.met ? (
+                  {graduationProgress.requirements.flashcards.met ? (
                     <Feather name="check-circle" size={16} color="#10B981" />
                   ) : null}
                 </View>
@@ -224,10 +224,10 @@ export default function ProfileScreen() {
           <View style={[styles.todayCard, { backgroundColor: theme.backgroundDefault }]}>
             <Feather name="book" size={24} color="#8B5CF6" />
             <ThemedText style={styles.todayValue}>
-              {todayStats?.lessonsCompleted || 0}
+              {todayStats?.flashcardsCompleted || 0}
             </ThemedText>
             <ThemedText style={[styles.todayLabel, { color: theme.textSecondary }]}>
-              Lessons
+              Flashcards
             </ThemedText>
           </View>
           <View style={[styles.todayCard, { backgroundColor: theme.backgroundDefault }]}>
@@ -292,11 +292,11 @@ export default function ProfileScreen() {
           <View style={styles.weeklyRow}>
             <View style={styles.weeklyItem}>
               <ThemedText style={[styles.weeklyLabel, { color: theme.textSecondary }]}>
-                Lessons
+                Flashcards
               </ThemedText>
               <View style={styles.weeklyValueRow}>
                 <ThemedText type="headline">
-                  {weekStats?.lessonsCompleted || 0}
+                  {weekStats?.flashcardsCompleted || 0}
                 </ThemedText>
               </View>
             </View>
@@ -384,9 +384,9 @@ export default function ProfileScreen() {
           <View style={styles.statRow}>
             <View style={styles.statItem}>
               <Feather name="book" size={20} color="#8B5CF6" />
-              <ThemedText style={styles.statValue}>{totalLessons}</ThemedText>
+              <ThemedText style={styles.statValue}>{totalflashcards}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
-                Lessons
+                Flashcards
               </ThemedText>
             </View>
             <View style={styles.statItem}>

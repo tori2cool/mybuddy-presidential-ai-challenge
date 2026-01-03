@@ -236,7 +236,7 @@ export const SUBJECTS: Record<SubjectId, SubjectInfo> = {
   }
 };
 
-export interface Lesson {
+export interface flashcard {
   id: string;
   question: string;
   answer: string;
@@ -246,11 +246,11 @@ export interface Lesson {
   level: number;
 }
 
-function generateLessonId(subject: SubjectId, grade: GradeLevel, index: number): string {
+function generateflashcardId(subject: SubjectId, grade: GradeLevel, index: number): string {
   return `${subject}_${grade}_${index}`;
 }
 
-export const CURRICULUM_DATA: Record<SubjectId, Record<GradeLevel, Lesson[]>> = {
+export const CURRICULUM_DATA: Record<SubjectId, Record<GradeLevel, flashcard[]>> = {
   math: {
     preK: [
       { id: "m_pk_1", question: "How many fingers on one hand?", answer: "5", acceptableAnswers: ["5", "five"], grade: "preK", subject: "math", level: 1 },
@@ -455,7 +455,7 @@ export const CURRICULUM_DATA: Record<SubjectId, Record<GradeLevel, Lesson[]>> = 
       { id: "r_4_3", question: "What is a biography?", answer: "Story about someone's life", acceptableAnswers: ["story about someone's life", "life story"], grade: "4", subject: "reading", level: 3 },
     ],
     5: [
-      { id: "r_5_1", question: "What is the theme of a story?", answer: "Main message or lesson", acceptableAnswers: ["main message", "lesson", "moral"], grade: "5", subject: "reading", level: 1 },
+      { id: "r_5_1", question: "What is the theme of a story?", answer: "Main message or flashcard", acceptableAnswers: ["main message", "flashcard", "moral"], grade: "5", subject: "reading", level: 1 },
       { id: "r_5_2", question: "What is personification?", answer: "Giving human traits to non-human things", acceptableAnswers: ["giving human traits to things", "human traits to objects"], grade: "5", subject: "reading", level: 2 },
       { id: "r_5_3", question: "What is the climax?", answer: "Most exciting part", acceptableAnswers: ["most exciting part", "turning point"], grade: "5", subject: "reading", level: 3 },
     ],

@@ -22,11 +22,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8082",
+        "http://localhost:8081",
         "http://localhost:19006",
         "http://localhost:19000",
-        "https://mybuddy.suknet.org",
+        "exp://*",
+        "mybuddy://*",
+        "https://mybuddy-and-me.com",
     ],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

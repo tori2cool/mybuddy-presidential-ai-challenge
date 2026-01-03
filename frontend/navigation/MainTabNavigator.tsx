@@ -4,7 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet } from "react-native";
 import AffirmationsStackNavigator from "@/navigation/AffirmationsStackNavigator";
-import LessonsStackNavigator from "@/navigation/LessonsStackNavigator";
+import FlashcardsStackNavigator from "@/navigation/FlashcardsStackNavigator";
 import OutdoorStackNavigator from "@/navigation/OutdoorStackNavigator";
 import ChoresStackNavigator from "@/navigation/ChoresStackNavigator";
 import ProfileStackNavigator from "@/navigation/ProfileStackNavigator";
@@ -12,7 +12,7 @@ import { useTheme } from "@/hooks/useTheme";
 
 export type MainTabParamList = {
   AffirmationsTab: undefined;
-  LessonsTab: undefined;
+  FlashcardsTab: undefined;
   OutdoorTab: undefined;
   ChoresTab: undefined;
   ProfileTab: undefined;
@@ -60,10 +60,10 @@ export default function MainTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="LessonsTab"
-        component={LessonsStackNavigator}
+        name="FlashcardsTab"
+        component={FlashcardsStackNavigator}
         options={{
-          title: "Lessons",
+          title: "Flashcards",
           tabBarIcon: ({ color, size }) => (
             <Feather name="book" size={size} color={color} />
           ),

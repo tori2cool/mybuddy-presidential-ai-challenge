@@ -28,7 +28,7 @@ import { getBuddyResponse, extractLearningsFromMessage } from '@/services/aiServ
 import { Spacing, BorderRadius } from '@/constants/theme';
 
 const QUICK_ACTIONS = [
-  { id: 'lessons', label: 'Help with lessons', icon: 'book' },
+  { id: 'flashcards', label: 'Help with flashcards', icon: 'book' },
   { id: 'chores', label: 'My chores today', icon: 'check-square' },
   { id: 'outdoor', label: 'Outdoor fun', icon: 'sun' },
   { id: 'diary', label: 'Diary mode', icon: 'edit-3' },
@@ -127,7 +127,7 @@ export function BuddyChatSheet() {
       const levelInfo = getLevelInfo();
       
       const progressInfo = {
-        lessonsCompleted: todayStats?.lessonsCompleted || 0,
+        flashcardsCompleted: todayStats?.flashcardsCompleted || 0,
         choresCompleted: todayStats?.choresCompleted || 0,
         outdoorActivities: todayStats?.outdoorActivities || 0,
         currentStreak: progress.currentStreak,
@@ -158,7 +158,7 @@ export function BuddyChatSheet() {
 
   const handleQuickAction = (actionId: string) => {
     const quickMessages: Record<string, string> = {
-      lessons: "Can you help me with my lessons today?",
+      flashcards: "Can you help me with my flashcards today?",
       chores: "What chores should I do today?",
       outdoor: "What outdoor activities can I do?",
       diary: "",
@@ -272,7 +272,7 @@ export function BuddyChatSheet() {
                 </ThemedText>
                 <ThemedText style={[styles.welcomeText, { color: theme.textSecondary }]}>
                   {messages.length === 0 
-                    ? `I'm ${buddyData.buddyName}, your learning buddy! I'm here to chat, help with lessons, or just listen. What would you like to do?`
+                    ? `I'm ${buddyData.buddyName}, your learning buddy! I'm here to chat, help with flashcards, or just listen. What would you like to do?`
                     : 'Choose an option below or type your own message!'
                   }
                 </ThemedText>

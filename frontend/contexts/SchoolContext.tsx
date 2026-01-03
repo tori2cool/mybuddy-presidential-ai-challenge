@@ -31,7 +31,7 @@ export interface SchoolProgressData {
   lastActiveDate: string | null;
   completedLevels: number[];
   discussionPosts: DiscussionPost[];
-  customLessons: CustomLesson[];
+  customflashcards: Customflashcard[];
 }
 
 export interface DiscussionPost {
@@ -50,7 +50,7 @@ export interface DiscussionReply {
   timestamp: string;
 }
 
-export interface CustomLesson {
+export interface Customflashcard {
   id: string;
   subjectId: string;
   level: number;
@@ -97,7 +97,7 @@ const defaultProgress: SchoolProgressData = {
   lastActiveDate: null,
   completedLevels: [],
   discussionPosts: [],
-  customLessons: [],
+  customflashcards: [],
 };
 
 interface SchoolContextValue {
@@ -108,9 +108,9 @@ interface SchoolContextValue {
   getSubjectLevelProgress: (subjectId: string, level: number) => { starsEarned: number; totalStars: number; progress: number };
   addDiscussionPost: (post: Omit<DiscussionPost, "id" | "timestamp" | "replies">) => void;
   addDiscussionReply: (postId: string, reply: Omit<DiscussionReply, "id" | "timestamp">) => void;
-  addCustomLesson: (lesson: Omit<CustomLesson, "id" | "createdAt">) => void;
-  updateCustomLesson: (lessonId: string, updates: Partial<CustomLesson>) => void;
-  deleteCustomLesson: (lessonId: string) => void;
+  addCustomflashcard: (flashcard: Omit<Customflashcard, "id" | "createdAt">) => void;
+  updateCustomflashcard: (flashcardId: string, updates: Partial<Customflashcard>) => void;
+  deleteCustomflashcard: (flashcardId: string) => void;
   isStarCompleted: (subjectId: string, level: number, starNumber: number) => boolean;
   getUnlockedBadges: () => Badge[];
   resetProgress: () => void;
@@ -348,33 +348,33 @@ export function SchoolProvider({ children }: SchoolProviderProps) {
     }));
   }, []);
 
-  const addCustomLesson = useCallback((lesson: Omit<CustomLesson, "id" | "createdAt">) => {
+  const addCustomflashcard = useCallback((flashcard: Omit<Customflashcard, "id" | "createdAt">) => {
     setProgress(prev => ({
       ...prev,
-      customLessons: [
+      customflashcards: [
         {
-          ...lesson,
+          ...flashcard,
           id: Date.now().toString(),
           createdAt: new Date().toISOString(),
         },
-        ...prev.customLessons,
+        ...prev.customflashcards,
       ],
     }));
   }, []);
 
-  const updateCustomLesson = useCallback((lessonId: string, updates: Partial<CustomLesson>) => {
+  const updateCustomflashcard = useCallback((flashcardId: string, updates: Partial<Customflashcard>) => {
     setProgress(prev => ({
       ...prev,
-      customLessons: prev.customLessons.map(lesson => 
-        lesson.id === lessonId ? { ...lesson, ...updates } : lesson
+      customflashcards: prev.customflashcards.map(flashcard => 
+        flashcard.id === flashcardId ? { ...flashcard, ...updates } : flashcard
       ),
     }));
   }, []);
 
-  const deleteCustomLesson = useCallback((lessonId: string) => {
+  const deleteCustomflashcard = useCallback((flashcardId: string) => {
     setProgress(prev => ({
       ...prev,
-      customLessons: prev.customLessons.filter(l => l.id !== lessonId),
+      customflashcards: prev.customflashcards.filter(l => l.id !== flashcardId),
     }));
   }, []);
 
@@ -394,9 +394,9 @@ export function SchoolProvider({ children }: SchoolProviderProps) {
     getSubjectLevelProgress,
     addDiscussionPost,
     addDiscussionReply,
-    addCustomLesson,
-    updateCustomLesson,
-    deleteCustomLesson,
+    addCustomflashcard,
+    updateCustomflashcard,
+    deleteCustomflashcard,
     isStarCompleted,
     getUnlockedBadges,
     resetProgress,

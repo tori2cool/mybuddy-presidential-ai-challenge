@@ -6,15 +6,15 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { useTheme } from "@/hooks/useTheme";
-import { useSchool, CustomLesson } from "@/contexts/SchoolContext";
+import { useSchool, Customflashcard } from "@/contexts/SchoolContext";
 import { Spacing, BorderRadius } from "@/constants/theme";
 import { getAllSubjects } from "@/constants/schoolData";
 
 export default function ParentPortalScreen() {
   const { theme } = useTheme();
-  const { progress, addCustomLesson, updateCustomLesson, deleteCustomLesson } = useSchool();
+  const { progress, addCustomflashcard, updateCustomflashcard, deleteCustomflashcard } = useSchool();
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingLesson, setEditingLesson] = useState<CustomLesson | null>(null);
+  const [editingflashcard, setEditingflashcard] = useState<Customflashcard | null>(null);
   
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -40,7 +40,7 @@ export default function ParentPortalScreen() {
     setCurrentQuestion("");
     setCurrentOptions(["", "", "", ""]);
     setCurrentCorrectAnswer(0);
-    setEditingLesson(null);
+    setEditingflashcard(null);
   };
 
   const openAddModal = () => {
@@ -48,13 +48,13 @@ export default function ParentPortalScreen() {
     setShowAddModal(true);
   };
 
-  const openEditModal = (lesson: CustomLesson) => {
-    setEditingLesson(lesson);
-    setTitle(lesson.title);
-    setContent(lesson.content);
-    setSelectedSubject(lesson.subjectId);
-    setSelectedLevel(lesson.level.toString());
-    setQuestions(lesson.questions);
+  const openEditModal = (flashcard: Customflashcard) => {
+    setEditingflashcard(flashcard);
+    setTitle(flashcard.title);
+    setContent(flashcard.content);
+    setSelectedSubject(flashcard.subjectId);
+    setSelectedLevel(flashcard.level.toString());
+    setQuestions(flashcard.questions);
     setShowAddModal(true);
   };
 
@@ -79,14 +79,14 @@ export default function ParentPortalScreen() {
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
-  const saveLesson = () => {
+  const saveflashcard = () => {
     if (!title.trim() || !content.trim() || !selectedSubject) {
       Alert.alert("Missing Info", "Please fill in the title, content, and select a subject.");
       return;
     }
     
-    if (editingLesson) {
-      updateCustomLesson(editingLesson.id, {
+    if (editingflashcard) {
+      updateCustomflashcard(editingflashcard.id, {
         title,
         content,
         subjectId: selectedSubject,
@@ -94,7 +94,7 @@ export default function ParentPortalScreen() {
         questions,
       });
     } else {
-      addCustomLesson({
+      addCustomflashcard({
         title,
         content,
         subjectId: selectedSubject,
@@ -108,17 +108,17 @@ export default function ParentPortalScreen() {
     resetForm();
   };
 
-  const handleDelete = (lessonId: string) => {
+  const handleDelete = (flashcardId: string) => {
     Alert.alert(
-      "Delete Lesson",
-      "Are you sure you want to delete this lesson?",
+      "Delete flashcard",
+      "Are you sure you want to delete this flashcard?",
       [
         { text: "Cancel", style: "cancel" },
         { 
           text: "Delete", 
           style: "destructive",
           onPress: () => {
-            deleteCustomLesson(lessonId);
+            deleteCustomflashcard(flashcardId);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           }
         },
@@ -126,15 +126,15 @@ export default function ParentPortalScreen() {
     );
   };
 
-  const renderLessonCard = (lesson: CustomLesson) => {
-    const subject = subjects.find(s => s.id === lesson.subjectId);
+  const renderflashcardCard = (flashcard: Customflashcard) => {
+    const subject = subjects.find(s => s.id === flashcard.subjectId);
     
     return (
       <View 
-        key={lesson.id} 
-        style={[styles.lessonCard, { backgroundColor: theme.backgroundDefault }]}
+        key={flashcard.id} 
+        style={[styles.flashcardCard, { backgroundColor: theme.backgroundDefault }]}
       >
-        <View style={styles.lessonHeader}>
+        <View style={styles.flashcardHeader}>
           <View style={[styles.subjectBadge, { backgroundColor: (subject?.color || "#6B7280") + "20" }]}>
             <Feather name={subject?.icon as any || "book"} size={16} color={subject?.color || "#6B7280"} />
             <ThemedText style={{ color: subject?.color || "#6B7280", marginLeft: Spacing.xs, fontSize: 12 }}>
@@ -142,28 +142,28 @@ export default function ParentPortalScreen() {
             </ThemedText>
           </View>
           <ThemedText style={[styles.levelBadge, { color: theme.textSecondary }]}>
-            Level {lesson.level}
+            Level {flashcard.level}
           </ThemedText>
         </View>
         
-        <ThemedText type="headline" numberOfLines={1}>{lesson.title}</ThemedText>
-        <ThemedText style={[styles.lessonContent, { color: theme.textSecondary }]} numberOfLines={2}>
-          {lesson.content}
+        <ThemedText type="headline" numberOfLines={1}>{flashcard.title}</ThemedText>
+        <ThemedText style={[styles.flashcardContent, { color: theme.textSecondary }]} numberOfLines={2}>
+          {flashcard.content}
         </ThemedText>
         
-        <View style={styles.lessonMeta}>
+        <View style={styles.flashcardMeta}>
           <ThemedText style={[styles.questionCount, { color: theme.textSecondary }]}>
-            {lesson.questions.length} question{lesson.questions.length !== 1 ? "s" : ""}
+            {flashcard.questions.length} question{flashcard.questions.length !== 1 ? "s" : ""}
           </ThemedText>
-          <View style={styles.lessonActions}>
+          <View style={styles.flashcardActions}>
             <Pressable 
-              onPress={() => openEditModal(lesson)}
+              onPress={() => openEditModal(flashcard)}
               style={[styles.actionBtn, { backgroundColor: "#3B82F6" + "15" }]}
             >
               <Feather name="edit-2" size={16} color="#3B82F6" />
             </Pressable>
             <Pressable 
-              onPress={() => handleDelete(lesson.id)}
+              onPress={() => handleDelete(flashcard.id)}
               style={[styles.actionBtn, { backgroundColor: "#EF4444" + "15" }]}
             >
               <Feather name="trash-2" size={16} color="#EF4444" />
@@ -184,7 +184,7 @@ export default function ParentPortalScreen() {
               Parent Portal
             </ThemedText>
             <ThemedText style={[styles.headerDesc, { color: theme.textSecondary }]}>
-              Add and manage custom lessons without coding
+              Add and manage custom flashcards without coding
             </ThemedText>
           </View>
         </View>
@@ -194,26 +194,26 @@ export default function ParentPortalScreen() {
           style={[styles.addButton, { backgroundColor: "#10B981" }]}
         >
           <Feather name="plus" size={20} color="white" />
-          <ThemedText style={styles.addButtonText}>Add New Lesson</ThemedText>
+          <ThemedText style={styles.addButtonText}>Add New flashcard</ThemedText>
         </Pressable>
 
         <ThemedText type="headline" style={styles.sectionTitle}>
-          Your Custom Lessons ({progress.customLessons.length})
+          Your Custom flashcards ({progress.customflashcards.length})
         </ThemedText>
 
-        {progress.customLessons.length === 0 ? (
+        {progress.customflashcards.length === 0 ? (
           <View style={[styles.emptyState, { backgroundColor: theme.backgroundDefault }]}>
             <Feather name="book-open" size={48} color={theme.textSecondary} />
             <ThemedText style={[styles.emptyText, { color: theme.textSecondary }]}>
-              No custom lessons yet
+              No custom flashcards yet
             </ThemedText>
             <ThemedText style={[styles.emptySubtext, { color: theme.textSecondary }]}>
-              Tap the button above to create your first lesson
+              Tap the button above to create your first flashcard
             </ThemedText>
           </View>
         ) : (
-          <View style={styles.lessonsList}>
-            {progress.customLessons.map(renderLessonCard)}
+          <View style={styles.flashcardsList}>
+            {progress.customflashcards.map(renderflashcardCard)}
           </View>
         )}
       </ThemedView>
@@ -230,9 +230,9 @@ export default function ParentPortalScreen() {
               <ThemedText style={{ color: "#EF4444" }}>Cancel</ThemedText>
             </Pressable>
             <ThemedText type="headline">
-              {editingLesson ? "Edit Lesson" : "New Lesson"}
+              {editingflashcard ? "Edit flashcard" : "New flashcard"}
             </ThemedText>
-            <Pressable onPress={saveLesson}>
+            <Pressable onPress={saveflashcard}>
               <ThemedText style={{ color: "#10B981", fontWeight: "600" }}>Save</ThemedText>
             </Pressable>
           </View>
@@ -241,7 +241,7 @@ export default function ParentPortalScreen() {
             <ThemedText style={styles.inputLabel}>Title</ThemedText>
             <TextInput
               style={[styles.textInput, { backgroundColor: theme.backgroundDefault, color: theme.text }]}
-              placeholder="Lesson title..."
+              placeholder="flashcard title..."
               placeholderTextColor={theme.textSecondary}
               value={title}
               onChangeText={setTitle}
@@ -290,10 +290,10 @@ export default function ParentPortalScreen() {
               keyboardType="number-pad"
             />
 
-            <ThemedText style={styles.inputLabel}>Lesson Content</ThemedText>
+            <ThemedText style={styles.inputLabel}>flashcard Content</ThemedText>
             <TextInput
               style={[styles.textInput, styles.textArea, { backgroundColor: theme.backgroundDefault, color: theme.text }]}
-              placeholder="Write your lesson content here..."
+              placeholder="Write your flashcard content here..."
               placeholderTextColor={theme.textSecondary}
               value={content}
               onChangeText={setContent}
@@ -419,14 +419,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
   },
-  lessonsList: {
+  flashcardsList: {
     gap: Spacing.md,
   },
-  lessonCard: {
+  flashcardCard: {
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
   },
-  lessonHeader: {
+  flashcardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -442,11 +442,11 @@ const styles = StyleSheet.create({
   levelBadge: {
     fontSize: 12,
   },
-  lessonContent: {
+  flashcardContent: {
     fontSize: 13,
     marginTop: Spacing.xs,
   },
-  lessonMeta: {
+  flashcardMeta: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
   questionCount: {
     fontSize: 12,
   },
-  lessonActions: {
+  flashcardActions: {
     flexDirection: "row",
     gap: Spacing.sm,
   },

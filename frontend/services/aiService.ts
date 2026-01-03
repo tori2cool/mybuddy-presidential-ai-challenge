@@ -3,7 +3,7 @@ import { UserProfile, ConversationMessage } from '@/contexts/BuddyContext';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 interface ProgressInfo {
-  lessonsCompleted: number;
+  flashcardsCompleted: number;
   choresCompleted: number;
   outdoorActivities: number;
   currentStreak: number;
@@ -43,7 +43,7 @@ function buildSystemPrompt(
     : '';
 
   const progress = progressInfo
-    ? `Today they've completed ${progressInfo.lessonsCompleted} lessons, ${progressInfo.choresCompleted} chores, and ${progressInfo.outdoorActivities} outdoor activities. They have a ${progressInfo.currentStreak} day streak. They're at ${progressInfo.currentGrade} grade, level ${progressInfo.currentLevel}.`
+    ? `Today they've completed ${progressInfo.flashcardsCompleted} flashcards, ${progressInfo.choresCompleted} chores, and ${progressInfo.outdoorActivities} outdoor activities. They have a ${progressInfo.currentStreak} day streak. They're at ${progressInfo.currentGrade} grade, level ${progressInfo.currentLevel}.`
     : '';
 
   return `You are ${buddyName}, a friendly, encouraging, and supportive AI buddy for children in an educational app called MyBuddy. You help kids with PreK-12 learning, life skills, and personal growth.
@@ -59,7 +59,7 @@ Your personality:
 
 Your role:
 - Be a diary and confidant they can share thoughts and feelings with
-- Help them stay on track with lessons, chores, and outdoor activities
+- Help them stay on track with flashcards, chores, and outdoor activities
 - Encourage them to be their best self and work toward their goals
 - Remember what they tell you and reference it in conversations
 - Give gentle reminders about tasks when appropriate
@@ -160,8 +160,8 @@ function getOfflineResponse(message: string, buddyName: string): string {
     return `I'm sorry you're feeling that way. It's okay to have those feelings. Would you like to talk about what's bothering you? I'm here to listen.`;
   }
 
-  if (lowerMessage.includes('lesson') || lowerMessage.includes('learn') || lowerMessage.includes('study')) {
-    return `Learning is an adventure! Your lessons are waiting for you in the Lessons tab. Every question you answer helps you grow smarter!`;
+  if (lowerMessage.includes('flashcard') || lowerMessage.includes('learn') || lowerMessage.includes('study')) {
+    return `Learning is an adventure! Your flashcards are waiting for you in the flashcards tab. Every question you answer helps you grow smarter!`;
   }
 
   if (lowerMessage.includes('chore') || lowerMessage.includes('task') || lowerMessage.includes('help')) {
