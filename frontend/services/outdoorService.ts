@@ -2,6 +2,12 @@
 import type { OutdoorActivity, UUID } from "@/types/models";
 import { apiFetch } from "./apiClient";
 
+const applyDailyFilter = (items: OutdoorActivity[], opts?: { isDaily?: boolean }): OutdoorActivity[] => {
+  if (opts?.isDaily === true) return items.filter((a) => a.isDaily);
+  if (opts?.isDaily === false) return items.filter((a) => !a.isDaily);
+  return items;
+};
+
 export async function getOutdoorActivities(
   childId: UUID,
   opts?: { isDaily?: boolean },
