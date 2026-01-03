@@ -1,5 +1,6 @@
 import { Flashcard, SubjectId, DifficultyTier } from "@/types/models";
 import { apiFetch, withTimeout } from "./apiClient";
+import { USE_AI_BACKEND } from "@/constants/aiConfig";
 
 const FLASHCARDS_TIMEOUT_MS = 3000;
 
@@ -139,6 +140,41 @@ export async function getFlashcards(
   difficulty: DifficultyTier,
   childId: string | null,
 ): Promise<Flashcard[]> {
+  if (USE_AI_BACKEND) {
+    try {
+      const data = await withTimeout(
+        apiFetch<Flashcard[]>("/ai/generate-flashcards", {
+          query: {
+            subjectId,
+            difficulty,
+            childId,
+          },
+        }),
+        FLASHCARDS_TIMEOUT_MS,
+      );
+
+      if (!Array.isArray(data) || data.length === 0) {
+        console.warn(
+          "getFlashcards (AI): API returned empty/non-array; falling back to static data.",
+          {
+            subjectId,
+            difficulty,
+            childId,
+          },
+        );
+        const subjectCards = flashcardData[subjectId] || [];
+        return subjectCards.filter((card) => card.difficulty === difficulty);
+      }
+
+      return data;
+    } catch (err) {
+      console.warn("getFlashcards (AI): API failed, falling back to static data:", err);
+      const subjectCards = flashcardData[subjectId] || [];
+      return subjectCards.filter((card) => card.difficulty === difficulty);
+    }
+  }
+
+  // use when USE_AI_BACKEND is false
   if (!childId) {
     console.warn("getFlashcards: missing childId; falling back to static data.", {
       subjectId,

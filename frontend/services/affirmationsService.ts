@@ -3,8 +3,9 @@
 import { Affirmation } from "@/types/models";
 import { Gradients } from "@/constants/theme";
 import { apiFetch, withTimeout } from "@/services/apiClient";
+import { USE_AI_BACKEND } from "@/constants/aiConfig";
 
-// Existing static fallback data
+// Existing static fallback data (unchanged)
 const fallbackAffirmations: Affirmation[] = [
   { id: "1", text: "I am capable of amazing things", gradient: Gradients.sunset },
   { id: "2", text: "Today is full of possibilities", gradient: Gradients.ocean },
@@ -19,6 +20,32 @@ const fallbackAffirmations: Affirmation[] = [
 const AFFIRMATIONS_TIMEOUT_MS = 3000;
 
 export async function getAffirmations(childId: string): Promise<Affirmation[]> {
+  // AI backend toggle
+  if (USE_AI_BACKEND) {
+    try {
+      const data = await withTimeout(
+        apiFetch<unknown>("/ai/generate-affirmations", {
+          query: { childId },
+        }),
+        AFFIRMATIONS_TIMEOUT_MS,
+      );
+
+      if (!Array.isArray(data) || data.length === 0) {
+        console.warn(
+          "getAffirmations (AI): API returned empty/non-array; falling back to static data.",
+          { childId },
+        );
+        return [...fallbackAffirmations];
+      }
+
+      return data as Affirmation[];
+    } catch (err) {
+      console.warn("getAffirmations (AI): API failed, falling back to static data:", err);
+      return [...fallbackAffirmations];
+    }
+  }
+
+  // use when USE_AI_BACKEND is false
   try {
     const data = await withTimeout(
       apiFetch<unknown>("/affirmations", {
@@ -27,7 +54,6 @@ export async function getAffirmations(childId: string): Promise<Affirmation[]> {
       AFFIRMATIONS_TIMEOUT_MS,
     );
 
-    // Fallback not only on errors/timeouts, but also when backend returns no usable data.
     if (!Array.isArray(data) || data.length === 0) {
       console.warn(
         "getAffirmations: API returned empty/non-array; falling back to static data.",
@@ -38,7 +64,6 @@ export async function getAffirmations(childId: string): Promise<Affirmation[]> {
 
     return data as Affirmation[];
   } catch (err) {
-    // Keep existing timeout/error fallback behavior.
     console.warn("getAffirmations: falling back to static data:", err);
     return [...fallbackAffirmations];
   }

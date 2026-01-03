@@ -1,5 +1,6 @@
 import { OutdoorActivity } from "@/types/models";
 import { apiFetch, withTimeout } from "./apiClient";
+import { USE_AI_BACKEND } from "@/constants/aiConfig";
 
 // Static fallback data
 const fallbackOutdoorActivities: OutdoorActivity[] = [
@@ -52,16 +53,50 @@ const fallbackOutdoorActivities: OutdoorActivity[] = [
 
 const OUTDOOR_TIMEOUT_MS = 3000;
 
+const applyDailyFilter = (items: OutdoorActivity[], opts?: { isDaily?: boolean }): OutdoorActivity[] => {
+  if (opts?.isDaily === true) return items.filter((a) => a.isDaily);
+  if (opts?.isDaily === false) return items.filter((a) => !a.isDaily);
+  return items;
+};
+
 export async function getOutdoorActivities(
   childId: string,
   opts?: { isDaily?: boolean },
 ): Promise<OutdoorActivity[]> {
-  const applyDailyFilter = (items: OutdoorActivity[]): OutdoorActivity[] => {
-    if (opts?.isDaily === true) return items.filter((a) => a.isDaily);
-    if (opts?.isDaily === false) return items.filter((a) => !a.isDaily);
-    return items;
-  };
+  // AI backend toggle
+  if (USE_AI_BACKEND) {
+    try {
+      const data = await withTimeout(
+        apiFetch<unknown>("/ai/generate-outdoor", {
+          query: {
+            childId,
+            ...(opts?.isDaily !== undefined ? { isDaily: opts.isDaily } : {}),
+          },
+        }),
+        OUTDOOR_TIMEOUT_MS,
+      );
 
+      if (Array.isArray(data)) {
+        const filtered = applyDailyFilter(data as OutdoorActivity[], opts);
+        if (filtered.length === 0) {
+          console.warn(
+            "getOutdoorActivities (AI): API returned empty after filter; falling back to static data.",
+            { childId, opts },
+          );
+          return applyDailyFilter([...fallbackOutdoorActivities], opts);
+        }
+        return filtered;
+      }
+
+      console.warn("getOutdoorActivities (AI): API returned non-array; falling back to static data.");
+      return applyDailyFilter([...fallbackOutdoorActivities], opts);
+    } catch (err) {
+      console.warn("getOutdoorActivities (AI): API failed, falling back to static data:", err);
+      return applyDailyFilter([...fallbackOutdoorActivities], opts);
+    }
+  }
+
+  // use when USE_AI_BACKEND is false
   try {
     const data = await withTimeout(
       apiFetch<unknown>("/outdoor/activities", {
@@ -74,15 +109,14 @@ export async function getOutdoorActivities(
     );
 
     if (Array.isArray(data)) {
-      const filtered = applyDailyFilter(data as OutdoorActivity[]);
+      const filtered = applyDailyFilter(data as OutdoorActivity[], opts);
 
-      // Apply empty-array fallback after filtering.
       if (filtered.length === 0) {
         console.warn(
           "getOutdoorActivities: API returned empty/non-array; falling back to static data.",
           { childId, receivedType: typeof data },
         );
-        return applyDailyFilter([...fallbackOutdoorActivities]);
+        return applyDailyFilter([...fallbackOutdoorActivities], opts);
       }
 
       return filtered;
@@ -94,9 +128,9 @@ export async function getOutdoorActivities(
         { childId, receivedType: typeof data },
       );
     }
-    return applyDailyFilter([...fallbackOutdoorActivities]);
+    return applyDailyFilter([...fallbackOutdoorActivities], opts);
   } catch (err) {
     console.warn("getOutdoorActivities: falling back to static data:", err);
-    return applyDailyFilter([...fallbackOutdoorActivities]);
+    return applyDailyFilter([...fallbackOutdoorActivities], opts);
   }
 }
