@@ -1,18 +1,16 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { jwtDecode } from "jwt-decode";
 import { secureStorage } from "@/services/storage/secureStorage";
-import { apiFetch } from "@/services/apiClient";
 import {
   startKeycloakLoginAsync,
-  KeycloakLoginResult,
+  refreshAccessToken,
+  decodeExp,
 } from "@/services/auth/keycloakAuth";
-import { setAccessToken as setApiAccessToken, ApiError, setUnauthorizedHandler } from "@/services/apiClient";
+import {
+  setAccessToken as setApiAccessToken,
+  setTokenRefresher,
+  setUnauthorizedHandler,
+} from "@/services/apiClient";
 
 type AuthUser = {
   sub: string;
@@ -24,7 +22,6 @@ type AuthContextValue = {
   loading: boolean;
   isAuthenticated: boolean;
   accessToken: string | null;
-  refreshToken: string | null;
   user: AuthUser | null;
   login: () => Promise<void>;
   logout: () => Promise<void>;
@@ -32,173 +29,120 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const ACCESS_TOKEN_KEY = "auth_access_token";
-const REFRESH_TOKEN_KEY = "auth_refresh_token";
-const USER_SUB_KEY = "auth_user_sub";
-const USER_EMAIL_KEY = "auth_user_email";
-const USER_NAME_KEY = "auth_user_name";
+const ACCESS_KEY = "auth_access";
+const REFRESH_KEY = "auth_refresh";
+const USER_KEY = "auth_user";
 
-async function clearStoredSession() {
-  await Promise.all([
-    secureStorage.deleteItemAsync(ACCESS_TOKEN_KEY),
-    secureStorage.deleteItemAsync(REFRESH_TOKEN_KEY),
-    secureStorage.deleteItemAsync(USER_SUB_KEY),
-    secureStorage.deleteItemAsync(USER_EMAIL_KEY),
-    secureStorage.deleteItemAsync(USER_NAME_KEY),
-  ]);
-}
-
-type AuthProviderProps = {
-  children: ReactNode;
-};
-
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  const resetAuthState = useCallback(async () => {
+  async function persist(
+    access: string,
+    refresh: string | null,
+    user: AuthUser,
+  ) {
+    setAccessToken(access);
+    setRefreshToken(refresh);
+    setUser(user);
+    setApiAccessToken(access);
+
+    await secureStorage.setItemAsync(ACCESS_KEY, access);
+    if (refresh) await secureStorage.setItemAsync(REFRESH_KEY, refresh);
+    await secureStorage.setItemAsync(USER_KEY, JSON.stringify(user));
+  }
+
+  async function clear() {
     setAccessToken(null);
-    setApiAccessToken(null);
     setRefreshToken(null);
     setUser(null);
-    await clearStoredSession();
-  }, []);
+    setApiAccessToken(null);
+    await secureStorage.deleteItemAsync(ACCESS_KEY);
+    await secureStorage.deleteItemAsync(REFRESH_KEY);
+    await secureStorage.deleteItemAsync(USER_KEY);
+  }
 
-  useEffect(() => {
-    setUnauthorizedHandler(() => {
-      // fire-and-forget; we don’t await in this callback
-      resetAuthState().catch((err) => {
-        console.error("[AuthContext] Error resetting auth on 401:", err);
-      });
-    });
+  async function ensureFreshToken(): Promise<string | null> {
+    if (!accessToken || !refreshToken) return null;
 
-    return () => setUnauthorizedHandler(null);
-  }, [resetAuthState]);
+    const exp = decodeExp(accessToken);
+    const now = Math.floor(Date.now() / 1000);
 
-  const validateSessionWithPing = useCallback(async () => {
-    // Avoid network validation until we actually have a token.
-    // During login (or first load) this prevents 401 loops resetting state.
-    if (!accessToken) {
-      console.log("[AuthContext] Skipping session validation: no accessToken");
-      return;
-    }
+    if (exp - now > 30) return accessToken;
 
     try {
-      // Lightweight authenticated endpoint.
-      await apiFetch<unknown>("/me");
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        await resetAuthState();
-      } else {
-        console.warn("[AuthContext] Session validation failed (non-401):", err);
-      }
+      const refreshed = await refreshAccessToken(refreshToken);
+      const decoded: any = jwtDecode(refreshed.accessToken);
+      const user = {
+        sub: decoded.sub,
+        email: decoded.email,
+        name: decoded.name,
+      };
+      await persist(refreshed.accessToken, refreshed.refreshToken, user);
+      return refreshed.accessToken;
+    } catch {
+      await clear();
+      return null;
     }
-  }, [accessToken, resetAuthState]);
+  }
 
   useEffect(() => {
-    async function loadStoredSession() {
+    setTokenRefresher(ensureFreshToken);
+    setUnauthorizedHandler(() => clear());
+
+    return () => {
+      setTokenRefresher(null);
+      setUnauthorizedHandler(null);
+    };
+  }, [accessToken, refreshToken]);
+
+  useEffect(() => {
+    (async () => {
       try {
-        const [storedAccess, storedRefresh, sub, email, name] =
-          await Promise.all([
-            secureStorage.getItemAsync(ACCESS_TOKEN_KEY),
-            secureStorage.getItemAsync(REFRESH_TOKEN_KEY),
-            secureStorage.getItemAsync(USER_SUB_KEY),
-            secureStorage.getItemAsync(USER_EMAIL_KEY),
-            secureStorage.getItemAsync(USER_NAME_KEY),
-          ]);
-
-        if (storedAccess && sub) {
-          setAccessToken(storedAccess);
-          setApiAccessToken(storedAccess);
-          setRefreshToken(storedRefresh ?? null);
-          setUser({
-            sub,
-            email: email ?? undefined,
-            name: name ?? undefined,
-          });
-
-          await validateSessionWithPing();
+        const [a, r, u] = await Promise.all([
+          secureStorage.getItemAsync(ACCESS_KEY),
+          secureStorage.getItemAsync(REFRESH_KEY),
+          secureStorage.getItemAsync(USER_KEY),
+        ]);
+        if (a && u) {
+          await persist(a, r, JSON.parse(u));
         }
       } finally {
         setLoading(false);
       }
-    }
-
-    loadStoredSession();
-  }, [validateSessionWithPing]);
-
-  const persistSession = useCallback(async (result: KeycloakLoginResult) => {
-    console.log("[AuthContext] Persisting session:", {
-      hasAccessToken: !!result.accessToken,
-      hasRefreshToken: !!result.refreshToken,
-      user: result.user,
-    });
-
-    setAccessToken(result.accessToken);
-    setApiAccessToken(result.accessToken);
-    setRefreshToken(result.refreshToken ?? null);
-    setUser(result.user);
-
-    await Promise.all([
-      secureStorage.setItemAsync(ACCESS_TOKEN_KEY, result.accessToken),
-      result.refreshToken
-        ? secureStorage.setItemAsync(REFRESH_TOKEN_KEY, result.refreshToken)
-        : secureStorage.deleteItemAsync(REFRESH_TOKEN_KEY),
-      secureStorage.setItemAsync(USER_SUB_KEY, result.user.sub),
-      result.user.email
-        ? secureStorage.setItemAsync(USER_EMAIL_KEY, result.user.email)
-        : secureStorage.deleteItemAsync(USER_EMAIL_KEY),
-      result.user.name
-        ? secureStorage.setItemAsync(USER_NAME_KEY, result.user.name)
-        : secureStorage.deleteItemAsync(USER_NAME_KEY),
-    ]);
+    })();
   }, []);
 
-  const login = useCallback(async () => {
-    console.log("[AuthContext] login() called");
+  async function login() {
+    const result = await startKeycloakLoginAsync();
+    if (!result) return;
+    await persist(result.accessToken, result.refreshToken ?? null, result.user);
+  }
 
-    // Disable the 401 reset handler during interactive login to avoid loops
-    // if any background request fires while we don't have a token yet.
-    setUnauthorizedHandler(null);
+  async function logout() {
+    await clear();
+  }
 
-    try {
-      const result = await startKeycloakLoginAsync();
-      console.log("[AuthContext] login() result:", !!result);
-      if (!result) return;
-      await persistSession(result);
-      console.log("[AuthContext] session persisted");
-    } finally {
-      setUnauthorizedHandler(() => {
-        resetAuthState().catch((err) => {
-          console.error("[AuthContext] Error resetting auth on 401:", err);
-        });
-      });
-    }
-  }, [persistSession, resetAuthState]);
-
-  const logout = useCallback(async () => {
-    await resetAuthState();
-  }, [resetAuthState]);
-
-  const value: AuthContextValue = {
-    loading,
-    isAuthenticated: !!accessToken,
-    accessToken,
-    refreshToken,
-    user,
-    login,
-    logout,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        loading,
+        isAuthenticated: !!accessToken,
+        accessToken,
+        user,
+        login,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
-export function useAuth(): AuthContextValue {
+export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }

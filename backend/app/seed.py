@@ -25,6 +25,8 @@ from app.models import (
     PointsValue,
     AchievementDefinition,
     Affirmation,
+    Chore,
+    OutdoorActivity,
 )
 
 # ========== SUBJECTS ==========
@@ -85,13 +87,38 @@ ACHIEVEMENTS_SEED = [
     {"id": "perfect_day", "title": "Perfect Day", "description": "Complete activities in all categories in one day", "icon": "sun", "type": "daily"},
 ]
 
-# ========== AFFIRMATIONS (OPTIONAL) ==========
+# ========== AFFIRMATIONS ==========
 AFFIRMATIONS_SEED = [
     {"id": "1", "text": "I can do hard things.", "gradient_0": "#8B5CF6", "gradient_1": "#3B82F6"},
     {"id": "2", "text": "I am learning every day.", "gradient_0": "#10B981", "gradient_1": "#3B82F6"},
-    {"id": "3", "text": "I’m proud of my effort.", "gradient_0": "#FB923C", "gradient_1": "#F59E0B"},
+    {"id": "3", "text": "I'm proud of my effort.", "gradient_0": "#FB923C", "gradient_1": "#F59E0B"},
+    {"id": "4", "text": "Progress matters more than perfection.", "gradient_0": "#22C55E", "gradient_1": "#06B6D4"},
+    {"id": "5", "text": "I show up even when it's uncomfortable.", "gradient_0": "#6366F1", "gradient_1": "#8B5CF6"},
+    {"id": "6", "text": "I am capable of figuring this out.", "gradient_0": "#14B8A6", "gradient_1": "#3B82F6"},
+    {"id": "7", "text": "Small steps still move me forward.", "gradient_0": "#F97316", "gradient_1": "#EF4444"},
+    {"id": "8", "text": "I give myself permission to grow.", "gradient_0": "#A855F7", "gradient_1": "#EC4899"},
+    {"id": "9", "text": "My effort today supports my future self.", "gradient_0": "#0EA5E9", "gradient_1": "#22C55E"},
+    {"id": "10", "text": "I don't need all the answers to begin.", "gradient_0": "#F59E0B", "gradient_1": "#FB923C"},
+    {"id": "11", "text": "I am improving through practice.", "gradient_0": "#3B82F6", "gradient_1": "#6366F1"},
+    {"id": "12", "text": "I trust myself to adapt and adjust.", "gradient_0": "#10B981", "gradient_1": "#14B8A6"},
 ]
 
+
+# ========== Chores ==========
+CHORES_SEED = [
+    {"id": "bed", "label": "Make my bed", "icon": "home", "is_extra": False},
+    {"id": "clothes", "label": "Put away clothes", "icon": "user", "is_extra": False},
+    {"id": "room", "label": "Clean my room", "icon": "trash-2", "is_extra": False},
+]
+
+# ========== Outdoor Activities ==========
+OUTDOOR_ACTIVITIES_SEED = [
+    {"id": "run", "name": "Play Tag", "category": "Active Play", "icon": "zap", "time": "15 min", "points": 20, "is_daily": True},
+    {"id": "explore", "name": "Nature Walk", "category": "Nature Explorer", "icon": "compass", "time": "20 min", "points": 20, "is_daily": False},
+    {"id": "sports", "name": "Kick the Ball", "category": "Sports & Games", "icon": "circle", "time": "30 min", "points": 20, "is_daily": False},
+    {"id": "creative", "name": "Draw with Chalk", "category": "Creative Outside", "icon": "edit-3", "time": "25 min", "points": 20, "is_daily": False},
+    {"id": "bike", "name": "Ride Your Bike", "category": "Active Play", "icon": "activity", "time": "20 min", "points": 20, "is_daily": False},
+]
 
 async def _seed_bulk(conn, model, rows, label: str) -> None:
     if not rows:
@@ -112,6 +139,8 @@ async def seed() -> None:
         await _seed_bulk(conn, PointsValue, POINTS_VALUES_SEED, "Points values")
         await _seed_bulk(conn, AchievementDefinition, ACHIEVEMENTS_SEED, "Achievements")
         await _seed_bulk(conn, Affirmation, AFFIRMATIONS_SEED, "Affirmations")
+        await _seed_bulk(conn, Chore, CHORES_SEED, "Chores")
+        await _seed_bulk(conn, OutdoorActivity, OUTDOOR_ACTIVITIES_SEED, "Outdoor activities")
 
     print("Done!")
 

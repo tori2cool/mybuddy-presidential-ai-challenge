@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# backend/Dockerfile
 FROM python:3.11-slim
 
 # Prevent Python from writing .pyc files and buffering stdout/stderr

@@ -100,13 +100,25 @@ def compute_balanced_progress(
             "currentLevel": "New Kid",
             "nextLevel": None,
             "requiredPerSubject": 0,
-            "subjectProgress": {s: {"current": subject_correct.get(s, 0)} for s in subjects},
+            "subjectProgress": {
+                s: {
+                    "current": subject_correct.get(s, 0),
+                    "required": 0,
+                    "met": True,
+                }
+                for s in subjects
+            },
             "message": "Keep practicing!",
         }
 
     levels_desc = sorted(level_thresholds.items(), key=lambda kv: kv[1], reverse=True)
 
     for level_name, threshold in levels_desc:
+        # Skip threshold=0 levels when determining achieved level
+        # "New Kid" (threshold=0) is the starting state, not a progression target
+        if threshold == 0:
+            continue
+            
         required_per_subject = (threshold + n_subjects - 1) // n_subjects
         if min_correct >= required_per_subject:
             # Determine nextLevel (the one above current, in ascending order)
@@ -122,20 +134,44 @@ def compute_balanced_progress(
                 "currentLevel": level_name,
                 "nextLevel": next_level,
                 "requiredPerSubject": required_per_subject,
-                "subjectProgress": {s: {"current": subject_correct.get(s, 0)} for s in subjects},
+                "subjectProgress": {
+                    s: {
+                        "current": subject_correct.get(s, 0),
+                        "required": required_per_subject,
+                        "met": subject_correct.get(s, 0) >= required_per_subject,
+                    }
+                    for s in subjects
+                },
                 "message": f"Ready for {level_name}!",
             }
 
-    # None matched => still "New Kid" (or lowest level). Use the smallest threshold for requiredPerSubject.
-    smallest_threshold = min(level_thresholds.values())
-    required_per_subject = (smallest_threshold + n_subjects - 1) // n_subjects
+    # None matched => still "New Kid" (or lowest level). 
+    # Find the first real level (smallest threshold > 0) for progress display.
+    levels_asc = sorted(level_thresholds.items(), key=lambda kv: kv[1])
+    # Filter out any levels with threshold 0 (like "New Kid")
+    levels_asc_filtered = [(name, thresh) for name, thresh in levels_asc if thresh > 0]
+    
+    if levels_asc_filtered:
+        next_level = levels_asc_filtered[0][0]
+        required_per_subject = (levels_asc_filtered[0][1] + n_subjects - 1) // n_subjects
+    else:
+        # All thresholds are 0 (misconfigured DB) - fall back to 0
+        next_level = None
+        required_per_subject = 0
 
     return {
         "canLevelUp": False,
         "currentLevel": "New Kid",
-        "nextLevel": None,
+        "nextLevel": next_level,
         "requiredPerSubject": required_per_subject,
-        "subjectProgress": {s: {"current": subject_correct.get(s, 0)} for s in subjects},
+        "subjectProgress": {
+            s: {
+                "current": subject_correct.get(s, 0),
+                "required": required_per_subject,
+                "met": subject_correct.get(s, 0) >= required_per_subject,
+            }
+            for s in subjects
+        },
         "message": "Keep practicing!",
     }
 

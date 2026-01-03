@@ -3,6 +3,7 @@
   "main": "index.js",
   "version": "1.0.0",
   "scripts": {
+    "build": "npx expo export --platform web",
     "start": "npx expo start",
     "start:tunnel": "npx expo start --tunnel",
     "android": "npx expo start --android",
