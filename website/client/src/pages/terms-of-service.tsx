@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -17,6 +19,16 @@ const staggerContainer = {
 export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-background">
+      {/* Back button top left */}
+      <div className="fixed top-4 left-4 z-50">
+        <Link href="/">
+          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition">
+            <ArrowLeft className="w-5 h-5" />
+            Back to Home
+          </button>
+        </Link>
+      </div>
+
       <motion.section 
         className="py-24"
         variants={staggerContainer}
@@ -56,7 +68,7 @@ export default function TermsOfService() {
             <p>We may update these terms. Continued use constitutes acceptance.</p>
 
             <h2>Contact</h2>
-            <p>For questions: support@mybuddy-and-me.com</p>
+            <p>For questions: sales@mybuddy-and-me.com</p>
           </motion.div>
         </div>
       </motion.section>

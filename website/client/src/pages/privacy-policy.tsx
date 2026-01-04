@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
 import { Shield, Lock, Users } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "wouter";  // For client-side back navigation
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -18,6 +20,16 @@ const staggerContainer = {
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-background">
+      {/* Back button top left */}
+      <div className="fixed top-4 left-4 z-50">
+        <Link href="/">
+          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition">
+            <ArrowLeft className="w-5 h-5" />
+            Back to Home
+          </button>
+        </Link>
+      </div>
+
       <motion.section 
         className="py-24"
         variants={staggerContainer}
@@ -38,7 +50,10 @@ export default function PrivacyPolicy() {
             Last updated: January 04, 2026
           </motion.p>
 
-          <motion.div variants={fadeInUp} className="prose prose-lg dark:prose-invert max-w-4xl mx-auto">
+          <motion.div 
+            variants={fadeInUp} 
+            className="prose prose-lg dark:prose-invert max-w-4xl mx-auto"
+          >
             <p>MyBuddy is committed to protecting your privacy, especially for children under 13 and their parents.</p>
 
             <h2>Information We Collect</h2>
@@ -60,12 +75,10 @@ export default function PrivacyPolicy() {
             <p>We do not sell or share personal data with third parties.</p>
 
             <h2>Contact</h2>
-            <p>For questions: support@mybuddy-and-me.com</p>
+            <p>For questions: sales@mybuddy-and-me.com</p>
           </motion.div>
         </div>
       </motion.section>
-
-      {/* The footer is already in home.tsx — it will appear on these pages automatically if wrapped in a layout, or copy the footer markup here if needed */}
     </div>
   );
 }
