@@ -222,6 +222,19 @@ class PointsValue(SQLModel, table=True):
     points: int = Field(sa_column=Column(Integer, nullable=False))
     is_active: bool = Field(default=True)
 
+class AgeRange(SQLModel, table=True):
+    """
+    Age ranges for content personalization.
+    """
+    __tablename__ = "age_ranges"
+
+    id: str = Field(primary_key=True, max_length=50)
+    name: str = Field(nullable=False, max_length=100)
+    min_age: int = Field(sa_column=Column(Integer, nullable=False))
+    max_age: Optional[int] = Field(sa_column=Column(Integer, nullable=True))
+    is_active: bool = Field(default=True)
+
+
 class Affirmation(SQLModel, table=True):
     """Static affirmation content.
     Mirrors the `affirmations` table.
@@ -233,6 +246,8 @@ class Affirmation(SQLModel, table=True):
     text: str = Field(nullable=False)
     gradient_0: str = Field(nullable=False, max_length=255)
     gradient_1: str = Field(nullable=False, max_length=255)
+    tags: Optional[list] = Field(default=None, sa_column=Column(JSONB))
+    age_range_id: Optional[str] = Field(default=None, foreign_key="age_ranges.id", max_length=50)
 
 class Subject(SQLModel, table=True):
     """Academic subject used to organize flashcards and other content.
@@ -271,6 +286,8 @@ class Flashcard(SQLModel, table=True):
         },
         max_length=50,
     )
+    tags: Optional[list] = Field(default=None, sa_column=Column(JSONB))
+    age_range_id: Optional[str] = Field(default=None, foreign_key="age_ranges.id", max_length=50)
 
 
 class Chore(SQLModel, table=True):
@@ -285,6 +302,8 @@ class Chore(SQLModel, table=True):
     label: str = Field(sa_column_kwargs={"nullable": False}, max_length=255)
     icon: str = Field(sa_column_kwargs={"nullable": False}, max_length=255)
     is_extra: bool = Field(default=False, sa_column_kwargs={"nullable": False})
+    tags: Optional[list] = Field(default=None, sa_column=Column(JSONB))
+    age_range_id: Optional[str] = Field(default=None, foreign_key="age_ranges.id", max_length=50)
 
 
 class OutdoorActivity(SQLModel, table=True):
@@ -302,6 +321,8 @@ class OutdoorActivity(SQLModel, table=True):
     time: str = Field(sa_column_kwargs={"nullable": False}, max_length=255)
     points: int = Field(sa_column_kwargs={"nullable": False})
     is_daily: bool = Field(sa_column_kwargs={"nullable": False})
+    tags: Optional[list] = Field(default=None, sa_column=Column(JSONB))
+    age_range_id: Optional[str] = Field(default=None, foreign_key="age_ranges.id", max_length=50)
 
 
 # ---------- PROJECT MODELS ----------
