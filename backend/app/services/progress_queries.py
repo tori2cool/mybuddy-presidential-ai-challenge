@@ -9,8 +9,8 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from ..models import ChildActivityEvent, ChildAchievement, Subject, DifficultyThreshold
-from .progress_rules import calculate_difficulty
+from ..models import ChildActivityEvent, ChildAchievement, Subject, DifficultyThreshold, ChildSubjectStreak
+from .progress_rules import calculate_difficulty, calculate_difficulty_from_streak
 
 EventKind = Literal["flashcard_answered", "chore_completed", "outdoor_completed", "affirmation_viewed"]
 
@@ -314,18 +314,20 @@ async def compute_flashcards_by_subject(session: AsyncSession, *, child_id: str)
     """
     Return per-subject flashcard stats:
       {
-        "<subjectId>": {"completed": int, "correct": int, "difficulty": "easy"|"medium"|"hard"},
+        "<subjectId>": {"completed": int, "correct": int, "correctStreak": int, "difficulty": "easy"|"medium"|"hard"},
         ...
       }
 
     Notes:
     - Initializes all known subjects from the DB so the client can render zeros.
     - Difficulty is computed using DB-driven thresholds (difficulty_thresholds table).
+    - correctStreak is read from ChildSubjectStreak table (updated incrementally).
+    - longestStreak is read from ChildSubjectStreak table.
     """
     # Initialize with all DB subjects so the client can render 0s.
     subject_ids = await list_subject_ids(session)
     by_subject: Dict[str, dict] = {
-        s: {"completed": 0, "correct": 0, "difficulty": "easy"} for s in subject_ids
+        s: {"completed": 0, "correct": 0, "correctStreak": 0, "longestStreak": 0, "difficulty": "easy"} for s in subject_ids
     }
 
     # Load difficulty thresholds once (DB-driven).
@@ -373,12 +375,51 @@ async def compute_flashcards_by_subject(session: AsyncSession, *, child_id: str)
         sid = subject_id or "unknown"
         if sid not in by_subject:
             # Fallback for events referencing subjects not present in the DB.
-            by_subject[sid] = {"completed": 0, "correct": 0, "difficulty": "easy"}
+            by_subject[sid] = {"completed": 0, "correct": 0, "correctStreak": 0, "longestStreak": 0, "difficulty": "easy"}
 
         correct = int(correct_sum or 0)
         by_subject[sid]["completed"] = int(completed or 0)
         by_subject[sid]["correct"] = correct
-        by_subject[sid]["difficulty"] = calculate_difficulty(correct, thresholds)
+
+    # Fetch streaks from ChildSubjectStreak table (both current and longest)
+    streak_rows = (
+        await session.execute(
+            select(
+                ChildSubjectStreak.subject_id,
+                ChildSubjectStreak.current_streak,
+                ChildSubjectStreak.longest_streak,
+            ).where(
+                ChildSubjectStreak.child_id == child_id,
+            )
+        )
+    ).all()
+
+    for subject_id, current_streak, longest_streak in streak_rows:
+        if subject_id in by_subject:
+            by_subject[subject_id]["correctStreak"] = current_streak
+            by_subject[subject_id]["longestStreak"] = longest_streak
+
+    # Compute difficulty based on current streak (now from ChildSubjectStreak table)
+    for sid in by_subject:
+        by_subject[sid]["difficulty"] = calculate_difficulty_from_streak(by_subject[sid]["correctStreak"], thresholds)
+
+    # Compute threshold boundaries for UI progress display
+    for sid in by_subject:
+        current_diff = by_subject[sid]["difficulty"]
+        
+        # Determine tier boundaries based on current difficulty
+        if current_diff == "easy":
+            current_start = thresholds.get("easy", 0)
+            next_threshold = thresholds.get("medium", 20)
+        elif current_diff == "medium":
+            current_start = thresholds.get("medium", 20)
+            next_threshold = thresholds.get("hard", 40)
+        else:  # hard
+            current_start = thresholds.get("hard", 40)
+            next_threshold = None  # Max tier reached
+        
+        by_subject[sid]["currentTierStartAtStreak"] = current_start
+        by_subject[sid]["nextDifficultyAtStreak"] = next_threshold
 
     return by_subject
 

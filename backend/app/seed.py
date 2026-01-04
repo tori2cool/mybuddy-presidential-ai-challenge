@@ -99,175 +99,214 @@ ACHIEVEMENTS_SEED = [
 
 # ========== FLASHCARDS ==========
 FLASHCARDS_SEED = [
-    # Math - Easy (age_3_5)
-    {"id": "m1", "subject_id": "math", "question": "What is 7 + 5?", "answer": "12", "acceptable_answers": ["12", "twelve"], "difficulty": "easy", "tags": ["math", "addition"], "age_range_id": "age_3_5"},
-    {"id": "m2", "subject_id": "math", "question": "What is 8 + 6?", "answer": "14", "acceptable_answers": ["14", "fourteen"], "difficulty": "easy", "tags": ["math", "addition"], "age_range_id": "age_3_5"},
-    {"id": "m3", "subject_id": "math", "question": "What is 15 - 9?", "answer": "6", "acceptable_answers": ["6", "six"], "difficulty": "easy", "tags": ["math", "subtraction"], "age_range_id": "age_3_5"},
-    {"id": "m4", "subject_id": "math", "question": "What is 4 + 9?", "answer": "13", "acceptable_answers": ["13", "thirteen"], "difficulty": "easy", "tags": ["math", "addition"], "age_range_id": "age_3_5"},
-    {"id": "m5", "subject_id": "math", "question": "What is 20 - 8?", "answer": "12", "acceptable_answers": ["12", "twelve"], "difficulty": "easy", "tags": ["math", "subtraction"], "age_range_id": "age_3_5"},
-    {"id": "m6", "subject_id": "math", "question": "What is 3 x 4?", "answer": "12", "acceptable_answers": ["12", "twelve"], "difficulty": "easy", "tags": ["math", "multiplication"], "age_range_id": "age_3_5"},
-    {"id": "m7", "subject_id": "math", "question": "What is 5 x 2?", "answer": "10", "acceptable_answers": ["10", "ten"], "difficulty": "easy", "tags": ["math", "multiplication"], "age_range_id": "age_3_5"},
-    {"id": "m8", "subject_id": "math", "question": "What is 16 / 4?", "answer": "4", "acceptable_answers": ["4", "four"], "difficulty": "easy", "tags": ["math", "division"], "age_range_id": "age_3_5"},
-    {"id": "m9", "subject_id": "math", "question": "What is 18 / 2?", "answer": "9", "acceptable_answers": ["9", "nine"], "difficulty": "easy", "tags": ["math", "division"], "age_range_id": "age_3_5"},
-    {"id": "m10", "subject_id": "math", "question": "What is 25 - 11?", "answer": "14", "acceptable_answers": ["14", "fourteen"], "difficulty": "easy", "tags": ["math", "subtraction"], "age_range_id": "age_3_5"},
-    # Math - Medium (age_6_8)
-    {"id": "m11", "subject_id": "math", "question": "What is 8 x 7?", "answer": "56", "acceptable_answers": ["56", "fifty six", "fifty-six"], "difficulty": "medium", "tags": ["math", "multiplication"], "age_range_id": "age_6_8"},
-    {"id": "m12", "subject_id": "math", "question": "What is 9 x 9?", "answer": "81", "acceptable_answers": ["81", "eighty one", "eighty-one"], "difficulty": "medium", "tags": ["math", "multiplication"], "age_range_id": "age_6_8"},
-    {"id": "m13", "subject_id": "math", "question": "What is 72 / 8?", "answer": "9", "acceptable_answers": ["9", "nine"], "difficulty": "medium", "tags": ["math", "division"], "age_range_id": "age_6_8"},
-    {"id": "m14", "subject_id": "math", "question": "What is 15 x 4?", "answer": "60", "acceptable_answers": ["60", "sixty"], "difficulty": "medium", "tags": ["math", "multiplication"], "age_range_id": "age_6_8"},
-    {"id": "m15", "subject_id": "math", "question": "What is 144 / 12?", "answer": "12", "acceptable_answers": ["12", "twelve"], "difficulty": "medium", "tags": ["math", "division"], "age_range_id": "age_6_8"},
-    {"id": "m16", "subject_id": "math", "question": "If you have 45 apples and give away 18, how many are left?", "answer": "27", "acceptable_answers": ["27", "twenty seven", "twenty-seven"], "difficulty": "medium", "tags": ["math", "word-problems"], "age_range_id": "age_6_8"},
-    {"id": "m17", "subject_id": "math", "question": "What is 7 x 8 + 6?", "answer": "62", "acceptable_answers": ["62", "sixty two", "sixty-two"], "difficulty": "medium", "tags": ["math", "multiplication"], "age_range_id": "age_6_8"},
-    {"id": "m18", "subject_id": "math", "question": "What is 100 - 37?", "answer": "63", "acceptable_answers": ["63", "sixty three", "sixty-three"], "difficulty": "medium", "tags": ["math", "subtraction"], "age_range_id": "age_6_8"},
-    {"id": "m19", "subject_id": "math", "question": "What is 11 x 11?", "answer": "121", "acceptable_answers": ["121", "one hundred twenty one"], "difficulty": "medium", "tags": ["math", "multiplication"], "age_range_id": "age_6_8"},
-    {"id": "m20", "subject_id": "math", "question": "What is half of 86?", "answer": "43", "acceptable_answers": ["43", "forty three", "forty-three"], "difficulty": "medium", "tags": ["math", "division"], "age_range_id": "age_6_8"},
-    # Math - Hard (age_9_12)
-    {"id": "m21", "subject_id": "math", "question": "If a book costs $12 and you have $50, how many books can you buy?", "answer": "4", "acceptable_answers": ["4", "four"], "difficulty": "hard", "tags": ["math", "word-problems"], "age_range_id": "age_9_12"},
-    {"id": "m22", "subject_id": "math", "question": "What is 25 x 25?", "answer": "625", "acceptable_answers": ["625", "six hundred twenty five"], "difficulty": "hard", "tags": ["math", "multiplication"], "age_range_id": "age_9_12"},
-    {"id": "m23", "subject_id": "math", "question": "What is (8 + 12) x 5?", "answer": "100", "acceptable_answers": ["100", "one hundred"], "difficulty": "hard", "tags": ["math", "word-problems"], "age_range_id": "age_9_12"},
-    {"id": "m24", "subject_id": "math", "question": "A train travels 60 miles per hour. How far does it go in 3 hours?", "answer": "180", "acceptable_answers": ["180", "180 miles", "one hundred eighty", "one hundred eighty miles"], "difficulty": "hard", "tags": ["math", "word-problems"], "age_range_id": "age_9_12"},
-    {"id": "m25", "subject_id": "math", "question": "What is 15% of 200?", "answer": "30", "acceptable_answers": ["30", "thirty"], "difficulty": "hard", "tags": ["math", "percentages"], "age_range_id": "age_9_12"},
-    {"id": "m26", "subject_id": "math", "question": "What is 144 / 6 + 18?", "answer": "42", "acceptable_answers": ["42", "forty two", "forty-two"], "difficulty": "hard", "tags": ["math", "division"], "age_range_id": "age_9_12"},
-    {"id": "m27", "subject_id": "math", "question": "If 3 pencils cost $1.50, how much do 10 pencils cost?", "answer": "5", "acceptable_answers": ["5", "$5", "$5.00", "five", "five dollars", "5 dollars"], "difficulty": "hard", "tags": ["math", "word-problems"], "age_range_id": "age_9_12"},
-    {"id": "m28", "subject_id": "math", "question": "What is the area of a rectangle with length 8 and width 6?", "answer": "48", "acceptable_answers": ["48", "forty eight", "forty-eight"], "difficulty": "hard", "tags": ["math", "geometry"], "age_range_id": "age_9_12"},
-    {"id": "m29", "subject_id": "math", "question": "What is 999 + 111?", "answer": "1110", "acceptable_answers": ["1110", "one thousand one hundred ten"], "difficulty": "hard", "tags": ["math", "addition"], "age_range_id": "age_9_12"},
-    {"id": "m30", "subject_id": "math", "question": "What number times itself equals 169?", "answer": "13", "acceptable_answers": ["13", "thirteen"], "difficulty": "hard", "tags": ["math", "multiplication"], "age_range_id": "age_9_12"},
+    # ----------------------------
+    # Math - Easy (age_6_8)
+    # ----------------------------
+    {"id": "m31", "subject_id": "math", "question": "What is 9 + 8?", "answer": "17", "acceptable_answers": ["17", "seventeen"], "difficulty": "easy", "tags": ["math", "addition"], "age_range_id": "age_6_8"},
+    {"id": "m32", "subject_id": "math", "question": "What is 14 - 6?", "answer": "8", "acceptable_answers": ["8", "eight"], "difficulty": "easy", "tags": ["math", "subtraction"], "age_range_id": "age_6_8"},
+    {"id": "m33", "subject_id": "math", "question": "What is 6 x 7?", "answer": "42", "acceptable_answers": ["42", "forty two", "forty-two"], "difficulty": "easy", "tags": ["math", "multiplication"], "age_range_id": "age_6_8"},
+    {"id": "m34", "subject_id": "math", "question": "What is 36 / 6?", "answer": "6", "acceptable_answers": ["6", "six"], "difficulty": "easy", "tags": ["math", "division"], "age_range_id": "age_6_8"},
+    {"id": "m35", "subject_id": "math", "question": "If you have 10 candies and eat 3, how many are left?", "answer": "7", "acceptable_answers": ["7", "seven"], "difficulty": "easy", "tags": ["math", "word-problems"], "age_range_id": "age_6_8"},
 
-    # Science - Easy (age_3_5)
-    {"id": "s1", "subject_id": "science", "question": "What planet is known as the Red Planet?", "answer": "Mars", "acceptable_answers": ["mars"], "difficulty": "easy", "tags": ["science", "space", "planets"], "age_range_id": "age_3_5"},
-    {"id": "s2", "subject_id": "science", "question": "How many legs does a spider have?", "answer": "8", "acceptable_answers": ["8", "eight"], "difficulty": "easy", "tags": ["science", "animals", "biology"], "age_range_id": "age_3_5"},
-    {"id": "s3", "subject_id": "science", "question": "What gas do we breathe in?", "answer": "Oxygen", "acceptable_answers": ["oxygen", "o2"], "difficulty": "easy", "tags": ["science", "biology"], "age_range_id": "age_3_5"},
-    {"id": "s4", "subject_id": "science", "question": "What is the closest star to Earth?", "answer": "The Sun", "acceptable_answers": ["sun", "the sun"], "difficulty": "easy", "tags": ["science", "space", "planets"], "age_range_id": "age_3_5"},
-    {"id": "s5", "subject_id": "science", "question": "How many planets are in our solar system?", "answer": "8", "acceptable_answers": ["8", "eight"], "difficulty": "easy", "tags": ["science", "space", "planets"], "age_range_id": "age_3_5"},
-    {"id": "s6", "subject_id": "science", "question": "What animal is known as the King of the Jungle?", "answer": "Lion", "acceptable_answers": ["lion", "a lion"], "difficulty": "easy", "tags": ["science", "animals", "biology"], "age_range_id": "age_3_5"},
-    {"id": "s7", "subject_id": "science", "question": "What is water made of?", "answer": "Hydrogen and Oxygen", "acceptable_answers": ["hydrogen and oxygen", "h2o", "water"], "difficulty": "easy", "tags": ["science", "chemistry", "elements"], "age_range_id": "age_3_5"},
-    {"id": "s8", "subject_id": "science", "question": "What do bees make?", "answer": "Honey", "acceptable_answers": ["honey"], "difficulty": "easy", "tags": ["science", "animals", "biology"], "age_range_id": "age_3_5"},
-    {"id": "s9", "subject_id": "science", "question": "What is the largest mammal?", "answer": "Blue Whale", "acceptable_answers": ["blue whale", "whale"], "difficulty": "easy", "tags": ["science", "animals", "biology"], "age_range_id": "age_3_5"},
-    {"id": "s10", "subject_id": "science", "question": "How many bones are in the human body?", "answer": "206", "acceptable_answers": ["206", "two hundred six"], "difficulty": "easy", "tags": ["science", "biology"], "age_range_id": "age_3_5"},
-    # Science - Medium (age_6_8)
-    {"id": "s11", "subject_id": "science", "question": "What is the largest organ in the human body?", "answer": "Skin", "acceptable_answers": ["skin", "the skin"], "difficulty": "medium", "tags": ["science", "biology"], "age_range_id": "age_6_8"},
-    {"id": "s12", "subject_id": "science", "question": "What force keeps us on the ground?", "answer": "Gravity", "acceptable_answers": ["gravity"], "difficulty": "medium", "tags": ["science", "physics", "gravity"], "age_range_id": "age_6_8"},
-    {"id": "s13", "subject_id": "science", "question": "What is the process plants use to make food?", "answer": "Photosynthesis", "acceptable_answers": ["photosynthesis"], "difficulty": "medium", "tags": ["science", "plants", "photosynthesis"], "age_range_id": "age_6_8"},
-    {"id": "s14", "subject_id": "science", "question": "What is the hardest natural substance on Earth?", "answer": "Diamond", "acceptable_answers": ["diamond", "diamonds"], "difficulty": "medium", "tags": ["science", "chemistry", "elements"], "age_range_id": "age_6_8"},
-    {"id": "s15", "subject_id": "science", "question": "What planet has the most moons?", "answer": "Saturn", "acceptable_answers": ["saturn"], "difficulty": "medium", "tags": ["science", "space", "planets"], "age_range_id": "age_6_8"},
-    {"id": "s16", "subject_id": "science", "question": "What is the chemical symbol for gold?", "answer": "Au", "acceptable_answers": ["au"], "difficulty": "medium", "tags": ["science", "chemistry", "elements"], "age_range_id": "age_6_8"},
-    {"id": "s17", "subject_id": "science", "question": "What type of animal is a dolphin?", "answer": "Mammal", "acceptable_answers": ["mammal", "a mammal"], "difficulty": "medium", "tags": ["science", "animals", "biology"], "age_range_id": "age_6_8"},
-    {"id": "s18", "subject_id": "science", "question": "What is the center of an atom called?", "answer": "Nucleus", "acceptable_answers": ["nucleus", "the nucleus"], "difficulty": "medium", "tags": ["science", "chemistry", "elements"], "age_range_id": "age_6_8"},
-    {"id": "s19", "subject_id": "science", "question": "What is the main gas in Earth's atmosphere?", "answer": "Nitrogen", "acceptable_answers": ["nitrogen"], "difficulty": "medium", "tags": ["science", "chemistry", "elements"], "age_range_id": "age_6_8"},
-    {"id": "s20", "subject_id": "science", "question": "How long does it take Earth to orbit the Sun?", "answer": "365 days", "acceptable_answers": ["365 days", "365", "1 year", "one year", "a year"], "difficulty": "medium", "tags": ["science", "space", "planets"], "age_range_id": "age_6_8"},
-    # Science - Hard (age_9_12)
-    {"id": "s21", "subject_id": "science", "question": "What are the three states of matter?", "answer": "Solid, Liquid, Gas", "acceptable_answers": ["solid liquid gas", "solid, liquid, gas", "solid liquid and gas"], "difficulty": "hard", "tags": ["science", "chemistry", "elements"], "age_range_id": "age_9_12"},
-    {"id": "s22", "subject_id": "science", "question": "What is the speed of light in miles per second?", "answer": "186,000", "acceptable_answers": ["186000", "186,000", "186000 miles"], "difficulty": "hard", "tags": ["science", "physics", "gravity"], "age_range_id": "age_9_12"},
-    {"id": "s23", "subject_id": "science", "question": "What part of the cell contains genetic information?", "answer": "Nucleus", "acceptable_answers": ["nucleus", "the nucleus", "dna"], "difficulty": "hard", "tags": ["science", "biology"], "age_range_id": "age_9_12"},
-    {"id": "s24", "subject_id": "science", "question": "What causes the tides on Earth?", "answer": "The Moon's gravity", "acceptable_answers": ["moon", "the moon", "moon's gravity", "gravity of the moon"], "difficulty": "hard", "tags": ["science", "physics", "gravity"], "age_range_id": "age_9_12"},
-    {"id": "s25", "subject_id": "science", "question": "What is Newton's First Law also known as?", "answer": "Law of Inertia", "acceptable_answers": ["law of inertia", "inertia"], "difficulty": "hard", "tags": ["science", "physics", "gravity"], "age_range_id": "age_9_12"},
-    {"id": "s26", "subject_id": "science", "question": "What is the boiling point of water in Fahrenheit?", "answer": "212", "acceptable_answers": ["212", "212 degrees", "212f"], "difficulty": "hard", "tags": ["science", "chemistry", "elements"], "age_range_id": "age_9_12"},
-    {"id": "s27", "subject_id": "science", "question": "What type of rock is formed from cooled lava?", "answer": "Igneous", "acceptable_answers": ["igneous", "igneous rock"], "difficulty": "hard", "tags": ["science", "plants", "photosynthesis"], "age_range_id": "age_9_12"},
-    {"id": "s28", "subject_id": "science", "question": "What is the unit of electrical resistance?", "answer": "Ohm", "acceptable_answers": ["ohm", "ohms"], "difficulty": "hard", "tags": ["science", "physics", "gravity"], "age_range_id": "age_9_12"},
-    {"id": "s29", "subject_id": "science", "question": "What is the chemical formula for table salt?", "answer": "NaCl", "acceptable_answers": ["nacl", "sodium chloride"], "difficulty": "hard", "tags": ["science", "chemistry", "elements"], "age_range_id": "age_9_12"},
-    {"id": "s30", "subject_id": "science", "question": "What is the function of white blood cells?", "answer": "Fight infection", "acceptable_answers": ["fight infection", "fight infections", "protect the body", "immunity", "immune system"], "difficulty": "hard", "tags": ["science", "biology"], "age_range_id": "age_9_12"},
+    # ----------------------------
+    # Science - Easy (age_6_8)
+    # ----------------------------
+    {"id": "s31", "subject_id": "science", "question": "What do plants need from the Sun to grow?", "answer": "Sunlight", "acceptable_answers": ["sunlight", "light"], "difficulty": "easy", "tags": ["science", "plants"], "age_range_id": "age_6_8"},
+    {"id": "s32", "subject_id": "science", "question": "What gas do plants breathe in?", "answer": "Carbon dioxide", "acceptable_answers": ["carbon dioxide", "co2"], "difficulty": "easy", "tags": ["science", "plants"], "age_range_id": "age_6_8"},
+    {"id": "s33", "subject_id": "science", "question": "What part of a plant usually grows underground?", "answer": "Roots", "acceptable_answers": ["roots", "root"], "difficulty": "easy", "tags": ["science", "plants"], "age_range_id": "age_6_8"},
+    {"id": "s34", "subject_id": "science", "question": "What is the force that pulls things toward Earth?", "answer": "Gravity", "acceptable_answers": ["gravity"], "difficulty": "easy", "tags": ["science", "physics"], "age_range_id": "age_6_8"},
+    {"id": "s35", "subject_id": "science", "question": "What is an animal that eats only plants called?", "answer": "Herbivore", "acceptable_answers": ["herbivore", "a herbivore"], "difficulty": "easy", "tags": ["science", "animals"], "age_range_id": "age_6_8"},
 
-    # Reading - Easy (age_3_5)
-    {"id": "r1", "subject_id": "reading", "question": "What punctuation mark ends a question?", "answer": "Question mark", "acceptable_answers": ["question mark", "?", "a question mark"], "difficulty": "easy", "tags": ["reading", "grammar"], "age_range_id": "age_3_5"},
-    {"id": "r2", "subject_id": "reading", "question": "What do we call words that sound the same but have different meanings?", "answer": "Homophones", "acceptable_answers": ["homophones", "homophone"], "difficulty": "easy", "tags": ["reading", "vocabulary"], "age_range_id": "age_3_5"},
-    {"id": "r3", "subject_id": "reading", "question": "What is the opposite of a synonym?", "answer": "Antonym", "acceptable_answers": ["antonym", "an antonym"], "difficulty": "easy", "tags": ["reading", "vocabulary"], "age_range_id": "age_3_5"},
-    {"id": "r4", "subject_id": "reading", "question": "What do we call a word that describes a noun?", "answer": "Adjective", "acceptable_answers": ["adjective", "an adjective"], "difficulty": "easy", "tags": ["reading", "grammar"], "age_range_id": "age_3_5"},
-    {"id": "r5", "subject_id": "reading", "question": "What punctuation mark shows excitement?", "answer": "Exclamation mark", "acceptable_answers": ["exclamation mark", "exclamation point", "!"], "difficulty": "easy", "tags": ["reading", "grammar"], "age_range_id": "age_3_5"},
-    {"id": "r6", "subject_id": "reading", "question": "How many letters are in the alphabet?", "answer": "26", "acceptable_answers": ["26", "twenty six", "twenty-six"], "difficulty": "easy", "tags": ["reading", "vocabulary"], "age_range_id": "age_3_5"},
-    {"id": "r7", "subject_id": "reading", "question": "What do we call a story that is not true?", "answer": "Fiction", "acceptable_answers": ["fiction", "a fiction"], "difficulty": "easy", "tags": ["reading", "literature"], "age_range_id": "age_3_5"},
-    {"id": "r8", "subject_id": "reading", "question": "What are the five vowels?", "answer": "A, E, I, O, U", "acceptable_answers": ["a e i o u", "aeiou", "a, e, i, o, u"], "difficulty": "easy", "tags": ["reading", "grammar"], "age_range_id": "age_3_5"},
-    {"id": "r9", "subject_id": "reading", "question": "What do we call a word that shows action?", "answer": "Verb", "acceptable_answers": ["verb", "a verb"], "difficulty": "easy", "tags": ["reading", "grammar"], "age_range_id": "age_3_5"},
-    {"id": "r10", "subject_id": "reading", "question": "What is the name for the main character in a story?", "answer": "Protagonist", "acceptable_answers": ["protagonist", "the protagonist", "main character"], "difficulty": "easy", "tags": ["reading", "literature"], "age_range_id": "age_3_5"},
-    # Reading - Medium (age_6_8)
-    {"id": "r11", "subject_id": "reading", "question": "What is a group of sentences about one topic called?", "answer": "Paragraph", "acceptable_answers": ["paragraph", "a paragraph"], "difficulty": "medium", "tags": ["reading", "writing"], "age_range_id": "age_6_8"},
-    {"id": "r12", "subject_id": "reading", "question": "What do we call a word that replaces a noun?", "answer": "Pronoun", "acceptable_answers": ["pronoun", "a pronoun"], "difficulty": "medium", "tags": ["reading", "grammar"], "age_range_id": "age_6_8"},
-    {"id": "r13", "subject_id": "reading", "question": "What is the name for the bad character in a story?", "answer": "Antagonist", "acceptable_answers": ["antagonist", "the antagonist", "villain"], "difficulty": "medium", "tags": ["reading", "literature"], "age_range_id": "age_6_8"},
-    {"id": "r14", "subject_id": "reading", "question": "What do we call a comparison using 'like' or 'as'?", "answer": "Simile", "acceptable_answers": ["simile", "a simile"], "difficulty": "medium", "tags": ["reading", "writing"], "age_range_id": "age_6_8"},
-    {"id": "r15", "subject_id": "reading", "question": "What is the setting of a story?", "answer": "Where and when it takes place", "acceptable_answers": ["where and when", "time and place", "place and time", "location"], "difficulty": "medium", "tags": ["reading", "comprehension"], "age_range_id": "age_6_8"},
-    {"id": "r16", "subject_id": "reading", "question": "What do we call words with opposite meanings?", "answer": "Antonyms", "acceptable_answers": ["antonyms", "antonym"], "difficulty": "medium", "tags": ["reading", "vocabulary"], "age_range_id": "age_6_8"},
-    {"id": "r17", "subject_id": "reading", "question": "What is a biography?", "answer": "A story about someone's life", "acceptable_answers": ["story of someone's life", "story about someone's life", "life story", "about someone's life"], "difficulty": "medium", "tags": ["reading", "literature"], "age_range_id": "age_6_8"},
-    {"id": "r18", "subject_id": "reading", "question": "What punctuation separates items in a list?", "answer": "Comma", "acceptable_answers": ["comma", "commas", ","], "difficulty": "medium", "tags": ["reading", "grammar"], "age_range_id": "age_6_8"},
-    {"id": "r19", "subject_id": "reading", "question": "What is the plural of 'child'?", "answer": "Children", "acceptable_answers": ["children"], "difficulty": "medium", "tags": ["reading", "grammar"], "age_range_id": "age_6_8"},
-    {"id": "r20", "subject_id": "reading", "question": "What do we call a word that modifies a verb?", "answer": "Adverb", "acceptable_answers": ["adverb", "an adverb"], "difficulty": "medium", "tags": ["reading", "grammar"], "age_range_id": "age_6_8"},
-    # Reading - Hard (age_9_12)
-    {"id": "r21", "subject_id": "reading", "question": "What is a metaphor?", "answer": "A direct comparison without using like or as", "acceptable_answers": ["direct comparison", "comparison without like or as", "comparing things directly"], "difficulty": "hard", "tags": ["reading", "writing"], "age_range_id": "age_9_12"},
-    {"id": "r22", "subject_id": "reading", "question": "What is the theme of a story?", "answer": "The main message or lesson", "acceptable_answers": ["main message", "lesson", "moral", "central idea", "main idea"], "difficulty": "hard", "tags": ["reading", "comprehension"], "age_range_id": "age_9_12"},
-    {"id": "r23", "subject_id": "reading", "question": "What is personification?", "answer": "Giving human traits to non-human things", "acceptable_answers": ["giving human traits to things", "making things human", "human traits to objects"], "difficulty": "hard", "tags": ["reading", "writing"], "age_range_id": "age_9_12"},
-    {"id": "r24", "subject_id": "reading", "question": "What is the climax of a story?", "answer": "The most exciting part", "acceptable_answers": ["most exciting part", "turning point", "peak", "high point"], "difficulty": "hard", "tags": ["reading", "comprehension"], "age_range_id": "age_9_12"},
-    {"id": "r25", "subject_id": "reading", "question": "What is alliteration?", "answer": "Repeating the same starting sound", "acceptable_answers": ["same starting sound", "repeated sounds", "same beginning sounds"], "difficulty": "hard", "tags": ["reading", "writing"], "age_range_id": "age_9_12"},
-    {"id": "r26", "subject_id": "reading", "question": "What is the difference between 'affect' and 'effect'?", "answer": "Affect is a verb, effect is a noun", "acceptable_answers": ["affect is verb effect is noun", "affect verb effect noun"], "difficulty": "hard", "tags": ["reading", "grammar"], "age_range_id": "age_9_12"},
-    {"id": "r27", "subject_id": "reading", "question": "What is irony?", "answer": "When the opposite of what you expect happens", "acceptable_answers": ["opposite of expected", "unexpected outcome", "opposite of what's expected"], "difficulty": "hard", "tags": ["reading", "comprehension"], "age_range_id": "age_9_12"},
-    {"id": "r28", "subject_id": "reading", "question": "What is a prefix?", "answer": "Letters added to the beginning of a word", "acceptable_answers": ["beginning of word", "letters before word", "added to beginning"], "difficulty": "hard", "tags": ["reading", "vocabulary"], "age_range_id": "age_9_12"},
-    {"id": "r29", "subject_id": "reading", "question": "What is a suffix?", "answer": "Letters added to the end of a word", "acceptable_answers": ["end of word", "letters after word", "added to end"], "difficulty": "hard", "tags": ["reading", "vocabulary"], "age_range_id": "age_9_12"},
-    {"id": "r30", "subject_id": "reading", "question": "What is the resolution of a story?", "answer": "How the story ends", "acceptable_answers": ["how it ends", "ending", "conclusion", "how the conflict is solved"], "difficulty": "hard", "tags": ["reading", "comprehension"], "age_range_id": "age_9_12"},
+    # ----------------------------
+    # Reading - Easy (age_6_8)
+    # ----------------------------
+    {"id": "r31", "subject_id": "reading", "question": "What is a noun?", "answer": "A person, place, or thing", "acceptable_answers": ["person place or thing", "a person place or thing", "a person, place, or thing"], "difficulty": "easy", "tags": ["reading", "grammar"], "age_range_id": "age_6_8"},
+    {"id": "r32", "subject_id": "reading", "question": "What is the plural of 'mouse'?", "answer": "Mice", "acceptable_answers": ["mice"], "difficulty": "easy", "tags": ["reading", "grammar"], "age_range_id": "age_6_8"},
+    {"id": "r33", "subject_id": "reading", "question": "What do we call the beginning of a story?", "answer": "Beginning", "acceptable_answers": ["beginning", "the beginning", "start", "the start"], "difficulty": "easy", "tags": ["reading", "comprehension"], "age_range_id": "age_6_8"},
+    {"id": "r34", "subject_id": "reading", "question": "What is a synonym?", "answer": "A word with the same meaning", "acceptable_answers": ["same meaning", "a word with the same meaning", "a word that means the same"], "difficulty": "easy", "tags": ["reading", "vocabulary"], "age_range_id": "age_6_8"},
+    {"id": "r35", "subject_id": "reading", "question": "What punctuation ends a sentence?", "answer": "Period", "acceptable_answers": ["period", ".", "a period"], "difficulty": "easy", "tags": ["reading", "grammar"], "age_range_id": "age_6_8"},
 
-    # History - Easy (age_3_5)
-    {"id": "h1", "subject_id": "history", "question": "Who was the first President of the United States?", "answer": "George Washington", "acceptable_answers": ["george washington", "washington"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_3_5"},
-    {"id": "h2", "subject_id": "history", "question": "What ancient wonder was built in Egypt?", "answer": "The Pyramids", "acceptable_answers": ["pyramids", "the pyramids", "great pyramids"], "difficulty": "easy", "tags": ["history", "ancient", "egypt"], "age_range_id": "age_3_5"},
-    {"id": "h3", "subject_id": "history", "question": "What is the name of the ship the Pilgrims sailed on?", "answer": "The Mayflower", "acceptable_answers": ["mayflower", "the mayflower"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_3_5"},
-    {"id": "h4", "subject_id": "history", "question": "In what year did Columbus sail to America?", "answer": "1492", "acceptable_answers": ["1492"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_3_5"},
-    {"id": "h5", "subject_id": "history", "question": "What holiday celebrates America's independence?", "answer": "Fourth of July", "acceptable_answers": ["fourth of july", "july 4th", "july fourth", "independence day"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_3_5"},
-    {"id": "h6", "subject_id": "history", "question": "Who invented the light bulb?", "answer": "Thomas Edison", "acceptable_answers": ["thomas edison", "edison"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_3_5"},
-    {"id": "h7", "subject_id": "history", "question": "What country gave the Statue of Liberty to America?", "answer": "France", "acceptable_answers": ["france"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_3_5"},
-    {"id": "h8", "subject_id": "history", "question": "What ocean did the Titanic sink in?", "answer": "Atlantic Ocean", "acceptable_answers": ["atlantic", "the atlantic", "atlantic ocean"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_3_5"},
-    {"id": "h9", "subject_id": "history", "question": "Who was known for saying 'I have a dream'?", "answer": "Martin Luther King Jr.", "acceptable_answers": ["martin luther king", "mlk", "martin luther king jr", "dr king"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_3_5"},
-    {"id": "h10", "subject_id": "history", "question": "What did the ancient Romans speak?", "answer": "Latin", "acceptable_answers": ["latin"], "difficulty": "easy", "tags": ["history", "ancient", "rome"], "age_range_id": "age_3_5"},
-    # History - Medium (age_6_8)
-    {"id": "h11", "subject_id": "history", "question": "What war was fought between the North and South in America?", "answer": "Civil War", "acceptable_answers": ["civil war", "the civil war", "american civil war"], "difficulty": "medium", "tags": ["history", "war", "civil-war"], "age_range_id": "age_6_8"},
-    {"id": "h12", "subject_id": "history", "question": "Who wrote the Declaration of Independence?", "answer": "Thomas Jefferson", "acceptable_answers": ["thomas jefferson", "jefferson"], "difficulty": "medium", "tags": ["history", "america"], "age_range_id": "age_6_8"},
-    {"id": "h13", "subject_id": "history", "question": "What empire built the Colosseum?", "answer": "Roman Empire", "acceptable_answers": ["roman", "roman empire", "romans", "rome"], "difficulty": "medium", "tags": ["history", "ancient", "rome"], "age_range_id": "age_6_8"},
-    {"id": "h14", "subject_id": "history", "question": "What was the name of the first airplane?", "answer": "Wright Flyer", "acceptable_answers": ["wright flyer", "flyer", "wright brothers plane"], "difficulty": "medium", "tags": ["history", "america"], "age_range_id": "age_6_8"},
-    {"id": "h15", "subject_id": "history", "question": "Who was the President during the Civil War?", "answer": "Abraham Lincoln", "acceptable_answers": ["abraham lincoln", "lincoln", "abe lincoln"], "difficulty": "medium", "tags": ["history", "america"], "age_range_id": "age_6_8"},
-    {"id": "h16", "subject_id": "history", "question": "What ancient civilization built the Parthenon?", "answer": "Greeks", "acceptable_answers": ["greeks", "greek", "ancient greece", "greece"], "difficulty": "medium", "tags": ["history", "ancient", "rome"], "age_range_id": "age_6_8"},
-    {"id": "h17", "subject_id": "history", "question": "What year did World War II end?", "answer": "1945", "acceptable_answers": ["1945"], "difficulty": "medium", "tags": ["history", "war", "world-war"], "age_range_id": "age_6_8"},
-    {"id": "h18", "subject_id": "history", "question": "Who was the first person to walk on the moon?", "answer": "Neil Armstrong", "acceptable_answers": ["neil armstrong", "armstrong"], "difficulty": "medium", "tags": ["history", "america"], "age_range_id": "age_6_8"},
-    {"id": "h19", "subject_id": "history", "question": "What was the Boston Tea Party protesting?", "answer": "Taxes", "acceptable_answers": ["taxes", "taxation", "tax", "british taxes"], "difficulty": "medium", "tags": ["history", "america"], "age_range_id": "age_6_8"},
-    {"id": "h20", "subject_id": "history", "question": "What is the oldest civilization in Mesopotamia?", "answer": "Sumer", "acceptable_answers": ["sumer", "sumerian", "sumerians"], "difficulty": "medium", "tags": ["history", "ancient", "egypt"], "age_range_id": "age_6_8"},
-    # History - Hard (age_9_12)
-    {"id": "h21", "subject_id": "history", "question": "What were the causes of World War I?", "answer": "Nationalism, alliances, imperialism", "acceptable_answers": ["nationalism", "alliances", "imperialism", "assassination"], "difficulty": "hard", "tags": ["history", "war", "world-war"], "age_range_id": "age_9_12"},
-    {"id": "h22", "subject_id": "history", "question": "What was the Renaissance?", "answer": "A rebirth of art and learning in Europe", "acceptable_answers": ["rebirth", "rebirth of art", "cultural movement", "rebirth of learning"], "difficulty": "hard", "tags": ["history", "ancient", "rome"], "age_range_id": "age_9_12"},
-    {"id": "h23", "subject_id": "history", "question": "Who was Cleopatra?", "answer": "The last pharaoh of Egypt", "acceptable_answers": ["pharaoh", "queen of egypt", "egyptian queen", "last pharaoh"], "difficulty": "hard", "tags": ["history", "ancient", "egypt"], "age_range_id": "age_9_12"},
-    {"id": "h24", "subject_id": "history", "question": "What was the Cold War?", "answer": "Political tension between USA and USSR", "acceptable_answers": ["tension between usa and ussr", "usa vs soviet union", "america vs russia"], "difficulty": "hard", "tags": ["history", "war", "world-war"], "age_range_id": "age_9_12"},
-    {"id": "h25", "subject_id": "history", "question": "What did the Magna Carta establish?", "answer": "Limits on the king's power", "acceptable_answers": ["limits on king", "rights", "limited monarchy", "rights of people"], "difficulty": "hard", "tags": ["history", "ancient", "rome"], "age_range_id": "age_9_12"},
-    {"id": "h26", "subject_id": "history", "question": "What was the Industrial Revolution?", "answer": "Shift from farming to factory work", "acceptable_answers": ["factories", "machines", "manufacturing", "industrial change"], "difficulty": "hard", "tags": ["history", "america"], "age_range_id": "age_9_12"},
-    {"id": "h27", "subject_id": "history", "question": "Who were the Vikings?", "answer": "Seafaring Norse people from Scandinavia", "acceptable_answers": ["norse", "scandinavian", "seafarers", "warriors from scandinavia"], "difficulty": "hard", "tags": ["history", "ancient", "rome"], "age_range_id": "age_9_12"},
-    {"id": "h28", "subject_id": "history", "question": "What was the Silk Road?", "answer": "Ancient trade route between East and West", "acceptable_answers": ["trade route", "trading route", "route between east and west"], "difficulty": "hard", "tags": ["history", "ancient", "egypt"], "age_range_id": "age_9_12"},
-    {"id": "h29", "subject_id": "history", "question": "What caused the fall of the Roman Empire?", "answer": "Invasions, economic trouble, and overexpansion", "acceptable_answers": ["invasions", "barbarians", "economic problems", "overexpansion"], "difficulty": "hard", "tags": ["history", "ancient", "rome"], "age_range_id": "age_9_12"},
-    {"id": "h30", "subject_id": "history", "question": "What was the effect of the printing press?", "answer": "Spread of knowledge and literacy", "acceptable_answers": ["spread knowledge", "more books", "literacy", "education"], "difficulty": "hard", "tags": ["history", "america"], "age_range_id": "age_9_12"},
+    # ----------------------------
+    # History - Easy (age_6_8)
+    # ----------------------------
+    {"id": "h31", "subject_id": "history", "question": "What country is known for building the Great Wall?", "answer": "China", "acceptable_answers": ["china"], "difficulty": "easy", "tags": ["history", "ancient"], "age_range_id": "age_6_8"},
+    {"id": "h32", "subject_id": "history", "question": "Who were the Pilgrims?", "answer": "People who traveled to America for a new life", "acceptable_answers": ["people who traveled to america", "people who came to america", "travelers to america"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_6_8"},
+    {"id": "h33", "subject_id": "history", "question": "What is the name of the U.S. flag?", "answer": "Stars and Stripes", "acceptable_answers": ["stars and stripes", "the stars and stripes"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_6_8"},
+    {"id": "h34", "subject_id": "history", "question": "What do we call a person who explores new places?", "answer": "Explorer", "acceptable_answers": ["explorer", "an explorer"], "difficulty": "easy", "tags": ["history", "vocabulary"], "age_range_id": "age_6_8"},
+    {"id": "h35", "subject_id": "history", "question": "What continent is Egypt in?", "answer": "Africa", "acceptable_answers": ["africa"], "difficulty": "easy", "tags": ["history", "geography"], "age_range_id": "age_6_8"},
+
+    # ----------------------------
+    # Math - Easy (age_9_12)
+    # ----------------------------
+    {"id": "m36", "subject_id": "math", "question": "What is 12 x 8?", "answer": "96", "acceptable_answers": ["96", "ninety six", "ninety-six"], "difficulty": "easy", "tags": ["math", "multiplication"], "age_range_id": "age_9_12"},
+    {"id": "m37", "subject_id": "math", "question": "What is 84 / 7?", "answer": "12", "acceptable_answers": ["12", "twelve"], "difficulty": "easy", "tags": ["math", "division"], "age_range_id": "age_9_12"},
+    {"id": "m38", "subject_id": "math", "question": "What is 250 + 175?", "answer": "425", "acceptable_answers": ["425", "four hundred twenty five", "four hundred twenty-five"], "difficulty": "easy", "tags": ["math", "addition"], "age_range_id": "age_9_12"},
+    {"id": "m39", "subject_id": "math", "question": "What is 300 - 128?", "answer": "172", "acceptable_answers": ["172", "one hundred seventy two", "one hundred seventy-two"], "difficulty": "easy", "tags": ["math", "subtraction"], "age_range_id": "age_9_12"},
+    {"id": "m40", "subject_id": "math", "question": "A notebook costs $3. How much do 7 notebooks cost?", "answer": "21", "acceptable_answers": ["21", "$21", "twenty one", "twenty-one"], "difficulty": "easy", "tags": ["math", "word-problems"], "age_range_id": "age_9_12"},
+
+    # ----------------------------
+    # Science - Easy (age_9_12)
+    # ----------------------------
+    {"id": "s36", "subject_id": "science", "question": "What is the process of water turning into vapor called?", "answer": "Evaporation", "acceptable_answers": ["evaporation"], "difficulty": "easy", "tags": ["science", "earth-science"], "age_range_id": "age_9_12"},
+    {"id": "s37", "subject_id": "science", "question": "What is the center of the solar system?", "answer": "The Sun", "acceptable_answers": ["sun", "the sun"], "difficulty": "easy", "tags": ["science", "space"], "age_range_id": "age_9_12"},
+    {"id": "s38", "subject_id": "science", "question": "What is a change from liquid to solid called?", "answer": "Freezing", "acceptable_answers": ["freezing"], "difficulty": "easy", "tags": ["science", "states-of-matter"], "age_range_id": "age_9_12"},
+    {"id": "s39", "subject_id": "science", "question": "What organ pumps blood through the body?", "answer": "Heart", "acceptable_answers": ["heart", "the heart"], "difficulty": "easy", "tags": ["science", "biology"], "age_range_id": "age_9_12"},
+    {"id": "s40", "subject_id": "science", "question": "What is an animal with a backbone called?", "answer": "Vertebrate", "acceptable_answers": ["vertebrate", "a vertebrate"], "difficulty": "easy", "tags": ["science", "biology"], "age_range_id": "age_9_12"},
+
+    # ----------------------------
+    # Reading - Easy (age_9_12)
+    # ----------------------------
+    {"id": "r36", "subject_id": "reading", "question": "What is a main idea?", "answer": "What the text is mostly about", "acceptable_answers": ["what it's mostly about", "what the text is mostly about", "main point"], "difficulty": "easy", "tags": ["reading", "comprehension"], "age_range_id": "age_9_12"},
+    {"id": "r37", "subject_id": "reading", "question": "What is a sentence fragment?", "answer": "An incomplete sentence", "acceptable_answers": ["incomplete sentence", "an incomplete sentence"], "difficulty": "easy", "tags": ["reading", "grammar"], "age_range_id": "age_9_12"},
+    {"id": "r38", "subject_id": "reading", "question": "What do we call hints about what will happen next in a story?", "answer": "Foreshadowing", "acceptable_answers": ["foreshadowing"], "difficulty": "easy", "tags": ["reading", "literature"], "age_range_id": "age_9_12"},
+    {"id": "r39", "subject_id": "reading", "question": "What is a compound word?", "answer": "Two words put together", "acceptable_answers": ["two words together", "two words put together"], "difficulty": "easy", "tags": ["reading", "vocabulary"], "age_range_id": "age_9_12"},
+    {"id": "r40", "subject_id": "reading", "question": "What is the purpose of a conclusion paragraph?", "answer": "To wrap up the main points", "acceptable_answers": ["wrap up", "wrap up the main points", "summarize", "to summarize"], "difficulty": "easy", "tags": ["reading", "writing"], "age_range_id": "age_9_12"},
+
+    # ----------------------------
+    # History - Easy (age_9_12)
+    # ----------------------------
+    {"id": "h36", "subject_id": "history", "question": "What was the purpose of the Underground Railroad?", "answer": "To help enslaved people escape", "acceptable_answers": ["help enslaved people escape", "help escape slavery", "escape slavery"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_9_12"},
+    {"id": "h37", "subject_id": "history", "question": "What document begins with 'We the People'?", "answer": "The U.S. Constitution", "acceptable_answers": ["constitution", "the constitution", "u.s. constitution", "us constitution"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_9_12"},
+    {"id": "h38", "subject_id": "history", "question": "What invention helped spread books faster in Europe?", "answer": "Printing press", "acceptable_answers": ["printing press", "the printing press"], "difficulty": "easy", "tags": ["history", "inventions"], "age_range_id": "age_9_12"},
+    {"id": "h39", "subject_id": "history", "question": "What was the main job of a medieval knight?", "answer": "To protect and fight", "acceptable_answers": ["protect and fight", "fight", "protect"], "difficulty": "easy", "tags": ["history", "medieval"], "age_range_id": "age_9_12"},
+    {"id": "h40", "subject_id": "history", "question": "What is democracy?", "answer": "A government where people vote", "acceptable_answers": ["people vote", "government where people vote", "a government where people vote"], "difficulty": "easy", "tags": ["history", "government"], "age_range_id": "age_9_12"},
+
+    # ----------------------------
+    # Math - Easy (age_13_plus)
+    # ----------------------------
+    {"id": "m41", "subject_id": "math", "question": "Solve for x: x + 7 = 19", "answer": "12", "acceptable_answers": ["12", "twelve"], "difficulty": "easy", "tags": ["math", "algebra"], "age_range_id": "age_13_plus"},
+    {"id": "m42", "subject_id": "math", "question": "What is 15% of 80?", "answer": "12", "acceptable_answers": ["12", "twelve"], "difficulty": "easy", "tags": ["math", "percentages"], "age_range_id": "age_13_plus"},
+    {"id": "m43", "subject_id": "math", "question": "If a triangle has angles 60° and 60°, what is the third angle?", "answer": "60", "acceptable_answers": ["60", "60°", "sixty"], "difficulty": "easy", "tags": ["math", "geometry"], "age_range_id": "age_13_plus"},
+    {"id": "m44", "subject_id": "math", "question": "What is the slope between (0, 0) and (2, 4)?", "answer": "2", "acceptable_answers": ["2", "two"], "difficulty": "easy", "tags": ["math", "algebra"], "age_range_id": "age_13_plus"},
+    {"id": "m45", "subject_id": "math", "question": "Simplify: 3(2 + 4)", "answer": "18", "acceptable_answers": ["18", "eighteen"], "difficulty": "easy", "tags": ["math", "algebra"], "age_range_id": "age_13_plus"},
+
+    # ----------------------------
+    # Science - Easy (age_13_plus)
+    # ----------------------------
+    {"id": "s41", "subject_id": "science", "question": "What is the basic unit of life?", "answer": "Cell", "acceptable_answers": ["cell", "a cell", "cells"], "difficulty": "easy", "tags": ["science", "biology"], "age_range_id": "age_13_plus"},
+    {"id": "s42", "subject_id": "science", "question": "What is the chemical symbol for sodium?", "answer": "Na", "acceptable_answers": ["na"], "difficulty": "easy", "tags": ["science", "chemistry"], "age_range_id": "age_13_plus"},
+    {"id": "s43", "subject_id": "science", "question": "What part of the brain controls balance?", "answer": "Cerebellum", "acceptable_answers": ["cerebellum"], "difficulty": "easy", "tags": ["science", "biology"], "age_range_id": "age_13_plus"},
+    {"id": "s44", "subject_id": "science", "question": "What is the pH of pure water?", "answer": "7", "acceptable_answers": ["7", "seven"], "difficulty": "easy", "tags": ["science", "chemistry"], "age_range_id": "age_13_plus"},
+    {"id": "s45", "subject_id": "science", "question": "What is energy stored in food measured in?", "answer": "Calories", "acceptable_answers": ["calories", "calorie"], "difficulty": "easy", "tags": ["science", "nutrition"], "age_range_id": "age_13_plus"},
+
+    # ----------------------------
+    # Reading - Easy (age_13_plus)
+    # ----------------------------
+    {"id": "r41", "subject_id": "reading", "question": "What is a thesis statement?", "answer": "The main claim of an essay", "acceptable_answers": ["main claim", "main claim of an essay", "main argument"], "difficulty": "easy", "tags": ["reading", "writing"], "age_range_id": "age_13_plus"},
+    {"id": "r42", "subject_id": "reading", "question": "What does 'cite' mean in writing?", "answer": "To credit a source", "acceptable_answers": ["credit a source", "to credit a source", "give credit"], "difficulty": "easy", "tags": ["reading", "writing"], "age_range_id": "age_13_plus"},
+    {"id": "r43", "subject_id": "reading", "question": "What is plagiarism?", "answer": "Using someone else's work without credit", "acceptable_answers": ["using work without credit", "someone else's work without credit", "copying without credit"], "difficulty": "easy", "tags": ["reading", "writing"], "age_range_id": "age_13_plus"},
+    {"id": "r44", "subject_id": "reading", "question": "What is tone in writing?", "answer": "The author's attitude", "acceptable_answers": ["author's attitude", "the author's attitude", "attitude"], "difficulty": "easy", "tags": ["reading", "literature"], "age_range_id": "age_13_plus"},
+    {"id": "r45", "subject_id": "reading", "question": "What is a counterargument?", "answer": "An opposing viewpoint", "acceptable_answers": ["opposing viewpoint", "opposing view", "opposition"], "difficulty": "easy", "tags": ["reading", "writing"], "age_range_id": "age_13_plus"},
+
+    # ----------------------------
+    # History - Easy (age_13_plus)
+    # ----------------------------
+    {"id": "h41", "subject_id": "history", "question": "What is the Bill of Rights?", "answer": "The first 10 amendments to the U.S. Constitution", "acceptable_answers": ["first 10 amendments", "the first 10 amendments", "first ten amendments"], "difficulty": "easy", "tags": ["history", "america", "government"], "age_range_id": "age_13_plus"},
+    {"id": "h42", "subject_id": "history", "question": "What was the main goal of the Civil Rights Movement?", "answer": "Equal rights under the law", "acceptable_answers": ["equal rights", "equal rights under the law", "civil rights"], "difficulty": "easy", "tags": ["history", "america"], "age_range_id": "age_13_plus"},
+    {"id": "h43", "subject_id": "history", "question": "What is a primary source?", "answer": "An original document or firsthand account", "acceptable_answers": ["original document", "firsthand account", "original or firsthand"], "difficulty": "easy", "tags": ["history", "skills"], "age_range_id": "age_13_plus"},
+    {"id": "h44", "subject_id": "history", "question": "What did the Cold War describe?", "answer": "Tension between the U.S. and the USSR", "acceptable_answers": ["tension", "tension between us and ussr", "us vs ussr", "usa and ussr"], "difficulty": "easy", "tags": ["history", "world-history"], "age_range_id": "age_13_plus"},
+    {"id": "h45", "subject_id": "history", "question": "What is a constitution?", "answer": "A set of rules for how a government works", "acceptable_answers": ["rules for government", "set of rules", "how a government works"], "difficulty": "easy", "tags": ["history", "government"], "age_range_id": "age_13_plus"},
 ]
 
 # ========== AFFIRMATIONS ==========
 AFFIRMATIONS_SEED = [
-    {"id": "1", "text": "I can do hard things.", "gradient_0": "#8B5CF6", "gradient_1": "#3B82F6", "tags": ["persistence"], "age_range_id": "age_3_5"},
-    {"id": "2", "text": "I am learning every day.", "gradient_0": "#10B981", "gradient_1": "#3B82F6", "tags": ["learning"], "age_range_id": "age_3_5"},
-    {"id": "3", "text": "I'm proud of my effort.", "gradient_0": "#FB923C", "gradient_1": "#F59E0B", "tags": ["effort"], "age_range_id": "age_3_5"},
-    {"id": "4", "text": "Progress matters more than perfection.", "gradient_0": "#22C55E", "gradient_1": "#06B6D4", "tags": ["growth-mindset"], "age_range_id": "age_3_5"},
-    {"id": "5", "text": "I show up even when it's uncomfortable.", "gradient_0": "#6366F1", "gradient_1": "#8B5CF6", "tags": ["resilience"], "age_range_id": "age_3_5"},
-    {"id": "6", "text": "I am capable of figuring this out.", "gradient_0": "#14B8A6", "gradient_1": "#3B82F6", "tags": ["confidence"], "age_range_id": "age_3_5"},
-    {"id": "7", "text": "Small steps still move me forward.", "gradient_0": "#F97316", "gradient_1": "#EF4444", "tags": ["growth-mindset"], "age_range_id": "age_3_5"},
-    {"id": "8", "text": "I give myself permission to grow.", "gradient_0": "#A855F7", "gradient_1": "#EC4899", "tags": ["self-compassion"], "age_range_id": "age_3_5"},
-    {"id": "9", "text": "My effort today supports my future self.", "gradient_0": "#0EA5E9", "gradient_1": "#22C55E", "tags": ["future"], "age_range_id": "age_3_5"},
-    {"id": "10", "text": "I don't need all the answers to begin.", "gradient_0": "#F59E0B", "gradient_1": "#FB923C", "tags": ["starting"], "age_range_id": "age_3_5"},
-    {"id": "11", "text": "I am improving through practice.", "gradient_0": "#3B82F6", "gradient_1": "#6366F1", "tags": ["practice"], "age_range_id": "age_3_5"},
-    {"id": "12", "text": "I trust myself to adapt and adjust.", "gradient_0": "#10B981", "gradient_1": "#14B8A6", "tags": ["trust", "adaptability"], "age_range_id": "age_3_5"},
+    # age_3_5 (Preschool)
+    {"id": "1", "text": "I can try again.", "gradient_0": "#8B5CF6", "gradient_1": "#3B82F6", "tags": ["persistence"], "age_range_id": "age_3_5"},
+    {"id": "2", "text": "I am brave.", "gradient_0": "#10B981", "gradient_1": "#3B82F6", "tags": ["confidence"], "age_range_id": "age_3_5"},
+    {"id": "3", "text": "I can learn new things.", "gradient_0": "#FB923C", "gradient_1": "#F59E0B", "tags": ["learning"], "age_range_id": "age_3_5"},
+    {"id": "4", "text": "I can use kind words.", "gradient_0": "#22C55E", "gradient_1": "#06B6D4", "tags": ["kindness"], "age_range_id": "age_3_5"},
+    {"id": "5", "text": "I can take deep breaths.", "gradient_0": "#6366F1", "gradient_1": "#8B5CF6", "tags": ["calm"], "age_range_id": "age_3_5"},
+    {"id": "6", "text": "I can share and wait my turn.", "gradient_0": "#14B8A6", "gradient_1": "#3B82F6", "tags": ["patience"], "age_range_id": "age_3_5"},
+    {"id": "7", "text": "I am loved.", "gradient_0": "#F97316", "gradient_1": "#EF4444", "tags": ["belonging"], "age_range_id": "age_3_5"},
+    {"id": "8", "text": "I can help.", "gradient_0": "#A855F7", "gradient_1": "#EC4899", "tags": ["kindness"], "age_range_id": "age_3_5"},
+
+    # age_6_8 (Early Elementary)
+    {"id": "13", "text": "Challenges help me grow.", "gradient_0": "#8B5CF6", "gradient_1": "#3B82F6", "tags": ["growth-mindset"], "age_range_id": "age_6_8"},
+    {"id": "14", "text": "I keep trying even when it's hard.", "gradient_0": "#10B981", "gradient_1": "#3B82F6", "tags": ["persistence"], "age_range_id": "age_6_8"},
+    {"id": "15", "text": "Every mistake teaches me something.", "gradient_0": "#FB923C", "gradient_1": "#F59E0B", "tags": ["learning"], "age_range_id": "age_6_8"},
+    {"id": "16", "text": "I believe in my ability to learn.", "gradient_0": "#22C55E", "gradient_1": "#06B6D4", "tags": ["confidence"], "age_range_id": "age_6_8"},
+    {"id": "17", "text": "I can handle setbacks.", "gradient_0": "#6366F1", "gradient_1": "#8B5CF6", "tags": ["resilience"], "age_range_id": "age_6_8"},
+    {"id": "18", "text": "My brain gets stronger when I practice.", "gradient_0": "#14B8A6", "gradient_1": "#3B82F6", "tags": ["practice"], "age_range_id": "age_6_8"},
+    {"id": "19", "text": "I can learn new things.", "gradient_0": "#F97316", "gradient_1": "#EF4444", "tags": ["growth-mindset"], "age_range_id": "age_6_8"},
+    {"id": "20", "text": "Effort is more important than being perfect.", "gradient_0": "#A855F7", "gradient_1": "#EC4899", "tags": ["effort"], "age_range_id": "age_6_8"},
+
+    # age_9_12 (Late Elementary)
+    {"id": "21", "text": "I embrace challenges as opportunities.", "gradient_0": "#0EA5E9", "gradient_1": "#22C55E", "tags": ["growth-mindset"], "age_range_id": "age_9_12"},
+    {"id": "22", "text": "I stay focused on my goals.", "gradient_0": "#F59E0B", "gradient_1": "#FB923C", "tags": ["focus"], "age_range_id": "age_9_12"},
+    {"id": "23", "text": "My mistakes help me find better solutions.", "gradient_0": "#3B82F6", "gradient_1": "#6366F1", "tags": ["learning"], "age_range_id": "age_9_12"},
+    {"id": "24", "text": "I trust myself to figure things out.", "gradient_0": "#10B981", "gradient_1": "#14B8A6", "tags": ["confidence"], "age_range_id": "age_9_12"},
+    {"id": "25", "text": "I bounce back from disappointment.", "gradient_0": "#EC4899", "gradient_1": "#A855F7", "tags": ["resilience"], "age_range_id": "age_9_12"},
+    {"id": "26", "text": "I improve every single day.", "gradient_0": "#14B8A6", "gradient_1": "#3B82F6", "tags": ["growth-mindset"], "age_range_id": "age_9_12"},
+    {"id": "27", "text": "I'm becoming stronger through effort.", "gradient_0": "#0EA5E9", "gradient_1": "#22C55E", "tags": ["effort"], "age_range_id": "age_9_12"},
+    {"id": "28", "text": "I can overcome obstacles.", "gradient_0": "#F59E0B", "gradient_1": "#FB923C", "tags": ["resilience"], "age_range_id": "age_9_12"},
+
+    # age_13_plus (Teen)
+    {"id": "29", "text": "I choose to see challenges as growth opportunities.", "gradient_0": "#3B82F6", "gradient_1": "#6366F1", "tags": ["growth-mindset"], "age_range_id": "age_13_plus"},
+    {"id": "30", "text": "I stay committed to my goals.", "gradient_0": "#10B981", "gradient_1": "#14B8A6", "tags": ["focus"], "age_range_id": "age_13_plus"},
+    {"id": "31", "text": "I learn from every experience.", "gradient_0": "#EC4899", "gradient_1": "#A855F7", "tags": ["learning"], "age_range_id": "age_13_plus"},
+    {"id": "32", "text": "I have confidence in my abilities.", "gradient_0": "#8B5CF6", "gradient_1": "#3B82F6", "tags": ["confidence"], "age_range_id": "age_13_plus"},
+    {"id": "33", "text": "I handle failure with grace.", "gradient_0": "#22C55E", "gradient_1": "#06B6D4", "tags": ["resilience"], "age_range_id": "age_13_plus"},
+    {"id": "34", "text": "I embrace the process of learning.", "gradient_0": "#F97316", "gradient_1": "#EF4444", "tags": ["growth-mindset"], "age_range_id": "age_13_plus"},
+    {"id": "35", "text": "My effort today builds my tomorrow.", "gradient_0": "#A855F7", "gradient_1": "#EC4899", "tags": ["effort"], "age_range_id": "age_13_plus"},
+    {"id": "36", "text": "I adapt and keep moving forward.", "gradient_0": "#14B8A6", "gradient_1": "#3B82F6", "tags": ["resilience"], "age_range_id": "age_13_plus"},
 ]
-
-
 # ========== Chores ==========
 CHORES_SEED = [
-    {"id": "bed", "label": "Make my bed", "icon": "home", "is_extra": False, "tags": ["tidying"], "age_range_id": "age_3_5"},
+    # age_3_5 (Preschool)
+    {"id": "bed", "label": "Make my bed", "icon": "home", "is_extra": False, "tags": ["space"], "age_range_id": "age_3_5"},
     {"id": "clothes", "label": "Put away clothes", "icon": "user", "is_extra": False, "tags": ["organization"], "age_range_id": "age_3_5"},
     {"id": "room", "label": "Clean my room", "icon": "trash-2", "is_extra": False, "tags": ["responsibility"], "age_range_id": "age_3_5"},
+
+    # age_6_8 (Early Elementary)
+    {"id": "backpack", "label": "Organize my backpack", "icon": "package", "is_extra": False, "tags": ["organization"], "age_range_id": "age_6_8"},
+    {"id": "feed-pet", "label": "Feed the pets", "icon": "heart", "is_extra": False, "tags": ["responsibility"], "age_range_id": "age_6_8"},
+    {"id": "set-table", "label": "Set the table", "icon": "coffee", "is_extra": False, "tags": ["helping"], "age_range_id": "age_6_8"},
+    {"id": "water-plants", "label": "Water the plants", "icon": "droplet", "is_extra": False, "tags": ["nature"], "age_range_id": "age_6_8"},
+    {"id": "small-trash", "label": "Empty small trash cans", "icon": "trash-2", "is_extra": False, "tags": ["responsibility"], "age_range_id": "age_6_8"},
+
+    # age_9_12 (Late Elementary)
+    {"id": "dishes", "label": "Do the dishes", "icon": "coffee", "is_extra": False, "tags": ["responsibility"], "age_range_id": "age_9_12"},
+    {"id": "walk-dog", "label": "Walk the dog", "icon": "activity", "is_extra": False, "tags": ["pets"], "age_range_id": "age_9_12"},
+    {"id": "vacuum", "label": "Vacuum living room", "icon": "wind", "is_extra": False, "tags": ["responsibility"], "age_range_id": "age_9_12"},
+    {"id": "fold-laundry", "label": "Fold laundry", "icon": "list", "is_extra": False, "tags": ["responsibility"], "age_range_id": "age_9_12"},
+    {"id": "clean-sink", "label": "Clean bathroom sink", "icon": "droplets", "is_extra": False, "tags": ["cleaning"], "age_range_id": "age_9_12"},
+
+    # age_13_plus (Teen)
+    {"id": "mow-lawn", "label": "Mow the lawn", "icon": "scissors", "is_extra": False, "tags": ["responsibility"], "age_range_id": "age_13_plus"},
+    {"id": "wash-car", "label": "Wash the car", "icon": "truck", "is_extra": False, "tags": ["responsibility"], "age_range_id": "age_13_plus"},
+    {"id": "cook-meal", "label": "Cook a meal", "icon": "clock", "is_extra": False, "tags": ["responsibility"], "age_range_id": "age_13_plus"},
+    {"id": "clean-garage", "label": "Clean the garage", "icon": "tool", "is_extra": False, "tags": ["responsibility"], "age_range_id": "age_13_plus"},
+    {"id": "do-laundry", "label": "Do laundry", "icon": "rotate-ccw", "is_extra": False, "tags": ["responsibility"], "age_range_id": "age_13_plus"},
 ]
 
 # ========== Outdoor Activities ==========
 OUTDOOR_ACTIVITIES_SEED = [
+    # age_3_5 (Preschool)
     {"id": "run", "name": "Play Tag", "category": "Active Play", "icon": "zap", "time": "15 min", "points": 20, "is_daily": True, "tags": ["active-play"], "age_range_id": "age_3_5"},
     {"id": "explore", "name": "Nature Walk", "category": "Nature Explorer", "icon": "compass", "time": "20 min", "points": 20, "is_daily": False, "tags": ["nature"], "age_range_id": "age_3_5"},
     {"id": "sports", "name": "Kick the Ball", "category": "Sports & Games", "icon": "circle", "time": "30 min", "points": 20, "is_daily": False, "tags": ["sports"], "age_range_id": "age_3_5"},
     {"id": "creative", "name": "Draw with Chalk", "category": "Creative Outside", "icon": "edit-3", "time": "25 min", "points": 20, "is_daily": False, "tags": ["creative"], "age_range_id": "age_3_5"},
-    {"id": "bike", "name": "Ride Your Bike", "category": "Active Play", "icon": "activity", "time": "20 min", "points": 20, "is_daily": False, "tags": ["active-play"], "age_range_id": "age_3_5"},
+    {"id": "bike", "name": "Ride Your Bike", "category": "Active Play", "icon": "activity", "time": "20 min", "points": 20, "is_daily": False, "tags": ["space"], "age_range_id": "age_3_5"},
+
+    # age_6_8 (Early Elementary)
+    {"id": "scooter", "name": "Ride a scooter", "category": "Active Play", "icon": "wind", "time": "20 min", "points": 20, "is_daily": False, "tags": ["active-play"], "age_range_id": "age_6_8"},
+    {"id": "play-catch", "name": "Play catch", "category": "Sports & Games", "icon": "circle", "time": "15 min", "points": 20, "is_daily": False, "tags": ["sports"], "age_range_id": "age_6_8"},
+    {"id": "build-fort", "name": "Build a fort", "category": "Creative", "icon": "home", "time": "30 min", "points": 20, "is_daily": False, "tags": ["creative"], "age_range_id": "age_6_8"},
+    {"id": "garden-family", "name": "Garden with family", "category": "Nature Explorer", "icon": "sun", "time": "25 min", "points": 20, "is_daily": False, "tags": ["nature"], "age_range_id": "age_6_8"},
+
+    # age_9_12 (Late Elementary)
+    {"id": "basketball", "name": "Play basketball", "category": "Sports & Games", "icon": "target", "time": "30 min", "points": 20, "is_daily": False, "tags": ["sports"], "age_range_id": "age_9_12"},
+    {"id": "bike-ride", "name": "Go for a bike ride", "category": "Active Play", "icon": "activity", "time": "20 min", "points": 20, "is_daily": False, "tags": ["active-play"], "age_range_id": "age_9_12"},
+    {"id": "soccer", "name": "Play soccer with friends", "category": "Sports & Games", "icon": "circle", "time": "45 min", "points": 20, "is_daily": False, "tags": ["sports"], "age_range_id": "age_9_12"},
+    {"id": "scavenger-hunt", "name": "Do a scavenger hunt", "category": "Creative", "icon": "compass", "time": "40 min", "points": 20, "is_daily": False, "tags": ["creative"], "age_range_id": "age_9_12"},
+
+    # age_13_plus (Teen)
+    {"id": "go-run", "name": "Go for a run/jog", "category": "Active Play", "icon": "wind", "time": "30 min", "points": 25, "is_daily": False, "tags": ["active-play"], "age_range_id": "age_13_plus"},
+    {"id": "play-tennis", "name": "Play tennis", "category": "Sports & Games", "icon": "target", "time": "45 min", "points": 25, "is_daily": False, "tags": ["sports"], "age_range_id": "age_13_plus"},
+    {"id": "go-hiking", "name": "Go hiking", "category": "Nature Explorer", "icon": "compass", "time": "60 min", "points": 25, "is_daily": False, "tags": ["nature"], "age_range_id": "age_13_plus"},
+    {"id": "take-photos", "name": "Take photos outside", "category": "Creative", "icon": "camera", "time": "45 min", "points": 25, "is_daily": False, "tags": ["creative"], "age_range_id": "age_13_plus"},
 ]
+
 
 async def _seed_bulk(conn, model, rows, label: str) -> None:
     if not rows:

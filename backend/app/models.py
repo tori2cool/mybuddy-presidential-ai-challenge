@@ -263,6 +263,71 @@ class Subject(SQLModel, table=True):
     color: str = Field(sa_column_kwargs={"nullable": False}, max_length=255)
 
 
+class ChildSubjectStreak(SQLModel, table=True):
+    """
+    Tracks current and longest correct answer streaks per subject.
+    """
+    __tablename__ = "child_subject_streaks"
+    
+    child_id: str = Field(
+        foreign_key="children.id",
+        primary_key=True,
+        nullable=False,
+        max_length=64,
+    )
+    subject_id: str = Field(
+        foreign_key="subjects.id",
+        primary_key=True,
+        nullable=False,
+        max_length=64,
+    )
+    current_streak: int = Field(default=0, sa_column=Column(Integer, default=0))
+    longest_streak: int = Field(default=0, sa_column=Column(Integer, default=0))
+    last_updated: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
+class ChildFlashcardPerformance(SQLModel, table=True):
+    """
+    Tracks how well a child performs on each flashcard.
+    Used to prioritize flashcards the child struggles with.
+    """
+    __tablename__ = "child_flashcard_performance"
+
+    child_id: str = Field(
+        foreign_key="children.id",
+        primary_key=True,
+        nullable=False,
+        max_length=64,
+    )
+    flashcard_id: str = Field(
+        foreign_key="flashcards.id",
+        primary_key=True,
+        nullable=False,
+        max_length=255,
+    )
+    correct_count: int = Field(default=0, sa_column=Column(Integer, default=0))
+    incorrect_count: int = Field(default=0, sa_column=Column(Integer, default=0))
+    last_seen_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True)),
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            onupdate=lambda: datetime.now(timezone.utc),
+        ),
+    )
+
+
 class Flashcard(SQLModel, table=True):
     """Flashcard content, linked to a subject.
 

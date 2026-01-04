@@ -3,9 +3,14 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
+from .logging_config import setup_logging
 from .db import init_db
 from .seed import seed
 from .middleware import logging_middleware
+
+# Configure logging early (before FastAPI app is created)
+setup_logging()
+
 from .routers.core import router as core_router
 from .routers.content import router as content_router
 from .routers.ws import router as ws_router

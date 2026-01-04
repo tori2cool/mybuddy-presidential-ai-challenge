@@ -283,32 +283,23 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
       const full: ProgressEventIn = { ...event, childId };
 
-      // Read-only rule: no optimistic dashboard mutations here.
       try {
         const ack = await postProgressEvent(full);
 
-        // Debounced refresh for high-frequency events (flashcards)
-        if (full.kind === "flashcard") {
-          scheduleDebouncedRefresh();
-        } else {
-          await refreshDashboard({ force: false });
-        }
+        // Don't trigger dashboard refresh from here
+        // Let calling components handle refresh timing
 
         return ack;
       } catch (err) {
         console.warn("[DashboardContext] postEvent failed:", err);
 
-        // Best-effort refresh to converge (but don't crash flows)
-        if (full.kind === "flashcard") {
-          scheduleDebouncedRefresh();
-        } else {
-          await refreshDashboard({ force: false }).catch(() => {});
-        }
+        // On error, trigger debounced refresh as best-effort
+        scheduleDebouncedRefresh();
 
         return null;
       }
     },
-    [childId, refreshDashboard, scheduleDebouncedRefresh],
+    [childId, scheduleDebouncedRefresh],
   );
 
   const value = useMemo<DashboardContextValue>(

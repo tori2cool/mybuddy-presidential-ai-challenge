@@ -12,7 +12,6 @@ from .config import settings
 from .security import decode_token, AuthError
 
 logger = logging.getLogger("mybuddy.api")
-logger.setLevel(settings.log_level.upper())
 
 async def logging_middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]):
     start_time = time.perf_counter()
@@ -30,24 +29,6 @@ async def logging_middleware(request: Request, call_next: Callable[[Request], Aw
         except (AuthError, Exception):
             user_id = None
 
-    if settings.log_request_bodies and logger.isEnabledFor(logging.DEBUG):
-        body_bytes = await request.body()
-
-        async def receive() -> dict:
-            return {"type": "http.request", "body": body_bytes, "more_body": False}
-
-        request = Request(request.scope, receive)
-        logger.debug(
-            "HTTP request body",
-            extra={
-                "http.method": method,
-                "http.path": path,
-                "http.query": query_string,
-                "user.id": user_id,
-                "http.request_body": body_bytes.decode("utf-8", errors="replace"),
-            },
-        )
-
     try:
         response = await call_next(request)
     except Exception:
@@ -64,14 +45,31 @@ async def logging_middleware(request: Request, call_next: Callable[[Request], Aw
         )
         raise
 
-    # NOTE: capturing response bodies safely is tricky; keep it off by default
-    # unless you *really* need it. Your previous approach can work, but it’s easy
-    # to break streaming responses. I’d keep it disabled unless debugging.
+    duration_ms = (time.perf_counter() - start_time) * 1000
+    status_code = response.status_code
+
+    # Log response body if enabled
     if settings.log_response_bodies and logger.isEnabledFor(logging.DEBUG):
         try:
-            # best-effort only (works for non-streaming responses)
-            body = getattr(response, "body", None)
-            if isinstance(body, (bytes, bytearray)):
+            # Get response body if available
+            body = None
+            if hasattr(response, "body"):
+                body = getattr(response, "body")
+            elif hasattr(response, "_body"):
+                body = getattr(response, "_body")
+            
+            if body is not None:
+                # Convert to string safely
+                if isinstance(body, (bytes, bytearray)):
+                    body_str = body.decode("utf-8", errors="replace")
+                elif isinstance(body, (list, dict, str)):
+                    body_str = str(body)
+                else:
+                    body_str = f"<{type(body).__name__}>"
+                
+                # Truncate long bodies
+                body_truncated = body_str[:1000] if len(body_str) > 1000 else body_str
+                
                 logger.debug(
                     "HTTP response body",
                     extra={
@@ -79,27 +77,14 @@ async def logging_middleware(request: Request, call_next: Callable[[Request], Aw
                         "http.path": path,
                         "http.query": query_string,
                         "user.id": user_id,
-                        "http.status_code": response.status_code,
-                        "http.response_body": body.decode("utf-8", errors="replace"),
+                        "http.status_code": status_code,
+                        "http.response_body": body_truncated,
+                        "http.response_type": type(body).__name__,
+                        "http.response_length": len(body) if hasattr(body, "__len__") else None,
                     },
                 )
-        except Exception:
-            pass
-
-    duration_ms = (time.perf_counter() - start_time) * 1000
-    status_code = response.status_code
-
-    logger.info(
-        "HTTP request completed",
-        extra={
-            "http.method": method,
-            "http.path": path,
-            "http.query": query_string,
-            "user.id": user_id,
-            "http.status_code": status_code,
-            "duration_ms": duration_ms,
-        },
-    )
+        except Exception as e:
+            logger.debug(f"Could not log response body: {e}")
 
     if status_code >= 400 or duration_ms >= settings.log_slow_request_ms:
         logger.warning(

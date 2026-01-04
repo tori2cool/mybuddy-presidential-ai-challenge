@@ -15,7 +15,7 @@ from ..schemas.progress import (
     EventAckOut,
 )
 from ..schemas.dashboard import DashboardOut, AchievementOut
-from ..models import AchievementDefinition
+from ..models import AchievementDefinition, ChildFlashcardPerformance, ChildSubjectStreak
 from ..services import progress_rules as rules
 from ..services.progress_queries import (
     insert_event,
@@ -219,6 +219,9 @@ async def flashcard_answered(
     child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
+    from sqlalchemy import select
+    from datetime import datetime, timezone
+
     points_values = await rules.fetch_points_values(session)
     points = points_values["flashcard_correct"] if payload.correct else points_values["flashcard_wrong"]
     await insert_event(
@@ -234,6 +237,53 @@ async def flashcard_answered(
             "points": points,
         },
     )
+
+    # Update subject streaks
+    streak_stmt = select(ChildSubjectStreak).where(
+        ChildSubjectStreak.child_id == child.id,
+        ChildSubjectStreak.subject_id == payload.subjectId,
+    )
+    streak = (await session.execute(streak_stmt)).scalar_one_or_none()
+
+    if streak is None:
+        streak = ChildSubjectStreak(
+            child_id=child.id,
+            subject_id=payload.subjectId,
+            current_streak=1 if payload.correct else 0,
+            longest_streak=1 if payload.correct else 0,
+        )
+        session.add(streak)
+    else:
+        if payload.correct:
+            streak.current_streak += 1
+            if streak.current_streak > streak.longest_streak:
+                streak.longest_streak = streak.current_streak
+            streak.last_updated = datetime.now(timezone.utc)
+        else:
+            streak.current_streak = 0
+            streak.last_updated = datetime.now(timezone.utc)
+
+    # Update performance tracking
+    perf_stmt = select(ChildFlashcardPerformance).where(
+        ChildFlashcardPerformance.child_id == child.id,
+        ChildFlashcardPerformance.flashcard_id == payload.flashcardId,
+    )
+    perf = (await session.execute(perf_stmt)).scalar_one_or_none()
+
+    if perf is None:
+        perf = ChildFlashcardPerformance(
+            child_id=child.id,
+            flashcard_id=payload.flashcardId,
+            correct_count=1 if payload.correct else 0,
+            incorrect_count=0 if payload.correct else 1,
+        )
+        session.add(perf)
+    else:
+        if payload.correct:
+            perf.correct_count += 1
+        else:
+            perf.incorrect_count += 1
+        perf.last_seen_at = datetime.now(timezone.utc)
 
     new_ids = await _unlock_from_current_state(session, child)
     await session.commit()

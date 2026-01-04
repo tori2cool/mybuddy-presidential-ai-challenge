@@ -1,9 +1,13 @@
 # routers/content.py
 from __future__ import annotations
 
+import logging
+
 from typing import Literal, Optional, List
 from datetime import date
 from uuid import uuid4
+
+logger = logging.getLogger("mybuddy.api")
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel
@@ -12,7 +16,7 @@ from sqlalchemy import func, case, text
 from sqlmodel import select
 
 from ..db import get_session
-from ..models import Child, Affirmation, Subject, Flashcard, Chore, OutdoorActivity
+from ..models import Child, Affirmation, Subject, Flashcard, Chore, OutdoorActivity, ChildFlashcardPerformance
 from ..security import get_current_user
 from ..deps import get_child_owned_query, get_child_owned_path
 from ..schemas.children import ChildUpsert, ChildOut
@@ -24,28 +28,6 @@ SEED_LOCK_TTL_SECONDS = 300
 
 
 def _build_interest_boost_order(Table, interests: Optional[list]):
-    """
-    Build CASE expression for ordering content by matching tags first.
-    Returns a SQLAlchemy case expression that orders content with matching tags (0) before others (1).
-
-    Args:
-        Table: SQLAlchemy table model class (Flashcard, Affirmation, etc.)
-        interests: List of child's interests
-
-    Returns:
-        SQLAlchemy case expression or None if no interests
-    """
-    if not interests:
-        return None
-
-    when_clauses = []
-    for interest in interests:
-        when_clauses.append(
-            (func.coalesce(Table.tags, text("'[]'::jsonb")).op("?")(interest), 0)
-        )
-    when_clauses.append((True, 1))  # fallback for non-matching
-
-    return case(*when_clauses)
     """
     Build CASE expression for ordering content by matching tags first.
     Returns a SQLAlchemy case expression that orders content with matching tags (0) before others (1).
@@ -166,30 +148,35 @@ async def list_affirmations(
     child: Child = Depends(get_child_owned_query),
     session: AsyncSession = Depends(get_session),
 ):
-    any_row = (await session.execute(select(Affirmation.id).limit(1))).first()
-    if any_row is None:
-        _enqueue_seed_if_needed()
+    try:
+        any_row = (await session.execute(select(Affirmation.id).limit(1))).first()
+        if any_row is None:
+            _enqueue_seed_if_needed()
+            logger.warning(f"list_affirmations: no affirmations in DB, triggering seed")
+            return []
+
+        age_range = await get_age_range_for_child(child, session)
+        logger.info(f"list_affirmations: child_id={child.id}, age={child.birthday}, age_range={age_range.id if age_range else None}, interests={child.interests}")
+
+        stmt = select(Affirmation)
+        if age_range:
+            stmt = stmt.where(Affirmation.age_range_id == age_range.id)
+
+        interest_order = _build_interest_boost_order(Affirmation, child.interests)
+        if interest_order is not None:
+            stmt = stmt.order_by(interest_order)
+        else:
+            stmt = stmt.order_by(func.random())
+
+        rows = (await session.execute(stmt)).scalars().all()
+        result = [{"id": r.id, "text": r.text, "gradient": [r.gradient_0, r.gradient_1]} for r in rows]
+        
+        logger.info(f"list_affirmations: returning {len(result)} affirmations")
+        
+        return result
+    except Exception as e:
+        logger.exception(f"list_affirmations error: {e}")
         return []
-
-    # Get age range for filtering
-    age_range = await get_age_range_for_child(child, session)
-
-    # Build base query
-    stmt = select(Affirmation)
-
-    # Apply age range filter if available
-    if age_range:
-        stmt = stmt.where(Affirmation.age_range_id == age_range.id)
-
-    # Apply interest boost if child has interests
-    interest_order = _build_interest_boost_order(Affirmation, child.interests)
-    if interest_order is not None:
-        stmt = stmt.order_by(interest_order)
-    else:
-        stmt = stmt.order_by(func.random())
-
-    rows = (await session.execute(stmt)).scalars().all()
-    return [{"id": r.id, "text": r.text, "gradient": [r.gradient_0, r.gradient_1]} for r in rows]
 
 
 @router.get("/subjects")
@@ -235,12 +222,32 @@ async def list_flashcards(
     if age_range:
         stmt = stmt.where(Flashcard.age_range_id == age_range.id)
 
-    # Apply interest boost if child has interests
+    # Build performance-based ordering
+    # Join with performance data to get correct/incorrect counts
+    stmt = stmt.outerjoin(
+        ChildFlashcardPerformance,
+        (ChildFlashcardPerformance.child_id == child.id) &
+        (ChildFlashcardPerformance.flashcard_id == Flashcard.id)
+    )
+
+    # Order by: most wrong answers first, then fewer correct answers
+    perf_order_expr = case(
+        (ChildFlashcardPerformance.incorrect_count.is_(None), 0),  # never seen
+        else_=ChildFlashcardPerformance.incorrect_count
+    ).desc()
+
+    correct_order_expr = case(
+        (ChildFlashcardPerformance.correct_count.is_(None), 0),  # never seen
+        else_=ChildFlashcardPerformance.correct_count
+    ).asc()
+
+    # Apply interest boost on top of performance ordering
     interest_order = _build_interest_boost_order(Flashcard, child.interests)
+
     if interest_order is not None:
-        stmt = stmt.order_by(interest_order)
+        stmt = stmt.order_by(perf_order_expr, correct_order_expr, interest_order, func.random())
     else:
-        stmt = stmt.order_by(func.random())
+        stmt = stmt.order_by(perf_order_expr, correct_order_expr, func.random())
 
     rows = (await session.execute(stmt)).scalars().all()
     return [
@@ -260,30 +267,35 @@ async def list_daily_chores(
     child: Child = Depends(get_child_owned_query),
     session: AsyncSession = Depends(get_session),
 ):
-    any_row = (await session.execute(select(Chore.id).limit(1))).first()
-    if any_row is None:
-        _enqueue_seed_if_needed()
+    try:
+        any_row = (await session.execute(select(Chore.id).limit(1))).first()
+        if any_row is None:
+            _enqueue_seed_if_needed()
+            logger.warning(f"list_daily_chores: no chores in DB, triggering seed")
+            return []
+
+        age_range = await get_age_range_for_child(child, session)
+        logger.info(f"list_daily_chores: child_id={child.id}, age={child.birthday}, age_range={age_range.id if age_range else None}, interests={child.interests}")
+
+        stmt = select(Chore)
+        if age_range:
+            stmt = stmt.where(Chore.age_range_id == age_range.id)
+
+        interest_order = _build_interest_boost_order(Chore, child.interests)
+        if interest_order is not None:
+            stmt = stmt.order_by(interest_order)
+        else:
+            stmt = stmt.order_by(func.random())
+
+        rows = (await session.execute(stmt)).scalars().all()
+        result = [{"id": r.id, "label": r.label, "icon": r.icon, "isExtra": r.is_extra} for r in rows]
+        
+        logger.info(f"list_daily_chores: returning {len(result)} chores")
+        
+        return result
+    except Exception as e:
+        logger.exception(f"list_daily_chores error: {e}")
         return []
-
-    # Get age range for filtering
-    age_range = await get_age_range_for_child(child, session)
-
-    # Build base query
-    stmt = select(Chore)
-
-    # Apply age range filter if available
-    if age_range:
-        stmt = stmt.where(Chore.age_range_id == age_range.id)
-
-    # Apply interest boost if child has interests
-    interest_order = _build_interest_boost_order(Chore, child.interests)
-    if interest_order is not None:
-        stmt = stmt.order_by(interest_order)
-    else:
-        stmt = stmt.order_by(func.random())
-
-    rows = (await session.execute(stmt)).scalars().all()
-    return [{"id": r.id, "label": r.label, "icon": r.icon, "isExtra": r.is_extra} for r in rows]
 
 
 @router.get("/outdoor/activities")
@@ -292,42 +304,46 @@ async def list_outdoor_activities(
     child: Child = Depends(get_child_owned_query),
     session: AsyncSession = Depends(get_session),
 ):
-    any_row = (await session.execute(select(OutdoorActivity.id).limit(1))).first()
-    if any_row is None:
-        _enqueue_seed_if_needed()
+    try:
+        any_row = (await session.execute(select(OutdoorActivity.id).limit(1))).first()
+        if any_row is None:
+            _enqueue_seed_if_needed()
+            logger.warning(f"list_outdoor_activities: no outdoor activities in DB, triggering seed")
+            return []
+
+        age_range = await get_age_range_for_child(child, session)
+        logger.info(f"list_outdoor_activities: child_id={child.id}, is_daily={is_daily}, age={child.birthday}, age_range={age_range.id if age_range else None}, interests={child.interests}")
+
+        stmt = select(OutdoorActivity)
+        if is_daily is not None:
+            stmt = stmt.where(OutdoorActivity.is_daily == is_daily)
+
+        if age_range:
+            stmt = stmt.where(OutdoorActivity.age_range_id == age_range.id)
+
+        interest_order = _build_interest_boost_order(OutdoorActivity, child.interests)
+        if interest_order is not None:
+            stmt = stmt.order_by(interest_order)
+        else:
+            stmt = stmt.order_by(func.random())
+
+        rows = (await session.execute(stmt)).scalars().all()
+        result = [
+            {
+                "id": r.id,
+                "name": r.name,
+                "category": r.category,
+                "icon": r.icon,
+                "time": r.time,
+                "points": r.points,
+                "isDaily": r.is_daily,
+            }
+            for r in rows
+        ]
+        
+        logger.info(f"list_outdoor_activities: returning {len(result)} activities")
+        
+        return result
+    except Exception as e:
+        logger.exception(f"list_outdoor_activities error: {e}")
         return []
-
-    # Get age range for filtering
-    age_range = await get_age_range_for_child(child, session)
-
-    # Build base query
-    stmt = select(OutdoorActivity)
-
-    # Apply is_daily filter if provided
-    if is_daily is not None:
-        stmt = stmt.where(OutdoorActivity.is_daily == is_daily)
-
-    # Apply age range filter if available
-    if age_range:
-        stmt = stmt.where(OutdoorActivity.age_range_id == age_range.id)
-
-    # Apply interest boost if child has interests
-    interest_order = _build_interest_boost_order(OutdoorActivity, child.interests)
-    if interest_order is not None:
-        stmt = stmt.order_by(interest_order)
-    else:
-        stmt = stmt.order_by(func.random())
-
-    rows = (await session.execute(stmt)).scalars().all()
-    return [
-        {
-            "id": r.id,
-            "name": r.name,
-            "category": r.category,
-            "icon": r.icon,
-            "time": r.time,
-            "points": r.points,
-            "isDaily": r.is_daily,
-        }
-        for r in rows
-    ]

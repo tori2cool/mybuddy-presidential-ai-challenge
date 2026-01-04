@@ -41,7 +41,11 @@ class WeekStatsOut(APIModel):
 class SubjectStatsOut(APIModel):
     completed: int = 0
     correct: int = 0
+    correctStreak: int = 0
+    longestStreak: int = 0
     difficulty: DifficultyTier = "easy"
+    nextDifficultyAtStreak: Optional[int] = None
+    currentTierStartAtStreak: int = 0
 
 class BalancedProgressOut(APIModel):
     canLevelUp: bool

@@ -46,7 +46,11 @@ export type DashboardData = {
     {
       completed: number;
       correct: number;
+      correctStreak: number;
+      longestStreak: number;
       difficulty: DifficultyTier;
+      nextDifficultyAtStreak: number | null;
+      currentTierStartAtStreak: number;
     }
   >;
 
@@ -129,7 +133,14 @@ function coerceDashboardData(payload: unknown): DashboardData {
     flashcardsBySubject[subjectId] = {
       completed: asNumber(s.completed),
       correct: asNumber(s.correct),
+      correctStreak: asNumber(s.correctStreak),
+      longestStreak: asNumber(s.longestStreak),
       difficulty,
+      nextDifficultyAtStreak:
+        s.nextDifficultyAtStreak === null || typeof s.nextDifficultyAtStreak === "number"
+          ? s.nextDifficultyAtStreak
+          : null,
+      currentTierStartAtStreak: asNumber(s.currentTierStartAtStreak),
     };
   }
 

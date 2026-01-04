@@ -59,12 +59,29 @@ async def fetch_points_values(db: AsyncSession) -> Dict[str, int]:
 
 def calculate_difficulty(correct: int, thresholds: Dict[str, int]) -> Literal["easy", "medium", "hard"]:
     """
-    Determine difficulty based on correct answers.
+    Determine difficulty based on total correct answers.
     Thresholds come from database.
+    
+    Note: For streak-based difficulty progression, use calculate_difficulty_from_streak.
     """
     if correct >= thresholds.get("hard", 40):
         return "hard"
     if correct >= thresholds.get("medium", 20):
+        return "medium"
+    return "easy"
+
+
+def calculate_difficulty_from_streak(streak: int, thresholds: Dict[str, int]) -> Literal["easy", "medium", "hard"]:
+    """
+    Determine difficulty based on consecutive correct answer streak.
+    Thresholds come from database.
+    
+    This is the main function for flashcard difficulty progression,
+    which now uses streaks instead of total correct answers.
+    """
+    if streak >= thresholds.get("hard", 40):
+        return "hard"
+    if streak >= thresholds.get("medium", 20):
         return "medium"
     return "easy"
 
