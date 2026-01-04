@@ -810,8 +810,8 @@ export default function Home() {
               © 2025 MyBuddy-and-Me.com. All rights reserved.
             </p>
             <div className="flex gap-6">
-              <a href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</a>
-              <a href="terms-of-service" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms of Service</a>
+              <a href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</a>
+              <a href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms of Service</a>
             </div>
           </div>
         </div>
