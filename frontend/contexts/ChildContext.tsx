@@ -8,10 +8,12 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { UUID } from "@/types/models"; // or "@/types/api" if that's now canonical
 
 type ChildContextValue = {
-  childId: string | null;
-  setChildId: (id: string | null) => Promise<void>;
+  /** Selected child UUID (or null if none selected). */
+  childId: UUID | null;
+  setChildId: (id: UUID | null) => Promise<void>;
   loaded: boolean;
 };
 
@@ -23,16 +25,8 @@ type ChildProviderProps = {
   children: ReactNode;
 };
 
-/**
- * ChildProvider
- *
- * Provides the current childId for the app. This is intentionally minimal:
- * - It just stores a string childId in React state.
- * - It does not itself talk to the backend or storage.
- * Those concerns are handled by separate hooks (e.g. useDevAutoChild).
- */
 export function ChildProvider({ children }: ChildProviderProps) {
-  const [childId, _setChildId] = useState<string | null>(null);
+  const [childId, _setChildId] = useState<UUID | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -42,7 +36,9 @@ export function ChildProvider({ children }: ChildProviderProps) {
       try {
         const stored = await AsyncStorage.getItem(SELECTED_CHILD_ID_KEY);
         if (cancelled) return;
-        _setChildId(stored ?? null);
+
+        const normalized = stored && stored.trim().length > 0 ? (stored as UUID) : null;
+        _setChildId(normalized);
       } finally {
         if (!cancelled) setLoaded(true);
       }
@@ -53,10 +49,13 @@ export function ChildProvider({ children }: ChildProviderProps) {
     };
   }, []);
 
-  const setChildId = useCallback(async (id: string | null) => {
-    _setChildId(id);
-    if (id) {
-      await AsyncStorage.setItem(SELECTED_CHILD_ID_KEY, id);
+  const setChildId = useCallback(async (id: UUID | null) => {
+    const normalized = id && id.trim().length > 0 ? id : null;
+
+    _setChildId(normalized);
+
+    if (normalized) {
+      await AsyncStorage.setItem(SELECTED_CHILD_ID_KEY, normalized);
     } else {
       await AsyncStorage.removeItem(SELECTED_CHILD_ID_KEY);
     }
@@ -68,22 +67,23 @@ export function ChildProvider({ children }: ChildProviderProps) {
       setChildId,
       loaded,
     }),
-    [childId, loaded, setChildId]
+    [childId, setChildId, loaded]
   );
 
   return <ChildContext.Provider value={value}>{children}</ChildContext.Provider>;
 }
 
-/**
- * useCurrentChildId
- *
- * Access the current childId and setter.
- * Must be called under a <ChildProvider>.
- */
-export function useCurrentChildId(): ChildContextValue {
+export function useCurrentChild(): ChildContextValue {
   const ctx = useContext(ChildContext);
-  if (!ctx) {
-    throw new Error("useCurrentChildId must be used within a ChildProvider");
-  }
+  if (!ctx) throw new Error("useCurrentChild must be used within a ChildProvider");
   return ctx;
 }
+
+/**
+ * Back-compat exports (optional)
+ * Prefer the explicit names below.
+ */
+export const useCurrentChildId = useCurrentChild;
+
+/** @deprecated Old naming; use useCurrentChildId / useCurrentChild */
+export const useCurrentChildSlug = useCurrentChild;

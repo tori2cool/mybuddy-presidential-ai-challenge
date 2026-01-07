@@ -1,14 +1,50 @@
-import { useState, useRef, useEffect } from "react";
-import { View, StyleSheet, Dimensions, Pressable, FlatList, ViewToken } from "react-native";
+import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  Pressable,
+  FlatList,
+  ViewToken,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+} from "react-native";
+
+type RafThrottleFn<T extends (...args: any[]) => void> = {
+  (...args: Parameters<T>): void;
+  cancel: () => void;
+};
+
+function rafThrottle<T extends (...args: any[]) => void>(fn: T): RafThrottleFn<T> {
+  let rafId: number | null = null;
+  let lastArgs: Parameters<T> | null = null;
+
+  const throttled = ((...args: Parameters<T>) => {
+    lastArgs = args;
+    if (rafId != null) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = null;
+      if (lastArgs) fn(...lastArgs);
+    });
+  }) as RafThrottleFn<T>;
+
+  throttled.cancel = () => {
+    if (rafId != null) cancelAnimationFrame(rafId);
+    rafId = null;
+    lastArgs = null;
+  };
+
+  return throttled;
+}
+
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
 import { IconButton } from "@/components/IconButton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useProgress } from "@/contexts/ProgressContext";
+import { useDashboard } from "@/contexts/DashboardContext";
 import { Spacing, Typography } from "@/constants/theme";
-import { AsyncStatus } from "@/components/AsyncStatus";
 import { getAffirmations } from "@/services/affirmationsService";
 import { Affirmation } from "@/types/models";
 import { useCurrentChildId } from "@/contexts/ChildContext";
@@ -17,17 +53,40 @@ const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function AffirmationsScreen() {
   const insets = useSafeAreaInsets();
-  const { addAffirmationViewed, progress, getTodayStats } = useProgress();
-  const { childId } = useCurrentChildId(); 
+  const { data: dashboard, postEvent } = useDashboard();
+  const { childId } = useCurrentChildId();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
+  const affirmationsRef = useRef<Affirmation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const flatListRef = useRef<FlatList>(null);
 
-  const todayStats = getTodayStats();
+  const debugApiEnabled =
+    typeof process !== "undefined" &&
+    typeof process.env !== "undefined" &&
+    ["1", "true", "yes"].includes(
+      String(process.env.EXPO_PUBLIC_DEBUG_API ?? "")
+        .trim()
+        .toLowerCase(),
+    );
 
+  const debug = useCallback(
+    (...args: any[]) => {
+      if (!debugApiEnabled) return;
+      // eslint-disable-next-line no-console
+      console.debug("[AffirmationsScreen]", ...args);
+    },
+    [debugApiEnabled],
+  );
+
+  const lastViewedIndexRef = useRef<number>(-1);
+
+  // Track which affirmationIds have been posted as viewed during this session.
+  // (Set is stored in a ref to avoid stale-closure issues in viewability callbacks.)
+  const postedViewedIdsRef = useRef<Set<string>>(new Set());
+
+  const affirmationsToday = dashboard?.today?.affirmationsViewed ?? 0;
   const toggleFavorite = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setFavorites((prev) =>
@@ -35,20 +94,159 @@ export default function AffirmationsScreen() {
     );
   };
 
+  const markViewed = useCallback(
+    (affirmationId: string) => {
+      if (!affirmationId) return;
+
+      // Exactly-once-per-session semantics.
+      if (postedViewedIdsRef.current.has(affirmationId)) {
+        debug("markViewed: deduped", { affirmationId });
+        return;
+      }
+      postedViewedIdsRef.current.add(affirmationId);
+
+      debug("markViewed: posting", { childId, affirmationId });
+
+
+      if (childId) {
+        postEvent({
+          kind: "affirmation",
+          body: { affirmationId },
+        }).catch((err) => {
+          debug("markViewed: postEvent failed", {
+            affirmationId,
+            err: String(err),
+          });
+        });
+      } else {
+        debug("markViewed: skipped (missing childId)", { affirmationId });
+      }
+    },
+    [childId, postEvent, debug],
+  );
+
+  // Keep FlatList callback stable while always using the latest markViewed.
+  const markViewedRef = useRef<(id: string) => void>(() => {});
+  useEffect(() => {
+    markViewedRef.current = markViewed;
+  }, [markViewed]);
+
+  useEffect(() => {
+    return () => {
+      onScrollRafThrottledRef.current?.cancel?.();
+    };
+  }, []);
+
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0 && viewableItems[0].index !== null) {
-        const newIndex = viewableItems[0].index;
-        setCurrentIndex(newIndex);
-        
-        const viewedItem = viewableItems[0].item;
-        if (viewedItem && !viewedIds.has(viewedItem.id)) {
-          setViewedIds(prev => new Set([...prev, viewedItem.id]));
-          addAffirmationViewed();
-        }
-      }
-    }
+      const first = viewableItems[0];
+      if (!first || first.index == null) return;
+
+      debug("onViewableItemsChanged", {
+        childId,
+        affirmations_len: affirmationsRef.current.length,
+        index: first.index,
+        id: (first.item as any)?.id,
+      });
+
+      setCurrentIndex(first.index);
+
+      const viewedItem = first.item as Affirmation | undefined;
+      if (!viewedItem) return;
+
+      // Secondary signal (e.g. native). Dedupe is handled inside markViewed.
+      markViewedRef.current(viewedItem.id);
+    },
   ).current;
+
+  const handleScrollEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetY = e.nativeEvent.contentOffset.y;
+      const index = Math.round(offsetY / SCREEN_HEIGHT);
+      const item = affirmationsRef.current[index];
+
+      debug("handleScrollEnd", {
+        offsetY,
+        index,
+        id: item?.id,
+        childId,
+        affirmations_len: affirmationsRef.current.length,
+      });
+
+      setCurrentIndex(index);
+      if (item) markViewedRef.current(item.id);
+    },
+    [debug, childId],
+  );
+
+  const handleScrollIndexChanged = useCallback(
+    (index: number, source: string, offsetY?: number) => {
+      if (index < 0) return;
+      const items = affirmationsRef.current;
+      if (!items || items.length === 0) {
+        debug("scrollIndexChanged: no items", { source, index, offsetY });
+        return;
+      }
+
+      const boundedIndex = Math.max(0, Math.min(index, items.length - 1));
+      if (boundedIndex === lastViewedIndexRef.current) return;
+      lastViewedIndexRef.current = boundedIndex;
+
+      const item = items[boundedIndex];
+      debug("scrollIndexChanged", {
+        source,
+        offsetY,
+        index: boundedIndex,
+        id: item?.id,
+      });
+
+      setCurrentIndex(boundedIndex);
+      if (item?.id) markViewedRef.current(item.id);
+    },
+    [debug],
+  );
+
+  const onScrollRafThrottledRef = useRef<
+    RafThrottleFn<(e: NativeSyntheticEvent<NativeScrollEvent>) => void> | undefined
+  >(undefined);
+
+  if (!onScrollRafThrottledRef.current) {
+    onScrollRafThrottledRef.current = rafThrottle(
+      (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+        const offsetY = e.nativeEvent.contentOffset.y;
+        const index = Math.round(offsetY / SCREEN_HEIGHT);
+        handleScrollIndexChanged(index, "onScroll", offsetY);
+      },
+    );
+  }
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      onScrollRafThrottledRef.current?.(e);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    affirmationsRef.current = affirmations;
+    debug("affirmations updated", {
+      childId,
+      affirmations_len: affirmations.length,
+      first_id: affirmations[0]?.id,
+    });
+  }, [affirmations, debug, childId]);
+
+  useEffect(() => {
+    debug("childId", { childId });
+  }, [childId, debug]);
+
+  // Reset per-session dedupe state when switching children so views are counted
+  // once per session per child.
+  useEffect(() => {
+    postedViewedIdsRef.current.clear();
+    lastViewedIndexRef.current = -1;
+    debug("reset view dedupe state", { childId });
+  }, [childId, debug]);
 
   useEffect(() => {
     if (!childId) {
@@ -59,12 +257,9 @@ export default function AffirmationsScreen() {
     const loadAffirmations = async () => {
       setIsLoading(true);
       try {
-        const data = await getAffirmations(childId);   // <-- pass childId
-        setAffirmations(data || []);                  // safeguard against undefined
-        if (data && data.length > 0 && !viewedIds.has(data[0].id)) {
-          setViewedIds(new Set([data[0].id]));
-          addAffirmationViewed();
-        }
+        const data = await getAffirmations(childId); // <-- pass childId
+        setAffirmations(data || []); // safeguard against undefined
+        // Rely on FlatList viewability to mark items as viewed (avoids double-posting the first item).
       } catch (error) {
         console.error("Failed to load affirmations:", error);
         setAffirmations([]); // avoid undefined.length
@@ -108,13 +303,13 @@ export default function AffirmationsScreen() {
               <View style={styles.statBadge}>
                 <Feather name="heart" size={14} color="white" />
                 <ThemedText style={styles.statText}>
-                  {todayStats?.affirmationsViewed || 0} today
+                  {affirmationsToday} today
                 </ThemedText>
               </View>
               <View style={styles.statBadge}>
                 <Feather name="zap" size={14} color="white" />
                 <ThemedText style={styles.statText}>
-                  +{(todayStats?.affirmationsViewed || 0) * 5} pts
+                  +{affirmationsToday * 5} pts
                 </ThemedText>
               </View>
             </View>
@@ -165,10 +360,15 @@ export default function AffirmationsScreen() {
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         pagingEnabled
+        scrollEnabled
         showsVerticalScrollIndicator={false}
         snapToInterval={SCREEN_HEIGHT}
         snapToAlignment="start"
         decelerationRate="fast"
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        onMomentumScrollEnd={handleScrollEnd}
+        onScrollEndDrag={handleScrollEnd}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{
           itemVisiblePercentThreshold: 50,

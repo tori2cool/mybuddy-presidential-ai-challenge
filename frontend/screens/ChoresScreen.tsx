@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Feather } from "@expo/vector-icons";
@@ -11,7 +11,7 @@ import { IconButton } from "@/components/IconButton";
 import { AsyncStatus } from "@/components/AsyncStatus";
 
 import { useTheme } from "@/hooks/useTheme";
-import { useProgress } from "@/contexts/ProgressContext";
+import { useDashboard } from "@/contexts/DashboardContext";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 import { getDailyChores } from "@/services/choresService";
@@ -21,16 +21,13 @@ import { useCurrentChildId } from "@/contexts/ChildContext";
 export default function ChoresScreen() {
   const { theme } = useTheme();
   const { childId } = useCurrentChildId();
-  const { addChoreCompleted, progress, getTodayStats } = useProgress();
+  const { data: dashboard, postEvent } = useDashboard();
 
   const [chores, setChores] = useState<Chore[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState<string[]>([]);
   const [extraChores, setExtraChores] = useState<Chore[]>([]);
-
-  // Track which chores have already incremented progress
-  const trackedChores = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!childId) return;
@@ -66,9 +63,12 @@ export default function ChoresScreen() {
     if (!wasCompleted) {
       // First time marking as completed in this toggle
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (!trackedChores.current.has(id)) {
-        addChoreCompleted();
-        trackedChores.current.add(id);
+      if (childId) {
+        const chore = allChores.find((c) => c.id === id);
+        postEvent({
+          kind: "chore",
+          body: { choreId: id, isExtra: chore?.isExtra ?? false },
+        }).catch(() => {});
       }
     }
 
@@ -81,7 +81,8 @@ export default function ChoresScreen() {
   const allCompleted =
     allChores.length > 0 &&
     allChores.every((chore) => completed.includes(chore.id));
-  const todayStats = getTodayStats();
+  const choresToday = dashboard?.today?.choresCompleted ?? 0;
+  const choresTotal = dashboard?.totals?.choresCompleted ?? 0;
 
   const addExtraChore = () => {
     const newChore: Chore = {
@@ -123,7 +124,7 @@ export default function ChoresScreen() {
           <View style={styles.statItem}>
             <Feather name="check-circle" size={20} color={theme.success} />
             <ThemedText style={[styles.statValue, { color: theme.success }]}>
-              {todayStats?.choresCompleted ?? 0}
+              {choresToday}
             </ThemedText>
             <ThemedText
               style={[styles.statLabel, { color: theme.textSecondary }]}
@@ -141,7 +142,7 @@ export default function ChoresScreen() {
             <ThemedText
               style={[styles.statValue, { color: theme.secondary }]}
             >
-              {progress.totalChoresCompleted}
+              {choresTotal}
             </ThemedText>
             <ThemedText
               style={[styles.statLabel, { color: theme.textSecondary }]}
@@ -157,7 +158,7 @@ export default function ChoresScreen() {
           <View style={styles.statItem}>
             <Feather name="zap" size={20} color={theme.primary} />
             <ThemedText style={[styles.statValue, { color: theme.primary }]}>
-              +{(todayStats?.choresCompleted ?? 0) * 15}
+              +{choresToday * 15}
             </ThemedText>
             <ThemedText
               style={[styles.statLabel, { color: theme.textSecondary }]}

@@ -1,66 +1,127 @@
 # app/routers/progress.py
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from datetime import datetime, timezone
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from ..config import settings
 from ..db import get_session
-from ..deps import get_child_owned
-from ..models import Child
+from ..deps import get_child_owned_path
+from ..models import (
+    AchievementDefinition,
+    Child,
+    ChildFlashcardPerformance,
+    ChildSubjectStreak,
+    Flashcard,
+    Subject,
+)
+from ..schemas.dashboard import AchievementOut, DashboardOut
 from ..schemas.progress import (
-    FlashcardAnsweredIn,
-    ChoreCompletedIn,
-    OutdoorCompletedIn,
     AffirmationViewedIn,
+    ChoreCompletedIn,
     EventAckOut,
+    FlashcardAnsweredIn,
+    OutdoorCompletedIn,
 )
-from ..schemas.dashboard import DashboardOut, AchievementOut
 from ..services import progress_rules as rules
-from ..services.progress_queries import (
-    insert_event,
-    compute_today_stats,
-    compute_week_stats,
-    compute_flashcards_by_subject,
-    compute_totals,
-    compute_streaks,
-    unlock_achievements,
-    get_unlocked_achievement_ids,
+from ..services.content_expansion import (
+    check_auto_flashcard_limit,
+    get_flashcard_context_with_interests,
+    seed_new_flashcards,
+    should_expand_content,
 )
-
+from ..services.progress_queries import (
+    compute_flashcards_by_subject,
+    compute_streaks,
+    compute_today_stats,
+    compute_totals,
+    compute_week_stats,
+    get_unlocked_achievements_map,
+    insert_event,
+    list_subject_ids,  # NOTE: should now return UUIDs OR subject codes; see comment below
+    unlock_achievements,
+)
+import logging
+logger = logging.getLogger("mybuddy.api")
 router = APIRouter(prefix="/v1", tags=["mybuddy-progress"])
 
-def _achievement_catalog() -> dict[str, rules.AchievementDef]:
-    return {a.id: a for a in rules.ACHIEVEMENTS}
+
+async def _achievement_catalog(session: AsyncSession) -> dict[str, AchievementDefinition]:
+    """
+    Map AchievementDefinition.code -> row.
+    """
+    result = await session.execute(select(AchievementDefinition))
+    rows = result.scalars().all()
+    return {a.code: a for a in rows}
+
 
 async def _build_dashboard(session: AsyncSession, child: Child) -> DashboardOut:
+    logger.info("build_dashboard: start child_id=%s", str(child.id))
+
     totals = await compute_totals(session, child_id=child.id)
     today = await compute_today_stats(session, child_id=child.id)
     week = await compute_week_stats(session, child_id=child.id)
     by_subject = await compute_flashcards_by_subject(session, child_id=child.id)
     streaks = await compute_streaks(session, child_id=child.id)
 
-    subject_correct = {s: by_subject[s]["correct"] for s in rules.SUBJECTS}
-    subject_difficulty = {s: by_subject[s]["difficulty"] for s in rules.SUBJECTS}
+    core_subjects = await list_subject_ids(session, child_id=child.id)
+    level_thresholds = await rules.fetch_level_thresholds(session)
+    level_metadata = await rules.fetch_level_metadata(session)
 
-    balanced = rules.compute_balanced_progress(subject_correct)
-    reward = rules.reward_for_level(balanced["currentLevel"], subject_correct)
+    logger.info(
+        "build_dashboard: loaded child_id=%s core_subjects=%s by_subject_keys=%s totalPoints=%s",
+        str(child.id),
+        list(core_subjects) if core_subjects else [],
+        list(by_subject.keys()) if isinstance(by_subject, dict) else [],
+        totals.get("totalPoints"),
+    )
 
-    unlocked_ids = await get_unlocked_achievement_ids(session, child_id=child.id)
-    catalog = _achievement_catalog()
+    subject_correct = {s: by_subject.get(s, {}).get("correct", 0) for s in core_subjects}
 
-    unlocked = []
-    locked = []
-    for a in rules.ACHIEVEMENTS:
-        if a.id in unlocked_ids:
-            # fetch unlockedAt timestamp
-            # (simple way: we didn’t pull timestamps here; for now set unlockedAt=None or add a query)
-            unlocked.append(AchievementOut(
-                id=a.id, title=a.title, description=a.description, icon=a.icon, type=a.type, unlockedAt=None
-            ))
+    balanced = rules.compute_balanced_progress(
+        subject_correct=subject_correct,
+        subjects=core_subjects,
+        level_thresholds=level_thresholds,
+    )
+    reward = rules.reward_for_level(
+        current_level=balanced["currentLevel"],
+        subject_correct=subject_correct,
+        subjects=core_subjects,
+        level_thresholds=level_thresholds,
+        level_metadata=level_metadata,
+    )
+
+    unlocked_map = await get_unlocked_achievements_map(session, child_id=child.id)
+    catalog = await _achievement_catalog(session)
+
+    unlocked: list[AchievementOut] = []
+    locked: list[AchievementOut] = []
+
+    for code, a in catalog.items():
+        unlocked_at = unlocked_map.get(code)
+        row = AchievementOut(
+            id=a.id,
+            code=a.code,
+            title=a.title,
+            description=a.description,
+            icon=a.icon,
+            type=a.achievement_type,
+            unlockedAt=unlocked_at,
+        )
+        if unlocked_at is not None:
+            unlocked.append(row)
         else:
-            locked.append(AchievementOut(
-                id=a.id, title=a.title, description=a.description, icon=a.icon, type=a.type, unlockedAt=None
-            ))
+            locked.append(row)
+
+    logger.info(
+        "build_dashboard: end child_id=%s unlocked=%s locked=%s",
+        str(child.id),
+        len(unlocked),
+        len(locked),
+    )
 
     return DashboardOut(
         totalPoints=totals["totalPoints"],
@@ -87,111 +148,442 @@ async def _build_dashboard(session: AsyncSession, child: Child) -> DashboardOut:
         reward=reward,
     )
 
+
 async def _unlock_from_current_state(session: AsyncSession, child: Child) -> list[str]:
+    """
+    Unlock achievements based on current state.
+    Returns list of achievement *codes*.
+    """
     totals = await compute_totals(session, child_id=child.id)
     today = await compute_today_stats(session, child_id=child.id)
     by_subject = await compute_flashcards_by_subject(session, child_id=child.id)
     streaks = await compute_streaks(session, child_id=child.id)
 
-    subject_correct = {s: by_subject[s]["correct"] for s in rules.SUBJECTS}
-    subject_difficulty = {s: by_subject[s]["difficulty"] for s in rules.SUBJECTS}
+    core_subjects = await list_subject_ids(session, child_id=child.id)
 
-    unlockable = rules.evaluate_achievement_conditions(
-        total_points=totals["totalPoints"],
-        current_streak=streaks["currentStreak"],
-        total_flashcards=totals["totalFlashcardsCompleted"],
-        total_chores=totals["totalChoresCompleted"],
-        total_outdoor=totals["totalOutdoorActivities"],
-        today_has_flashcards=today["hasFlashcards"],
-        today_has_chores=today["hasChores"],
-        today_has_outdoor=today["hasOutdoor"],
-        subject_difficulty=subject_difficulty,
-        subject_correct=subject_correct,
+    subject_correct = {s: by_subject.get(s, {}).get("correct", 0) for s in core_subjects}
+    subject_difficulty = {s: by_subject.get(s, {}).get("difficultyCode") for s in core_subjects}
+
+    total_flashcards = totals.get("totalFlashcardsCompleted", 0)
+    total_chores = totals.get("totalChoresCompleted", 0)
+    total_outdoor = totals.get("totalOutdoorActivities", 0)
+
+    unlockable_codes: list[str] = []
+
+    # Points-based achievements
+    for ach in (
+        await session.execute(
+            select(AchievementDefinition).where(AchievementDefinition.points_threshold.is_not(None))
+        )
+    ).scalars().all():
+        if ach.points_threshold is not None and totals["totalPoints"] >= ach.points_threshold:
+            unlockable_codes.append(ach.code)
+
+    # Streak-based achievements
+    for ach in (
+        await session.execute(
+            select(AchievementDefinition).where(AchievementDefinition.streak_days_threshold.is_not(None))
+        )
+    ).scalars().all():
+        if ach.streak_days_threshold is not None and streaks["currentStreak"] >= ach.streak_days_threshold:
+            unlockable_codes.append(ach.code)
+
+    # Flashcard count-based achievements
+    for ach in (
+        await session.execute(
+            select(AchievementDefinition).where(AchievementDefinition.flashcards_count_threshold.is_not(None))
+        )
+    ).scalars().all():
+        if ach.flashcards_count_threshold is not None and total_flashcards >= ach.flashcards_count_threshold:
+            unlockable_codes.append(ach.code)
+
+    # Chore count-based achievements
+    for ach in (
+        await session.execute(
+            select(AchievementDefinition).where(AchievementDefinition.chores_count_threshold.is_not(None))
+        )
+    ).scalars().all():
+        if ach.chores_count_threshold is not None and total_chores >= ach.chores_count_threshold:
+            unlockable_codes.append(ach.code)
+
+    # Outdoor activity count-based achievements
+    for ach in (
+        await session.execute(
+            select(AchievementDefinition).where(AchievementDefinition.outdoor_count_threshold.is_not(None))
+        )
+    ).scalars().all():
+        if ach.outdoor_count_threshold is not None and total_outdoor >= ach.outdoor_count_threshold:
+            unlockable_codes.append(ach.code)
+
+    # Subject difficulty achievements:
+    # Assumes keys are subject CODEs ("math", "science"...)
+    if subject_difficulty.get("math") in ("medium", "hard"):
+        unlockable_codes.append("math-whiz")
+    if subject_difficulty.get("science") in ("medium", "hard"):
+        unlockable_codes.append("science-star")
+    if subject_difficulty.get("reading") in ("medium", "hard"):
+        unlockable_codes.append("bookworm")
+    if subject_difficulty.get("history") in ("medium", "hard"):
+        unlockable_codes.append("history-buff")
+
+    if any(diff == "hard" for diff in subject_difficulty.values() if diff is not None):
+        unlockable_codes.append("master-student")
+
+    if core_subjects and all(subject_correct.get(s, 0) >= 10 for s in core_subjects):
+        unlockable_codes.append("balanced-learner")
+
+    if today.get("hasFlashcards") and today.get("hasChores") and today.get("hasOutdoor"):
+        unlockable_codes.append("perfect-day")
+
+    # NOTE: unlock_achievements must now treat these as achievement CODES (strings),
+    # and insert into ChildAchievement by looking up AchievementDefinition.id.
+    # If the function arg is still named achievement_ids, keep it but pass codes.
+    new_codes = await unlock_achievements(
+        session,
+        child_id=child.id,
+        achievement_ids=unlockable_codes,  # actually codes
     )
-    new_ids = await unlock_achievements(session, child_id=child.id, achievement_ids=unlockable)
-    return new_ids
+    return new_codes
+
 
 @router.get("/children/{child_id}/dashboard", response_model=DashboardOut)
 async def get_dashboard(
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
     return await _build_dashboard(session, child)
 
+
 @router.post("/children/{child_id}/events/flashcard", response_model=EventAckOut)
 async def flashcard_answered(
     payload: FlashcardAnsweredIn,
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
-    points = rules.POINTS["flashcard_correct"] if payload.correct else rules.POINTS["flashcard_wrong"]
-    await insert_event(
-        session,
-        child_id=child.id,
-        kind="flashcard_answered",
-        meta={
-            "subjectId": payload.subjectId,
-            "correct": payload.correct,
-            "flashcardId": payload.flashcardId,
-            "answer": payload.answer,
-            "points": points,
-        },
+    logger.info(
+        "event_flashcard: start child_id=%s flashcardId=%s correct=%s",
+        str(child.id),
+        str(payload.flashcardId),
+        payload.correct,
     )
 
-    new_ids = await _unlock_from_current_state(session, child)
-    await session.commit()
-    return EventAckOut(pointsAwarded=points, newAchievementIds=new_ids)
+    try:
+        points_values = await rules.fetch_points_values(session)
+        points = points_values["flashcard_correct"] if payload.correct else points_values["flashcard_wrong"]
+
+        # Validate flashcard exists (UUID PK)
+        flashcard = (
+            await session.execute(select(Flashcard).where(Flashcard.id == payload.flashcardId))
+        ).scalar_one_or_none()
+        if flashcard is None:
+            logger.warning(
+                "event_flashcard: invalid flashcardId=%s child_id=%s",
+                str(payload.flashcardId),
+                str(child.id),
+            )
+            raise HTTPException(status_code=400, detail="Invalid flashcardId.")
+
+        # Derive subject from flashcard.subject_id
+        subject_id: UUID = flashcard.subject_id
+        logger.info(
+            "event_flashcard: validated child_id=%s flashcardId=%s subject_id=%s points=%s",
+            str(child.id),
+            str(payload.flashcardId),
+            str(subject_id),
+            points,
+        )
+
+        # Insert append-only event
+        await insert_event(
+            session,
+            child_id=child.id,
+            kind="flashcard",
+            meta={
+                "dedupeKey": f"flashcard:{payload.flashcardId}",
+                "flashcardId": str(payload.flashcardId),
+                "subjectId": str(subject_id),
+                "correct": payload.correct,
+                "answer": payload.answer,
+                "points": points,
+            },
+        )
+        logger.info("event_flashcard: inserted_event child_id=%s", str(child.id))
+
+        # Update subject streaks (FKs are UUID)
+        streak = (
+            await session.execute(
+                select(ChildSubjectStreak).where(
+                    ChildSubjectStreak.child_id == child.id,
+                    ChildSubjectStreak.subject_id == subject_id,
+                )
+            )
+        ).scalar_one_or_none()
+
+        if streak is None:
+            logger.info(
+                "event_flashcard: create_streak child_id=%s subject_id=%s start=%s",
+                str(child.id),
+                str(subject_id),
+                1 if payload.correct else 0,
+            )
+            streak = ChildSubjectStreak(
+                child_id=child.id,
+                subject_id=subject_id,
+                current_streak=1 if payload.correct else 0,
+                longest_streak=1 if payload.correct else 0,
+            )
+            session.add(streak)
+        else:
+            prev_current = streak.current_streak
+            prev_longest = streak.longest_streak
+
+            if payload.correct:
+                streak.current_streak += 1
+                if streak.current_streak > streak.longest_streak:
+                    streak.longest_streak = streak.current_streak
+            else:
+                streak.current_streak = 0
+
+            streak.last_updated = datetime.now(timezone.utc)
+            logger.info(
+                "event_flashcard: update_streak child_id=%s subject_id=%s current %s->%s longest %s->%s",
+                str(child.id),
+                str(subject_id),
+                prev_current,
+                streak.current_streak,
+                prev_longest,
+                streak.longest_streak,
+            )
+
+        # Update performance tracking (FKs are UUID)
+        perf = (
+            await session.execute(
+                select(ChildFlashcardPerformance).where(
+                    ChildFlashcardPerformance.child_id == child.id,
+                    ChildFlashcardPerformance.flashcard_id == payload.flashcardId,
+                )
+            )
+        ).scalar_one_or_none()
+
+        if perf is None:
+            logger.info(
+                "event_flashcard: create_perf child_id=%s flashcardId=%s correct=%s",
+                str(child.id),
+                str(payload.flashcardId),
+                payload.correct,
+            )
+            perf = ChildFlashcardPerformance(
+                child_id=child.id,
+                flashcard_id=payload.flashcardId,
+                correct_count=1 if payload.correct else 0,
+                incorrect_count=0 if payload.correct else 1,
+                last_seen_at=datetime.now(timezone.utc),
+            )
+            session.add(perf)
+        else:
+            prev_c = perf.correct_count
+            prev_i = perf.incorrect_count
+
+            if payload.correct:
+                perf.correct_count += 1
+            else:
+                perf.incorrect_count += 1
+            perf.last_seen_at = datetime.now(timezone.utc)
+
+            logger.info(
+                "event_flashcard: update_perf child_id=%s flashcardId=%s correct %s->%s incorrect %s->%s",
+                str(child.id),
+                str(payload.flashcardId),
+                prev_c,
+                perf.correct_count,
+                prev_i,
+                perf.incorrect_count,
+            )
+
+        # CONTENT EXPANSION
+        if payload.correct and await should_expand_content(session, child.id, payload.flashcardId, threshold=2):
+            logger.warning(
+                "content_expansion: triggered child_id=%s flashcardId=%s",
+                str(child.id),
+                str(payload.flashcardId),
+            )
+
+            context = await get_flashcard_context_with_interests(session, payload.flashcardId, child.id)
+
+            auto_count, should_expand = await check_auto_flashcard_limit(
+                session,
+                context["subject_id"],
+                context["age_range_id"],
+                context["difficulty"],
+            )
+
+            if should_expand:
+                new_ids = await seed_new_flashcards(
+                    session,
+                    subject_id=context["subject_id"],
+                    age_range_id=context["age_range_id"],
+                    difficulty=context["difficulty"],
+                    interests=context["interests"],
+                    count=10,
+                )
+                logger.warning(
+                    "content_expansion: seeded count=%s subject_id=%s age_range_id=%s difficulty=%s auto_count=%s max=%s",
+                    len(new_ids),
+                    str(context["subject_id"]),
+                    str(context["age_range_id"]),
+                    str(context["difficulty"]),
+                    auto_count,
+                    settings.max_auto_flashcards,
+                )
+            else:
+                logger.warning(
+                    "content_expansion: limit_reached subject_id=%s age_range_id=%s difficulty=%s auto_count=%s max=%s",
+                    str(context["subject_id"]),
+                    str(context["age_range_id"]),
+                    str(context["difficulty"]),
+                    auto_count,
+                    settings.max_auto_flashcards,
+                )
+
+        new_codes = await _unlock_from_current_state(session, child)
+
+        logger.info(
+            "event_flashcard: commit child_id=%s points=%s newAchievementCodes=%s",
+            str(child.id),
+            points,
+            new_codes,
+        )
+
+        await session.commit()
+        logger.info("event_flashcard: success child_id=%s", str(child.id))
+        return EventAckOut(pointsAwarded=points, newAchievementCodes=new_codes)
+
+    except HTTPException:
+        # already logged (for invalid flashcardId, etc.)
+        raise
+    except Exception:
+        logger.exception("event_flashcard: failed child_id=%s flashcardId=%s", str(child.id), str(payload.flashcardId))
+        raise
+
 
 @router.post("/children/{child_id}/events/chore", response_model=EventAckOut)
 async def chore_completed(
     payload: ChoreCompletedIn,
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
-    points = rules.POINTS["chore_completed"]
-    await insert_event(
-        session,
-        child_id=child.id,
-        kind="chore_completed",
-        meta={"choreId": payload.choreId, "isExtra": payload.isExtra, "points": points},
+    logger.info(
+        "event_chore: start child_id=%s choreId=%s isExtra=%s",
+        str(child.id),
+        str(payload.choreId),
+        payload.isExtra,
     )
 
-    new_ids = await _unlock_from_current_state(session, child)
-    await session.commit()
-    return EventAckOut(pointsAwarded=points, newAchievementIds=new_ids)
+    try:
+        points_values = await rules.fetch_points_values(session)
+        points = points_values["chore_completed"]
+
+        await insert_event(
+            session,
+            child_id=child.id,
+            kind="chore",
+            meta={
+                "dedupeKey": f"chore:{payload.choreId}",
+                "choreId": str(payload.choreId),
+                "isExtra": payload.isExtra,
+                "points": points,
+            },
+        )
+
+        new_codes = await _unlock_from_current_state(session, child)
+        logger.info("event_chore: commit child_id=%s points=%s newAchievementCodes=%s", str(child.id), points, new_codes)
+
+        await session.commit()
+        logger.info("event_chore: success child_id=%s", str(child.id))
+        return EventAckOut(pointsAwarded=points, newAchievementCodes=new_codes)
+    except Exception:
+        logger.exception("event_chore: failed child_id=%s choreId=%s", str(child.id), str(payload.choreId))
+        raise
+
 
 @router.post("/children/{child_id}/events/outdoor", response_model=EventAckOut)
 async def outdoor_completed(
     payload: OutdoorCompletedIn,
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
-    points = rules.POINTS["outdoor_completed"]
-    await insert_event(
-        session,
-        child_id=child.id,
-        kind="outdoor_completed",
-        meta={"outdoorActivityId": payload.outdoorActivityId, "isDaily": payload.isDaily, "points": points},
+    logger.info(
+        "event_outdoor: start child_id=%s outdoorActivityId=%s isDaily=%s",
+        str(child.id),
+        str(payload.outdoorActivityId),
+        payload.isDaily,
     )
 
-    new_ids = await _unlock_from_current_state(session, child)
-    await session.commit()
-    return EventAckOut(pointsAwarded=points, newAchievementIds=new_ids)
+    try:
+        points_values = await rules.fetch_points_values(session)
+        points = points_values["outdoor_completed"]
+
+        await insert_event(
+            session,
+            child_id=child.id,
+            kind="outdoor",
+            meta={
+                "dedupeKey": f"outdoor:{payload.outdoorActivityId}",
+                "outdoorActivityId": str(payload.outdoorActivityId),
+                "isDaily": payload.isDaily,
+                "points": points,
+            },
+        )
+
+        new_codes = await _unlock_from_current_state(session, child)
+        logger.info("event_outdoor: commit child_id=%s points=%s newAchievementCodes=%s", str(child.id), points, new_codes)
+
+        await session.commit()
+        logger.info("event_outdoor: success child_id=%s", str(child.id))
+        return EventAckOut(pointsAwarded=points, newAchievementCodes=new_codes)
+    except Exception:
+        logger.exception("event_outdoor: failed child_id=%s outdoorActivityId=%s", str(child.id), str(payload.outdoorActivityId))
+        raise
+
 
 @router.post("/children/{child_id}/events/affirmation", response_model=EventAckOut)
 async def affirmation_viewed(
     payload: AffirmationViewedIn,
-    child: Child = Depends(get_child_owned),
+    child: Child = Depends(get_child_owned_path),
     session: AsyncSession = Depends(get_session),
 ):
-    points = rules.POINTS["affirmation_viewed"]
-    await insert_event(
-        session,
-        child_id=child.id,
-        kind="affirmation_viewed",
-        meta={"affirmationId": payload.affirmationId, "points": points},
+    logger.info(
+        "event_affirmation: start child_id=%s affirmationId=%s",
+        str(child.id),
+        str(payload.affirmationId),
     )
 
-    new_ids = await _unlock_from_current_state(session, child)
-    await session.commit()
-    return EventAckOut(pointsAwarded=points, newAchievementIds=new_ids)
+    try:
+        points_values = await rules.fetch_points_values(session)
+        points = points_values["affirmation_viewed"]
+
+        await insert_event(
+            session,
+            child_id=child.id,
+            kind="affirmation",
+            meta={
+                "dedupeKey": f"affirmation:{payload.affirmationId}",
+                "affirmationId": str(payload.affirmationId),
+                "points": points,
+            },
+        )
+
+        new_codes = await _unlock_from_current_state(session, child)
+        logger.info(
+            "event_affirmation: commit child_id=%s points=%s newAchievementCodes=%s",
+            str(child.id),
+            points,
+            new_codes,
+        )
+
+        await session.commit()
+        logger.info("event_affirmation: success child_id=%s", str(child.id))
+        return EventAckOut(pointsAwarded=points, newAchievementCodes=new_codes)
+    except Exception:
+        logger.exception("event_affirmation: failed child_id=%s affirmationId=%s", str(child.id), str(payload.affirmationId))
+        raise

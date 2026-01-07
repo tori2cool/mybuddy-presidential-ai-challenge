@@ -1,209 +1,283 @@
-# app/services/progress_rules.py
+# backend/app/services/progress_rules.py
+"""
+Core calculation functions.
+All thresholds, subjects, points values are fetched from database.
+No hardcoded constants.
+"""
+
 from __future__ import annotations
+from typing import Dict, List
 
-from dataclasses import dataclass
-from datetime import date
-from typing import Dict, List, Literal, Optional, Tuple
+from sqlalchemy.ext.asyncio import AsyncSession
 
-SubjectId = Literal["math", "science", "reading", "history"]
-DifficultyTier = Literal["easy", "medium", "hard"]
 
-SUBJECTS: List[SubjectId] = ["math", "science", "reading", "history"]
+# ========== FETCH FUNCTIONS (NO CONSTANTS) ==========
 
-DIFFICULTY_THRESHOLDS = {
-    "easy": 0,
-    "medium": 20,
-    "hard": 40,
-}
+async def fetch_level_thresholds(db: AsyncSession) -> Dict[str, int]:
+    """Fetch level thresholds from database."""
+    from sqlalchemy import select
+    from ..models import LevelThreshold
 
-LEVEL_THRESHOLDS: Dict[str, int] = {
-    "New Kid": 0,
-    "Good Kid": 50,
-    "Great Kid": 200,
-    "Awesome Kid": 500,
-    "Amazing Kid": 1000,
-    "Super Star Kid": 2000,
-}
+    result = await db.execute(select(LevelThreshold).where(LevelThreshold.is_active == True))
+    thresholds = {row.name: row.threshold for row in result.scalars().all()}
+    return thresholds
 
-POINTS = {
-    "flashcard_correct": 10,
-    "flashcard_wrong": 2,
-    "chore_completed": 15,
-    "outdoor_completed": 20,
-    "affirmation_viewed": 5,
-}
 
-@dataclass(frozen=True)
-class AchievementDef:
-    id: str
-    title: str
-    description: str
-    icon: str
-    type: Literal["daily", "weekly", "monthly", "special"]
+async def fetch_level_metadata(db: AsyncSession) -> Dict[str, Dict]:
+    """Fetch level metadata (icon, color) from database."""
+    from sqlalchemy import select
+    from ..models import LevelThreshold
 
-ACHIEVEMENTS: List[AchievementDef] = [
-    AchievementDef("first_flashcard", "Brain Starter", "Complete your first flashcard", "zap", "special"),
-    AchievementDef("first_chore", "Helper Bee", "Complete your first chore", "check-circle", "special"),
-    AchievementDef("first_outdoor", "Nature Explorer", "Complete your first outdoor activity", "sun", "special"),
-    AchievementDef("streak_3", "On Fire!", "Keep a 3-day streak", "flame", "daily"),
-    AchievementDef("streak_7", "Super Star", "Keep a 7-day streak", "star", "weekly"),
-    AchievementDef("streak_30", "Champion", "Keep a 30-day streak", "award", "monthly"),
-    AchievementDef("points_100", "Rising Star", "Earn 100 points", "trending-up", "daily"),
-    AchievementDef("points_500", "Superstar", "Earn 500 points", "star", "weekly"),
-    AchievementDef("points_2000", "Legend", "Earn 2000 points", "award", "monthly"),
-    AchievementDef("flashcards_10", "Quick Learner", "Complete 10 flashcards", "book", "daily"),
-    AchievementDef("flashcards_50", "Knowledge Seeker", "Complete 50 flashcards", "book-open", "weekly"),
-    AchievementDef("chores_7", "Tidy Champion", "Complete 7 chores", "home", "weekly"),
-    AchievementDef("outdoor_5", "Adventure Kid", "Complete 5 outdoor activities", "compass", "weekly"),
-    AchievementDef("perfect_day", "Perfect Day", "Complete activities in all categories in one day", "sun", "daily"),
-    AchievementDef("medium_math", "Math Whiz", "Reach Medium difficulty in Math", "grid", "special"),
-    AchievementDef("medium_science", "Science Star", "Reach Medium difficulty in Science", "zap", "special"),
-    AchievementDef("medium_reading", "Bookworm", "Reach Medium difficulty in Reading", "book-open", "special"),
-    AchievementDef("medium_history", "History Buff", "Reach Medium difficulty in History", "globe", "special"),
-    AchievementDef("hard_unlocked", "Master Student", "Reach Hard difficulty in any subject", "award", "special"),
-    AchievementDef("balanced_learner", "Balanced Learner", "Get 10+ correct in all subjects", "target", "special"),
-]
+    result = await db.execute(select(LevelThreshold).where(LevelThreshold.is_active == True))
+    return {
+        row.name: {"icon": row.icon, "color": row.color}
+        for row in result.scalars().all()
+    }
 
-def calculate_difficulty(correct: int) -> DifficultyTier:
-    if correct >= DIFFICULTY_THRESHOLDS["hard"]:
-        return "hard"
-    if correct >= DIFFICULTY_THRESHOLDS["medium"]:
-        return "medium"
-    return "easy"
 
-def compute_balanced_progress(subject_correct: Dict[SubjectId, int]) -> dict:
-    subject_corrects = [subject_correct.get(s, 0) for s in SUBJECTS]
-    min_correct = min(subject_corrects) if subject_corrects else 0
+async def fetch_difficulty_thresholds(db: AsyncSession) -> Dict[str, int]:
+    """Fetch difficulty thresholds from database. Keyed by code (easy/medium/hard)."""
+    from sqlalchemy import select
+    from ..models import DifficultyThreshold
 
-    levels = sorted(LEVEL_THRESHOLDS.items(), key=lambda kv: kv[1], reverse=True)
+    result = await db.execute(
+        select(DifficultyThreshold).where(DifficultyThreshold.is_active == True)  # noqa: E712
+    )
+    return {row.code: int(row.threshold) for row in result.scalars().all()}
 
-    current_level = "New Kid"
-    next_level: Optional[str] = None
-    next_threshold = LEVEL_THRESHOLDS["Good Kid"]
 
-    # ported from your TS logic (reverse scan)
-    for i in range(len(levels) - 1, -1, -1):
-        level_name, threshold = levels[i]
-        required_per_subject = (threshold + len(SUBJECTS) - 1) // len(SUBJECTS)
+async def fetch_points_values(db: AsyncSession) -> Dict[str, int]:
+    """Fetch points values from database. Keyed by code (stable identifier)."""
+    from sqlalchemy import select
+    from ..models import PointsValue
+
+    result = await db.execute(select(PointsValue).where(PointsValue.is_active == True))  # noqa: E712
+    return {row.code: int(row.points) for row in result.scalars().all()}
+
+
+# ========== CALCULATION FUNCTIONS ==========
+
+def calculate_difficulty(correct: int, thresholds: Dict[str, int]) -> str:
+    """
+    Determine difficulty based on total correct answers.
+    Thresholds come from database.
+    
+    Note: For streak-based difficulty progression, use calculate_difficulty_from_streak.
+    Returns the highest tier where correct >= threshold (sorted ascending by threshold).
+    """
+    # Sort tiers by threshold ascending
+    sorted_tiers = sorted(thresholds.items(), key=lambda x: x[1])
+    
+    # Return the highest tier whose threshold is <= correct
+    for tier_name, threshold in reversed(sorted_tiers):
+        if correct >= threshold:
+            return tier_name
+    
+    # Fallback: return lowest tier name if thresholds exist
+    return sorted_tiers[0][0] if sorted_tiers else "easy"
+
+
+def calculate_difficulty_from_streak(streak: int, thresholds: Dict[str, int]) -> str:
+    """
+    Determine difficulty based on consecutive correct answer streak.
+    Thresholds come from database.
+    
+    This is the main function for flashcard difficulty progression,
+    which now uses streaks instead of total correct answers.
+    Returns the highest tier where streak >= threshold (sorted ascending by threshold).
+    """
+    # Sort tiers by threshold ascending (e.g., [("easy", 0), ("medium", 20), ("hard", 40)])
+    sorted_tiers = sorted(thresholds.items(), key=lambda x: x[1])
+    
+    # Return the highest tier whose threshold is <= streak
+    for tier_name, threshold in reversed(sorted_tiers):
+        if streak >= threshold:
+            return tier_name
+    
+    # Fallback: return lowest tier name if thresholds exist
+    return sorted_tiers[0][0] if sorted_tiers else "easy"
+
+
+def compute_balanced_progress(
+    subject_correct: Dict[str, int],
+    subjects: List[str],
+    level_thresholds: Dict[str, int],
+) -> dict:
+    n_subjects = len(subjects)
+
+    if n_subjects == 0:
+        return {
+            "canLevelUp": False,
+            "currentLevel": "New Kid",
+            "nextLevel": None,
+            "requiredPerSubject": 0,
+            "subjectProgress": {},
+            "lowestSubject": None,
+            "message": "Keep practicing!",
+        }
+
+    if not level_thresholds:
+        sp = {
+            s: {
+                "correct": subject_correct.get(s, 0),
+                "required": 0,
+                "meetsRequirement": True,
+            }
+            for s in subjects
+        }
+        return {
+            "canLevelUp": False,
+            "currentLevel": "New Kid",
+            "nextLevel": None,
+            "requiredPerSubject": 0,
+            "subjectProgress": sp,
+            "lowestSubject": min(subject_correct, key=lambda k: subject_correct.get(k, 0)) if subjects else None,
+            "message": "Keep practicing!",
+        }
+
+    min_correct = min(subject_correct.get(s, 0) for s in subjects)
+    lowest_subject = min(subjects, key=lambda s: subject_correct.get(s, 0))
+
+    levels_desc = sorted(level_thresholds.items(), key=lambda kv: kv[1], reverse=True)
+
+    for level_name, threshold in levels_desc:
+        if threshold == 0:
+            continue
+
+        required_per_subject = (threshold + n_subjects - 1) // n_subjects
         if min_correct >= required_per_subject:
-            current_level = level_name
-            if i > 0:
-                next_level = levels[i - 1][0]
-                next_threshold = levels[i - 1][1]
-            else:
-                next_level = None
-                next_threshold = 0
+            levels_asc = sorted(level_thresholds.items(), key=lambda kv: kv[1])
+            next_level = None
+            for i, (ln, _) in enumerate(levels_asc):
+                if ln == level_name and i < len(levels_asc) - 1:
+                    next_level = levels_asc[i + 1][0]
+                    break
 
-    required_per_subject = (next_threshold + len(SUBJECTS) - 1) // len(SUBJECTS) if next_level else 0
+            sp = {
+                s: {
+                    "correct": subject_correct.get(s, 0),
+                    "required": required_per_subject,
+                    "meetsRequirement": subject_correct.get(s, 0) >= required_per_subject,
+                }
+                for s in subjects
+            }
 
-    subject_progress: Dict[SubjectId, dict] = {}
-    lowest_subject: Optional[SubjectId] = None
-    lowest_value = 10**9
+            return {
+                "canLevelUp": True,
+                "currentLevel": level_name,
+                "nextLevel": next_level,
+                "requiredPerSubject": required_per_subject,
+                "subjectProgress": sp,
+                "lowestSubject": lowest_subject,
+                "message": f"Ready for {level_name}!",
+            }
 
-    for s in SUBJECTS:
-        cur = subject_correct.get(s, 0)
-        met = cur >= required_per_subject if next_level else True
-        subject_progress[s] = {"current": cur, "required": required_per_subject, "met": met}
-        if cur < lowest_value:
-            lowest_value = cur
-            lowest_subject = s
-
-    can_level_up = (next_level is None) or all(subject_progress[s]["met"] for s in SUBJECTS)
-
-    if next_level is None:
-        message = "You've reached the highest level!"
-    elif can_level_up:
-        message = f"Ready to become {next_level}!"
+    # still New Kid; compute “next target”
+    levels_asc = sorted(level_thresholds.items(), key=lambda kv: kv[1])
+    levels_asc_filtered = [(name, thresh) for name, thresh in levels_asc if thresh > 0]
+    if levels_asc_filtered:
+        next_level = levels_asc_filtered[0][0]
+        required_per_subject = (levels_asc_filtered[0][1] + n_subjects - 1) // n_subjects
     else:
-        needed = [s for s in SUBJECTS if not subject_progress[s]["met"]]
-        subject_names = ", ".join([s.capitalize() for s in needed])
-        message = f"Need more correct answers in: {subject_names}"
+        next_level = None
+        required_per_subject = 0
+
+    sp = {
+        s: {
+            "correct": subject_correct.get(s, 0),
+            "required": required_per_subject,
+            "meetsRequirement": subject_correct.get(s, 0) >= required_per_subject,
+        }
+        for s in subjects
+    }
 
     return {
-        "canLevelUp": can_level_up,
-        "currentLevel": current_level,
+        "canLevelUp": False,
+        "currentLevel": "New Kid",
         "nextLevel": next_level,
         "requiredPerSubject": required_per_subject,
-        "subjectProgress": subject_progress,
+        "subjectProgress": sp,
         "lowestSubject": lowest_subject,
-        "message": message,
+        "message": "Keep practicing!",
     }
 
-def reward_for_level(current_level: str, subject_correct: Dict[SubjectId, int]) -> dict:
-    level_colors = {
-        "Super Star Kid": {"icon": "star", "color": "#F59E0B"},
-        "Amazing Kid": {"icon": "award", "color": "#8B5CF6"},
-        "Awesome Kid": {"icon": "sun", "color": "#3B82F6"},
-        "Great Kid": {"icon": "thumbs-up", "color": "#10B981"},
-        "Good Kid": {"icon": "smile", "color": "#FB923C"},
-        "New Kid": {"icon": "user", "color": "#9CA3AF"},
-    }
-    icon = level_colors.get(current_level, level_colors["New Kid"])["icon"]
-    color = level_colors.get(current_level, level_colors["New Kid"])["color"]
 
-    balanced = compute_balanced_progress(subject_correct)
-    next_level = balanced["nextLevel"]
-    next_at = LEVEL_THRESHOLDS.get(next_level) if next_level else None
-    current_threshold = LEVEL_THRESHOLDS.get(current_level, 0)
 
-    min_correct = min(subject_correct.get(s, 0) for s in SUBJECTS) if SUBJECTS else 0
-    effective_progress = min_correct * len(SUBJECTS)
+def reward_for_level(
+    current_level: str,
+    subject_correct: Dict[str, int],
+    subjects: List[str],
+    level_thresholds: Dict[str, int],
+    level_metadata: Dict[str, Dict],
+) -> dict:
+    """
+    Calculate reward level info.
+    All parameters come from database.
 
-    if next_at is None or next_at == current_threshold:
+    IMPORTANT: Must never crash when:
+      - subjects is empty (brand-new child / no subjects configured yet)
+      - level_thresholds is empty (DB misconfigured or not seeded)
+      - current_level not present in thresholds
+    """
+
+    metadata = level_metadata.get(current_level, {"icon": "star", "color": "#9CA3AF"})
+
+    # If there are no subjects, we cannot compute "balanced min across subjects".
+    # Return a safe "0 progress" reward.
+    if not subjects:
+        return {
+            "level": current_level,
+            "icon": metadata.get("icon", "star"),
+            "color": metadata.get("color", "#9CA3AF"),
+            "nextAt": None,
+            "progress": 0,
+        }
+
+    # If thresholds are missing, also return safe default.
+    if not level_thresholds:
+        return {
+            "level": current_level,
+            "icon": metadata.get("icon", "star"),
+            "color": metadata.get("color", "#9CA3AF"),
+            "nextAt": None,
+            "progress": 0,
+        }
+
+    min_correct = min(subject_correct.get(s, 0) for s in subjects)
+    effective_progress = min_correct * len(subjects)
+
+    # Current threshold; if unknown current_level, treat as 0.
+    current_threshold = level_thresholds.get(current_level, 0)
+
+    sorted_levels = sorted(level_thresholds.items(), key=lambda kv: kv[1])
+
+    # Find next level's threshold
+    next_at = None
+    for i, (level_name, threshold) in enumerate(sorted_levels):
+        if level_name == current_level:
+            if i < len(sorted_levels) - 1:
+                next_at = sorted_levels[i + 1][1]
+            break
+
+    if next_at is None:
         pct = 100
     else:
-        pct = int(min(max(((effective_progress - current_threshold) / (next_at - current_threshold)) * 100, 0), 100))
+        denom = (next_at - current_threshold)
+        if denom <= 0:
+            # Bad/misordered thresholds; don't divide by zero or go negative.
+            pct = 0
+        else:
+            pct = int(
+                min(
+                    max(((effective_progress - current_threshold) / denom) * 100, 0),
+                    100,
+                )
+            )
 
-    return {"level": current_level, "icon": icon, "color": color, "nextAt": next_at, "progress": pct}
-
-def evaluate_achievement_conditions(
-    *,
-    total_points: int,
-    current_streak: int,
-    total_flashcards: int,
-    total_chores: int,
-    total_outdoor: int,
-    today_has_flashcards: bool,
-    today_has_chores: bool,
-    today_has_outdoor: bool,
-    subject_difficulty: Dict[SubjectId, DifficultyTier],
-    subject_correct: Dict[SubjectId, int],
-) -> List[str]:
-    unlocked: List[str] = []
-
-    def add(id: str, cond: bool):
-        if cond:
-            unlocked.append(id)
-
-    add("first_flashcard", total_flashcards >= 1)
-    add("first_chore", total_chores >= 1)
-    add("first_outdoor", total_outdoor >= 1)
-
-    add("streak_3", current_streak >= 3)
-    add("streak_7", current_streak >= 7)
-    add("streak_30", current_streak >= 30)
-
-    add("points_100", total_points >= 100)
-    add("points_500", total_points >= 500)
-    add("points_2000", total_points >= 2000)
-
-    add("flashcards_10", total_flashcards >= 10)
-    add("flashcards_50", total_flashcards >= 50)
-
-    add("chores_7", total_chores >= 7)
-    add("outdoor_5", total_outdoor >= 5)
-
-    add("perfect_day", today_has_flashcards and today_has_chores and today_has_outdoor)
-
-    add("medium_math", subject_difficulty.get("math") in ("medium", "hard"))
-    add("medium_science", subject_difficulty.get("science") in ("medium", "hard"))
-    add("medium_reading", subject_difficulty.get("reading") in ("medium", "hard"))
-    add("medium_history", subject_difficulty.get("history") in ("medium", "hard"))
-
-    any_hard = any(subject_difficulty.get(s) == "hard" for s in SUBJECTS)
-    add("hard_unlocked", any_hard)
-
-    all_subjects_min10 = all((subject_correct.get(s, 0) >= 10) for s in SUBJECTS)
-    add("balanced_learner", all_subjects_min10)
-
-    return unlocked
+    return {
+        "level": current_level,
+        "icon": metadata.get("icon", "star"),
+        "color": metadata.get("color", "#9CA3AF"),
+        "nextAt": next_at,
+        "progress": pct,
+    }

@@ -10,6 +10,7 @@ This folder contains system-wide documentation for MyBuddy.
 
 ## Component Docs
 
+- [DashboardContext integration plan](./DASHBOARD_CONTEXT_INTEGRATION.md) – Frontend plan for backend-driven dashboard/progress (API-first with cache + migration fallback).
 - [Frontend README](../frontend/README.md)
 - [Backend README](../backend/README.md)
 - [Root README](../README.md)

@@ -3,11 +3,12 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import OnboardingWelcomeScreen from "@/screens/OnboardingWelcomeScreen";
 import OnboardingQuizScreen from "@/screens/OnboardingQuizScreen";
 import OnboardingNameAvatarScreen from "@/screens/OnboardingNameAvatarScreen";
+import type { UUID } from "@/types/models";
 
 export type OnboardingParamList = {
   Welcome: undefined;
   Quiz: undefined;
-  NameAvatar: { interests: string[] };
+  NameAvatar: { interests: UUID[] };
 };
 
 const Stack = createNativeStackNavigator<OnboardingParamList>();

@@ -1,23 +1,27 @@
 import React from "react";
-import { Platform } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { View, Platform } from "react-native";
+import RNDateTimePicker from "@react-native-community/datetimepicker";
+import type { DatePickerProps } from "@/types/models";
 
-type Props = {
-  value: Date;
-  onChange: (next: Date) => void;
-  maximumDate?: Date;
-};
-
-export function DatePicker({ value, onChange, maximumDate }: Props) {
+export function DatePicker({
+  value,
+  maximumDate,
+  onChange,
+}: DatePickerProps) {
   return (
-    <DateTimePicker
-      value={value}
-      mode="date"
-      display={Platform.OS === "ios" ? "spinner" : "default"}
-      maximumDate={maximumDate}
-      onChange={(event, selectedDate) => {
-        if (event.type === "set" && selectedDate) onChange(selectedDate);
-      }}
-    />
+    <View>
+      <RNDateTimePicker
+        value={value}
+        maximumDate={maximumDate}
+        mode="date"
+        display={Platform.OS === "ios" ? "spinner" : "default"}
+        onChange={(_, date) => {
+          // Android fires with undefined on cancel
+          if (date) {
+            onChange(date);
+          }
+        }}
+      />
+    </View>
   );
 }

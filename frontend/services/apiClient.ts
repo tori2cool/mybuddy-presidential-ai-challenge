@@ -1,9 +1,13 @@
-// mybuddyai/services/apiClient.ts
-
 let accessToken: string | null = null;
 
-type UnauthorizedHandler = () => void;
+type UnauthorizedHandler = (info?: { status: number; url: string; hasToken: boolean }) => void;
 let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+type TokenRefresher = () => Promise<string | null>;
+let tokenRefresher: TokenRefresher | null = null;
+
+// Prevent multiple simultaneous refresh calls (stampede).
+let refreshInFlight: Promise<string | null> | null = null;
 
 export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
   unauthorizedHandler = handler;
@@ -13,207 +17,175 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+// AuthContext sets this (ensureFreshToken)
+export function setTokenRefresher(refresher: TokenRefresher | null) {
+  tokenRefresher = refresher;
+  refreshInFlight = null;
+}
+
 function normalizeBaseUrl(baseUrl: string): string {
-  // Ensure a trailing slash so URL(relative, base) preserves any base path like `/api/`.
-  // Example:
-  //  baseUrl: https://example.com/api   -> https://example.com/api/
-  //  join:   new URL('v1/foo', base)    -> https://example.com/api/v1/foo
   return baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
 }
 
 function resolveApiBaseUrl(): string {
-  // Expo-friendly env var precedence:
-  // EXPO_PUBLIC_API_BASE_URL (preferred)
   const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-
+  if (!baseUrl) throw new Error("Missing EXPO_PUBLIC_API_BASE_URL");
   return normalizeBaseUrl(baseUrl);
-}
-
-function isTruthyEnv(value: unknown): boolean {
-  if (typeof value !== "string") return false;
-  switch (value.trim().toLowerCase()) {
-    case "1":
-    case "true":
-    case "yes":
-      return true;
-    default:
-      return false;
-  }
-}
-
-function getDebugApiEnabled(): boolean {
-  return isTruthyEnv(process.env.EXPO_PUBLIC_DEBUG_API);
-}
-
-function safeErrorSummary(payload: unknown): string | undefined {
-  if (!payload || typeof payload !== "object") return undefined;
-  const p = payload as any;
-  const message =
-    p?.details?.message ??
-    p?.error ??
-    p?.message;
-  if (typeof message === "string") return message;
-  return undefined;
-}
-
-function generateRequestId(): string {
-  // Avoid node-only deps; this is for log correlation only.
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
+type QueryValue = string | number | boolean | undefined | null;
+
 interface RequestOptions {
   method?: HttpMethod;
-  query?: Record<string, string | number | boolean | undefined>;
+  query?: Record<string, QueryValue>;
   body?: unknown;
   headers?: Record<string, string>;
 }
 
-interface ApiErrorPayload {
-  error: string;
-  details?: { message?: string } & Record<string, unknown>;
-}
-
 export class ApiError extends Error {
   status: number;
-  payload?: ApiErrorPayload;
+  payload?: any;
 
-  constructor(status: number, payload?: ApiErrorPayload) {
-    super(payload?.details?.message || payload?.error || `HTTP ${status}`);
+  constructor(status: number, payload?: any) {
+    super(payload?.details?.message || payload?.error || payload?.message || `HTTP ${status}`);
     this.name = "ApiError";
     this.status = status;
     this.payload = payload;
   }
 }
 
-export async function withTimeout<T>(
-  promise: Promise<T>,
-  ms: number,
-): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error(`Request timed out after ${ms}ms`));
-    }, ms);
-  });
-
-  try {
-    const result = await Promise.race([promise, timeoutPromise]);
-    return result as T;
-  } finally {
-    clearTimeout(timeoutId!);
-  }
+function normalizePath(path: string): string {
+  if (!path) return "/";
+  return path.startsWith("/") ? path : `/${path}`;
 }
 
-export async function apiFetch<T>(
-  path: string,
-  options: RequestOptions = {},
-): Promise<T> {
-  const requestId = generateRequestId();
-  const startedAt = Date.now();
-  const debugApi = getDebugApiEnabled();
-
+function buildUrl(path: string, query?: RequestOptions["query"]) {
   const baseUrl = resolveApiBaseUrl();
-  // IMPORTANT: use a relative join (no leading slash) so any base path prefix
-  // like `/api/` is preserved.
-  const url = new URL(`v1${path}`, baseUrl);
+  const normalizedPath = normalizePath(path);
 
-  if (options.query) {
-    for (const [key, value] of Object.entries(options.query)) {
-      if (value !== undefined && value !== null) {
-        url.searchParams.set(key, String(value));
-      }
+  // NOTE: baseUrl already ends with "/", and URL() handles relative resolution.
+  const url = new URL(`v1${normalizedPath}`, baseUrl);
+
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
     }
   }
 
+  return url.toString();
+}
+
+function isFormData(x: any): x is FormData {
+  return typeof FormData !== "undefined" && x instanceof FormData;
+}
+
+function buildBody(body: unknown): { body?: BodyInit; contentType?: string } {
+  if (body === undefined || body === null) return {};
+  if (typeof body === "string") return { body };
+  if (isFormData(body)) return { body }; // fetch sets multipart boundaries
+  // You can extend here for Blob/ArrayBuffer if needed.
+  return { body: JSON.stringify(body), contentType: "application/json" };
+}
+
+async function parseJsonSafe(res: Response) {
+  if (res.status === 204) return undefined;
+
+  const text = await res.text();
+  if (!text) return undefined;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+async function doFetchOnce(fullUrl: string, options: RequestOptions, token: string | null) {
+  const method = options.method ?? "GET";
+  const { body, contentType } = buildBody(options.body);
+
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    Accept: "application/json",
     ...(options.headers || {}),
   };
 
-  const hasAuthHeader = Boolean(accessToken) || Boolean(headers["Authorization"]);
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-  }
+  // Only set Content-Type when we actually have a JSON body (and not FormData)
+  if (contentType && !headers["Content-Type"]) headers["Content-Type"] = contentType;
 
-  const method = options.method ?? "GET";
-  const fullUrl = url.toString();
-  if (debugApi) {
-    console.debug("[api] request", {
-      requestId,
-      method,
-      url: fullUrl,
-      hasAuthHeader,
-    });
+  if (token && !headers["Authorization"]) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const res = await fetch(fullUrl, {
     method,
     headers,
-    body:
-      options.body !== undefined
-        ? JSON.stringify(options.body)
-        : undefined,
+    body,
+    // Align web behavior with native and avoid surprises when the API uses cookies.
+    // Safe for same-origin + cross-origin (requires server CORS allow-credentials if used).
+    credentials: "include",
   });
 
-  if (debugApi) {
-    console.debug("[api] response", {
-      requestId,
-      method,
-      url: fullUrl,
-      status: res.status,
-    });
+  const json = await parseJsonSafe(res);
+  return { res, json };
+}
+
+async function refreshTokenIfPossible(): Promise<string | null> {
+  if (!tokenRefresher) return null;
+
+  // Deduplicate concurrent refresh calls.
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const t = await tokenRefresher!();
+        return t ?? null;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
   }
 
-  const text = await res.text();
-  const hasBody = text.length > 0;
+  return refreshInFlight;
+}
 
-  let json: any = undefined;
-  if (hasBody) {
-    try {
-      json = JSON.parse(text);
-    } catch {
-      // non-JSON response or empty; leave json as undefined
+export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const fullUrl = buildUrl(path, options.query);
+
+  // Attempt #1 using current token (no proactive refresh here; avoid double-refresh + stampedes).
+  let { res, json } = await doFetchOnce(fullUrl, options, accessToken);
+
+  // If 401, attempt refresh + retry once.
+  if (res.status === 401) {
+    const newToken = await refreshTokenIfPossible();
+    if (newToken) {
+      accessToken = newToken;
+      ({ res, json } = await doFetchOnce(fullUrl, options, accessToken));
     }
   }
 
-  const durationMs = Date.now() - startedAt;
+  if (res.status === 401) {
+    console.warn("[apiFetch] 401 Unauthorized", {
+      url: fullUrl,
+      hasToken: !!accessToken,
+      payload: json,
+    });
+
+    // Avoid clearing tokens if the request raced auth bootstrap and we had no token yet.
+    // Only trigger global unauthorized handling when we actually had a token.
+    if (accessToken) {
+      unauthorizedHandler?.({ status: 401, url: fullUrl, hasToken: true });
+    }
+
+    throw new ApiError(401, json);
+  }
 
   if (!res.ok) {
-    if (debugApi) {
-      console.debug("[api] error", {
-        requestId,
-        method,
-        url: fullUrl,
-        status: res.status,
-        duration_ms: durationMs,
-        summary: safeErrorSummary(json),
-      });
-    }
-
-    if (res.status === 401) {
-      if (unauthorizedHandler && debugApi) {
-        console.debug("[api] 401 unauthorizedHandler fired", {
-          requestId,
-          method,
-          url: fullUrl,
-        });
-      }
-      unauthorizedHandler?.();
-    }
     throw new ApiError(res.status, json);
   }
 
-  if (debugApi) {
-    console.debug("[api] success", {
-      requestId,
-      method,
-      url: fullUrl,
-      status: res.status,
-      duration_ms: durationMs,
-    });
-  }
+  // If endpoint returns 204 or empty body, json will be undefined.
+  if (json === undefined) return undefined as T;
 
   return json as T;
 }

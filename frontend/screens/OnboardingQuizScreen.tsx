@@ -1,38 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Button } from "@/components/Button";
-import { OnboardingParamList } from "@/navigation/OnboardingNavigator";
+import type { OnboardingParamList } from "@/navigation/OnboardingNavigator";
 import { Spacing, Typography, BorderRadius } from "@/constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/hooks/useTheme";
 import { ProgressBar } from "@/components/ProgressBar";
+import { getInterests } from "@/services/interestsService";
+import type { Interest, UUID } from "@/types/models";
 
 type QuizScreenNavigationProp = NativeStackNavigationProp<OnboardingParamList>;
-
-const interests = [
-  { id: "animals", label: "Animals", icon: "🐾" },
-  { id: "trucks", label: "Monster Trucks", icon: "🚚" },
-  { id: "ponies", label: "Ponies", icon: "🐴" },
-  { id: "dinosaurs", label: "Dinosaurs", icon: "🦕" },
-  { id: "sports", label: "Sports", icon: "⚽" },
-  { id: "horseback", label: "Horseback Riding", icon: "🏇" },
-  { id: "space", label: "Space", icon: "🚀" },
-  { id: "art", label: "Art", icon: "🎨" },
-];
 
 export default function OnboardingQuizScreen() {
   const navigation = useNavigation<QuizScreenNavigationProp>();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-  const [selected, setSelected] = useState<string[]>([]);
 
-  const toggleInterest = (id: string) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+  // ✅ store selected interest UUIDs
+  const [selectedIds, setSelectedIds] = useState<UUID[]>([]);
+  const [interests, setInterests] = useState<Interest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let aborted = false;
+
+    const fetchInterests = async () => {
+      try {
+        const data = await getInterests();
+        if (!aborted) {
+          setInterests(data);
+          setError(null);
+        }
+      } catch (err: any) {
+        if (!aborted) {
+          setError(err?.message ?? "Failed to load interests");
+        }
+      } finally {
+        if (!aborted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchInterests();
+
+    return () => {
+      aborted = true;
+    };
+  }, []);
+
+  const toggleInterest = (id: UUID) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
@@ -54,6 +78,7 @@ export default function OnboardingQuizScreen() {
           <ProgressBar progress={0.5} />
         </View>
       </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -64,37 +89,50 @@ export default function OnboardingQuizScreen() {
         <ThemedText style={styles.question}>
           Pick your favorites! (Choose as many as you like)
         </ThemedText>
-        <View style={styles.grid}>
-          {interests.map((interest) => {
-            const isSelected = selected.includes(interest.id);
-            return (
-              <Pressable
-                key={interest.id}
-                onPress={() => toggleInterest(interest.id)}
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor: isSelected
-                      ? theme.primary
-                      : theme.backgroundDefault,
-                    borderColor: isSelected ? theme.primary : theme.backgroundSecondary,
-                  },
-                ]}
-              >
-                <ThemedText style={styles.icon}>{interest.icon}</ThemedText>
-                <ThemedText
+
+        {isLoading ? (
+          <ThemedText style={styles.centeredText}>Loading interests...</ThemedText>
+        ) : error ? (
+          <ThemedText style={[styles.centeredText, { color: theme.error }]}>
+            {error}
+          </ThemedText>
+        ) : (
+          <View style={styles.grid}>
+            {interests.map((interest) => {
+              const isSelected = selectedIds.includes(interest.id);
+
+              return (
+                <Pressable
+                  key={interest.id}
+                  onPress={() => toggleInterest(interest.id)}
                   style={[
-                    styles.label,
-                    { color: isSelected ? "white" : theme.text },
+                    styles.card,
+                    {
+                      backgroundColor: isSelected
+                        ? theme.primary
+                        : theme.backgroundDefault,
+                      borderColor: isSelected
+                        ? theme.primary
+                        : theme.backgroundSecondary,
+                    },
                   ]}
                 >
-                  {interest.label}
-                </ThemedText>
-              </Pressable>
-            );
-          })}
-        </View>
+                  <ThemedText style={styles.icon}>{interest.icon}</ThemedText>
+                  <ThemedText
+                    style={[
+                      styles.label,
+                      { color: isSelected ? "white" : theme.text },
+                    ]}
+                  >
+                    {interest.label}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
+
       <View
         style={[
           styles.footer,
@@ -105,12 +143,8 @@ export default function OnboardingQuizScreen() {
         ]}
       >
         <Button
-          onPress={() =>
-            navigation.navigate("NameAvatar", {
-              interests: selected,
-            })
-          }
-          disabled={selected.length === 0}
+          onPress={() => navigation.navigate("NameAvatar", { interests: selectedIds })}
+          disabled={selectedIds.length === 0}
         >
           Next
         </Button>
@@ -174,5 +208,10 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderTopWidth: 1,
     borderTopColor: "rgba(0,0,0,0.05)",
+  },
+  centeredText: {
+    ...Typography.body,
+    textAlign: "center",
+    paddingVertical: Spacing.xl,
   },
 });

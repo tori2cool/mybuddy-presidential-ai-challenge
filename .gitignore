@@ -71,6 +71,8 @@ node_modules/
 expo-env.d.ts
 dist/
 web-build/
+assets/
+img/
 
 # Native build outputs
 ios/
