@@ -22,6 +22,7 @@ import { AsyncStatus } from "@/components/AsyncStatus";
 import { useTheme } from "@/hooks/useTheme";
 import type { DifficultyCode, DifficultyThreshold, Subject, Flashcard } from "@/types/models";
 import { useDashboard } from "@/contexts/DashboardContext";
+import type { ProgressEvent } from "@/services/eventsService";
 import { Spacing, BorderRadius } from "@/constants/theme";
 import { getFlashcards } from "@/services/flashcardsService";
 
@@ -43,6 +44,8 @@ function FlashcardPracticeModal({
   onClose,
 }: FlashcardPracticeModalProps) {
   const { theme } = useTheme();
+  const { postEvent, refreshDashboard } = useDashboard();
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [hasChecked, setHasChecked] = useState(false);
@@ -112,9 +115,14 @@ function FlashcardPracticeModal({
   };
 
   const handleClose = async () => {
-    await refreshDashboard({ force: true });
-    resetState();
-    onClose();
+    try {
+      await refreshDashboard({ force: true });
+    } catch (err) {
+      console.error("[FlashcardPracticeModal] refreshDashboard failed on close:", err);
+    } finally {
+      resetState();
+      onClose();
+    }
   };
 
   const currentCard = cards[currentIndex];
@@ -163,47 +171,50 @@ function FlashcardPracticeModal({
   };
 
   const checkAnswer = () => {
-    if (!userAnswer.trim() || !currentCard || !subject) return;
+    try {
+      if (!userAnswer.trim() || !currentCard || !subject) return;
 
-    const normalizedUserAnswer = userAnswer.trim().toLowerCase();
-    const correct = currentCard.acceptableAnswers.some(
-      (acceptable) => acceptable.toLowerCase() === normalizedUserAnswer
-    );
-
-    setIsCorrect(correct);
-    setHasChecked(true);
-
-    // Backend derives subject from flashcardId; do not include subjectId (extra fields are forbidden).
-    console.log("Posting flashcard event:", {
-      correct,
-      flashcardId: currentCard.id,
-      answer: userAnswer.trim(),
-    });
-
-    postEvent({
-      kind: "flashcard",
-      body: {
-        correct,
-        flashcardId: currentCard.id,
-        answer: userAnswer.trim(),
-      },
-    }).catch((err) => {
-      console.error("Failed to post flashcard event:", err);
-    });
-
-    if (correct) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setCorrectCount((prev) => prev + 1);
-      feedbackScale.value = withSequence(
-        withSpring(1.2, { damping: 8 }),
-        withSpring(1, { damping: 10 })
+      const normalizedUserAnswer = userAnswer.trim().toLowerCase();
+      const correct = currentCard.acceptableAnswers.some(
+        (acceptable) => acceptable.toLowerCase() === normalizedUserAnswer
       );
-    } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      cardScale.value = withSequence(
-        withSpring(0.95, { damping: 8 }),
-        withSpring(1, { damping: 10 })
-      );
+
+      setIsCorrect(correct);
+      setHasChecked(true);
+
+      const event: ProgressEvent = {
+        kind: "flashcard",
+        body: {
+          correct,
+          flashcardId: currentCard.id,
+          answer: userAnswer.trim(),
+        },
+      };
+
+      // Backend derives subject from flashcardId; do not include subjectId (extra fields are forbidden).
+      console.log("Posting flashcard event:", event);
+
+      // Fire-and-forget; DashboardContext will debounce refresh after posting.
+      postEvent(event).catch((err) => {
+        console.error("Failed to post flashcard event:", err);
+      });
+
+      if (correct) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setCorrectCount((prev) => prev + 1);
+        feedbackScale.value = withSequence(
+          withSpring(1.2, { damping: 8 }),
+          withSpring(1, { damping: 10 })
+        );
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        cardScale.value = withSequence(
+          withSpring(0.95, { damping: 8 }),
+          withSpring(1, { damping: 10 })
+        );
+      }
+    } catch (err) {
+      console.error("[FlashcardPracticeModal] checkAnswer failed:", err);
     }
   };
 
@@ -221,7 +232,7 @@ function FlashcardPracticeModal({
           {/* Header */}
           <View style={styles.modalHeader}>
             <Pressable style={styles.closeButton} onPress={handleClose}>
-              <Feather name="x" size={24} color={theme.textPrimary} />
+              <Feather name="x" size={24} color={theme.text} />
             </Pressable>
             <View style={styles.modalTitleContainer}>
               <ThemedText type="headline" style={styles.modalTitle}>
@@ -319,7 +330,7 @@ function FlashcardPracticeModal({
                         : hasChecked
                           ? theme.error
                           : theme.border,
-                      color: theme.textPrimary,
+                      color: theme.text,
                     },
                   ]}
                   value={userAnswer}
