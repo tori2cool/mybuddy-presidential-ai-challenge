@@ -16,6 +16,10 @@ server {
     real_ip_header proxy_protocol;
     real_ip_recursive on;
 
+    # websockets upgrade headers (harmless otherwise)
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+
     # ----------------------------
     # Expo Web STATIC site
     # ----------------------------
@@ -25,6 +29,21 @@ server {
     #   - /opt/mybuddy/web/dist
     root /home/sukitfup/mybuddy/frontend/dist;
     index index.html;
+
+    # ----------------------------
+    # Backend Images (served by nginx from a folder)
+    # URL: https://mybuddy-and-me.com/img/<file>
+    # FS:  /home/sukitfup/mybuddy/backend/img/<file>
+    # ----------------------------
+    location ^~ /img/ {
+        # Use alias so /img/foo.jpg maps to .../img/foo.jpg
+        alias /home/sukitfup/mybuddy/backend/img/;
+        try_files $uri =404;
+
+        # optional cache (tune as you like)
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800";
+    }
 
     # Good static caching for hashed assets (Expo export typically fingerprints assets)
     location ~* \.(?:js|css|map|png|jpg|jpeg|gif|svg|ico|webp|avif|woff2?|ttf|otf)$ {
@@ -49,11 +68,6 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
-
-    # (Optional) If your backend supports websockets under /api/,
-    # keep upgrade headers (harmless otherwise)
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection $connection_upgrade;
 }
 
 server {

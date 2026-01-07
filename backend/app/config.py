@@ -51,6 +51,21 @@ class Settings(BaseModel):
         "redis://localhost:6379/1",
     )
 
+    # If we generate images from backend, this is the base URL for them
+    backend_img_url: str = os.getenv("BACKEND_IMG_URL", "http://localhost:80/img")
+
+    # ---- Content Expansion ----
+    # Maximum auto-generated flashcards per subject/age/difficulty combination
+    max_auto_flashcards: int = int(os.getenv("MAX_AUTO_FLASHCARDS", "500"))
+
+    # ---- AI / Content Generation ----
+    # OpenAI API key for flashcard generation
+    flashcard_api_key: str = os.getenv("FLASHCARD_API_KEY", "")
+    # OpenAI API base URL
+    flashcard_api_base: str = os.getenv("FLASHCARD_API_BASE", "https://api.openai.com/v1")
+    # Model to use for flashcard generation
+    flashcard_model: str = os.getenv("FLASHCARD_MODEL", "gpt-5-mini")
+
     # ---- Keycloak (this is what security.py uses) ----
     keycloak: KeycloakSettings = KeycloakSettings()
 

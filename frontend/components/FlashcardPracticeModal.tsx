@@ -20,16 +20,16 @@ import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
 import { AsyncStatus } from "@/components/AsyncStatus";
 import { useTheme } from "@/hooks/useTheme";
-import { DifficultyTier, Subject, Flashcard } from "@/types/models";
-import { DIFFICULTY_LABELS } from "@/constants/difficulty";
+import type { DifficultyCode, DifficultyThreshold, Subject, Flashcard } from "@/types/models";
 import { useDashboard } from "@/contexts/DashboardContext";
-import { Spacing, BorderRadius, Typography } from "@/constants/theme";
+import { Spacing, BorderRadius } from "@/constants/theme";
 import { getFlashcards } from "@/services/flashcardsService";
 
 interface FlashcardPracticeModalProps {
   visible: boolean;
   subject: Subject | null;
-  difficulty: DifficultyTier;
+  difficultyCode: DifficultyCode;
+  difficultyInfo?: DifficultyThreshold | null;
   childId: string | null;
   onClose: () => void;
 }
@@ -37,12 +37,12 @@ interface FlashcardPracticeModalProps {
 function FlashcardPracticeModal({
   visible,
   subject,
-  difficulty,
+  difficultyCode,
+  difficultyInfo,
   childId,
   onClose,
 }: FlashcardPracticeModalProps) {
   const { theme } = useTheme();
-  const { dashboardData, postEvent, refreshDashboard } = useDashboard();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [hasChecked, setHasChecked] = useState(false);
@@ -56,7 +56,18 @@ function FlashcardPracticeModal({
   const cardScale = useSharedValue(1);
   const feedbackScale = useSharedValue(0);
 
-  const difficultyInfo = DIFFICULTY_LABELS[difficulty];
+  const resolvedDifficultyInfo: { label: string; icon: string; color: string } =
+    difficultyInfo
+      ? {
+          label: typeof difficultyInfo.label === "string" ? difficultyInfo.label : difficultyCode,
+          icon: typeof difficultyInfo.icon === "string" ? difficultyInfo.icon : "help-circle",
+          color: typeof difficultyInfo.color === "string" ? difficultyInfo.color : theme.primary,
+        }
+      : {
+          label: difficultyCode,
+          icon: "help-circle",
+          color: theme.primary,
+        };
 
   useEffect(() => {
     if (visible && subject && childId) {
@@ -66,7 +77,8 @@ function FlashcardPracticeModal({
 
       (async () => {
         try {
-          const data = await getFlashcards(subject.id, difficulty, childId);
+          // Backend expects SubjectCode (e.g., "math"), not the subject UUID.
+          const data = await getFlashcards(subject.code, difficultyCode, childId);
           if (cancelled) return;
           setCards(data);
         } finally {
@@ -78,7 +90,7 @@ function FlashcardPracticeModal({
         cancelled = true;
       };
     }
-  }, [visible, subject, difficulty, childId]);
+  }, [visible, subject, difficultyCode, childId]);
 
   useEffect(() => {
     if (!visible || hasChecked || isLoading || cards.length === 0) return;
@@ -161,8 +173,8 @@ function FlashcardPracticeModal({
     setIsCorrect(correct);
     setHasChecked(true);
 
+    // Backend derives subject from flashcardId; do not include subjectId (extra fields are forbidden).
     console.log("Posting flashcard event:", {
-      subjectId: subject.id,
       correct,
       flashcardId: currentCard.id,
       answer: userAnswer.trim(),
@@ -171,7 +183,6 @@ function FlashcardPracticeModal({
     postEvent({
       kind: "flashcard",
       body: {
-        subjectId: subject.id,
         correct,
         flashcardId: currentCard.id,
         answer: userAnswer.trim(),
@@ -219,12 +230,18 @@ function FlashcardPracticeModal({
               <View
                 style={[
                   styles.difficultyBadge,
-                  { backgroundColor: difficultyInfo.color + "20" },
+                  { backgroundColor: resolvedDifficultyInfo.color + "20" },
                 ]}
               >
-                <Feather name={difficultyInfo.icon as any} size={12} color={difficultyInfo.color} />
-                <ThemedText style={[styles.difficultyText, { color: difficultyInfo.color }]}>
-                  {difficultyInfo.label}
+                <Feather
+                  name={resolvedDifficultyInfo.icon as any}
+                  size={12}
+                  color={resolvedDifficultyInfo.color}
+                />
+                <ThemedText
+                  style={[styles.difficultyText, { color: resolvedDifficultyInfo.color }]}
+                >
+                  {resolvedDifficultyInfo.label}
                 </ThemedText>
               </View>
             </View>

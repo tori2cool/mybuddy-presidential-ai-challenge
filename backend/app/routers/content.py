@@ -1,81 +1,82 @@
-# routers/content.py
+# backend/app/routers/content.py
 from __future__ import annotations
 
 import logging
+from typing import Optional
+from uuid import UUID
 
-from typing import Literal, Optional, List
-from datetime import date
-from uuid import uuid4
-
-logger = logging.getLogger("mybuddy.api")
-
-from fastapi import APIRouter, Depends, Query, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import case, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, case, text
 from sqlmodel import select
-
+from ..config import settings
 from ..db import get_session
-from ..models import Child, Affirmation, Subject, Flashcard, Chore, OutdoorActivity, ChildFlashcardPerformance
+from ..models import (
+    Child,
+    Affirmation,
+    Subject,
+    Flashcard,
+    Chore,
+    OutdoorActivity,
+    ChildFlashcardPerformance,
+    SubjectAgeRange,
+    Avatar,
+    Interest,
+    DifficultyThreshold,
+    AgeRange,
+)
 from ..security import get_current_user
 from ..deps import get_child_owned_query, get_child_owned_path
-from ..schemas.children import ChildUpsert, ChildOut
+from ..schemas.children import ChildCreateIn, ChildUpdateIn, ChildOut
+from ..schemas.difficulty import DifficultyOut
 from ..tasks import redis_client, seed_content
 from ..utils.age_utils import get_age_range_for_child
+
+logger = logging.getLogger("mybuddy.api")
 
 SEED_LOCK_KEY = "seed:content"
 SEED_LOCK_TTL_SECONDS = 300
 
+router = APIRouter(prefix="/v1", tags=["mybuddy-content"])
+
 
 def _build_interest_boost_order(Table, interests: Optional[list]):
     """
-    Build CASE expression for ordering content by matching tags first.
-    Returns a SQLAlchemy case expression that orders content with matching tags (0) before others (1).
-
-    Args:
-        Table: SQLAlchemy table model class (Flashcard, Affirmation, etc.)
-        interests: List of child's interests
-
-    Returns:
-        SQLAlchemy case expression or None if no interests
+    Order rows where Table.tags contains any interest first.
+    Uses JSONB '?' operator.
+    interests are stored on Child as JSONB list of strings/uuids.
     """
     if not interests:
         return None
 
     when_clauses = []
     for interest in interests:
-        when_clauses.append(
-            (func.coalesce(Table.tags, text("'[]'::jsonb")).op("?")(interest), 0)
-        )
-    when_clauses.append((True, 1))  # fallback for non-matching
-
+        # coalesce tags to [] then test membership
+        when_clauses.append((func.coalesce(Table.tags, text("'[]'::jsonb")).op("?")(str(interest)), 0))
+    when_clauses.append((True, 1))
     return case(*when_clauses)
 
 
-def _enqueue_seed_if_needed() -> None:
-    """Enqueue background seed task at most once per TTL.
+# ---------------------------------------------------------------------------
+# Children
+# ---------------------------------------------------------------------------
 
-    Uses Redis SET NX with TTL as a lightweight distributed lock.
+def _child_to_out(child: Child) -> ChildOut:
+    """Map ORM Child -> API ChildOut.
+
+    Do not return ORM objects directly: Child uses snake_case (avatar_id) and
+    stores interests as list[str] in JSONB, while the API schema uses camelCase
+    (avatarId) and interests as list[UUID].
     """
 
-    try:
-        acquired = redis_client.set(SEED_LOCK_KEY, "1", nx=True, ex=SEED_LOCK_TTL_SECONDS)
-        if acquired:
-            seed_content.delay()
-    except Exception:
-        # Never fail the request due to seed enqueuing.
-        return
+    return ChildOut(
+        id=child.id,
+        name=child.name,
+        birthday=child.birthday,
+        avatarId=child.avatar_id,
+        interests=[UUID(x) for x in (child.interests or [])],
+    )
 
-router = APIRouter(prefix="/v1", tags=["mybuddy-content"])
-
-def child_to_dict(row: Child) -> dict:
-    return {
-        "id": row.id,
-        "name": row.name,
-        "birthday": row.birthday,
-        "interests": row.interests,
-        "avatar": row.avatar,
-    }
 
 @router.get("/children", response_model=list[ChildOut])
 async def list_children(
@@ -85,63 +86,76 @@ async def list_children(
     owner_sub = user.get("sub")
     stmt = select(Child).where(Child.owner_sub == owner_sub).order_by(Child.created_at.desc())
     result = await session.execute(stmt)
-    return result.scalars().all()
+    children = result.scalars().all()
+    return [_child_to_out(c) for c in children]
+
 
 @router.post("/children", response_model=ChildOut)
-async def upsert_child(
-    payload: ChildUpsert,
+async def create_child(
+    payload: ChildCreateIn,
     session: AsyncSession = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
     owner_sub = user.get("sub")
-    interests = payload.interests
 
-    if payload.id:
-        stmt_any = select(Child).where(Child.id == payload.id)
-        existing_any = (await session.execute(stmt_any)).scalars().first()
-        if existing_any is not None and existing_any.owner_sub != owner_sub:
-            raise HTTPException(status_code=403, detail="Child id belongs to another user")
-
-        stmt = select(Child).where(Child.id == payload.id, Child.owner_sub == owner_sub)
-        child = (await session.execute(stmt)).scalars().first()
-
-        if child is None:
-            child = Child(
-                id=payload.id,
-                owner_sub=owner_sub,
-                name=payload.name,
-                birthday=payload.birthday,
-                interests=interests,
-                avatar=payload.avatar,
-            )
-            session.add(child)
-        else:
-            child.name = payload.name
-            child.birthday = payload.birthday
-            child.interests = interests
-            child.avatar = payload.avatar
-    else:
-        child = Child(
-            id=uuid4().hex,
-            owner_sub=owner_sub,
-            name=payload.name,
-            birthday=payload.birthday,
-            interests=interests,
-            avatar=payload.avatar,
-        )
-        session.add(child)
-
+    child = Child(
+        owner_sub=owner_sub,
+        name=payload.name,
+        birthday=payload.birthday,
+        # store UUIDs as strings in JSONB (safe + consistent)
+        interests=[str(x) for x in payload.interests],
+        avatar_id=payload.avatarId,
+    )
+    session.add(child)
     await session.commit()
     await session.refresh(child)
-    return child
+
+    return _child_to_out(child)
+
+
+@router.patch("/children/{child_id}", response_model=ChildOut)
+async def update_child(
+    child_id: UUID,
+    payload: ChildUpdateIn,
+    session: AsyncSession = Depends(get_session),
+    user: dict = Depends(get_current_user),
+):
+    owner_sub = user.get("sub")
+    child = (
+        await session.execute(
+            select(Child).where(Child.id == child_id, Child.owner_sub == owner_sub)
+        )
+    ).scalars().first()
+
+    if child is None:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    if "name" in payload.model_fields_set:
+        child.name = payload.name  # type: ignore[assignment]
+    if "birthday" in payload.model_fields_set:
+        child.birthday = payload.birthday  # type: ignore[assignment]
+    if "interests" in payload.model_fields_set:
+        child.interests = [str(x) for x in (payload.interests or [])]
+    if "avatarId" in payload.model_fields_set:
+        child.avatar_id = payload.avatarId
+
+    session.add(child)
+    await session.commit()
+    await session.refresh(child)
+
+    return _child_to_out(child)
 
 
 @router.get("/children/{child_id}", response_model=ChildOut)
 async def get_child(
     child: Child = Depends(get_child_owned_path),
 ):
-    return child
+    return _child_to_out(child)
 
+
+# ---------------------------------------------------------------------------
+# Content lists
+# ---------------------------------------------------------------------------
 
 @router.get("/affirmations")
 async def list_affirmations(
@@ -149,33 +163,35 @@ async def list_affirmations(
     session: AsyncSession = Depends(get_session),
 ):
     try:
-        any_row = (await session.execute(select(Affirmation.id).limit(1))).first()
-        if any_row is None:
-            _enqueue_seed_if_needed()
-            logger.warning(f"list_affirmations: no affirmations in DB, triggering seed")
-            return []
-
-        age_range = await get_age_range_for_child(child, session)
-        logger.info(f"list_affirmations: child_id={child.id}, age={child.birthday}, age_range={age_range.id if age_range else None}, interests={child.interests}")
+        age_range: Optional[AgeRange] = await get_age_range_for_child(child, session)
+        logger.info(
+            "list_affirmations: child_id=%s age_range_id=%s interests=%s",
+            str(child.id),
+            (str(age_range.id) if age_range else None),
+            child.interests,
+        )
 
         stmt = select(Affirmation)
         if age_range:
             stmt = stmt.where(Affirmation.age_range_id == age_range.id)
 
         interest_order = _build_interest_boost_order(Affirmation, child.interests)
-        if interest_order is not None:
-            stmt = stmt.order_by(interest_order)
-        else:
-            stmt = stmt.order_by(func.random())
+        stmt = stmt.order_by(interest_order, func.random()) if interest_order is not None else stmt.order_by(func.random())
 
         rows = (await session.execute(stmt)).scalars().all()
-        result = [{"id": r.id, "text": r.text, "gradient": [r.gradient_0, r.gradient_1]} for r in rows]
-        
-        logger.info(f"list_affirmations: returning {len(result)} affirmations")
-        
-        return result
+        return [
+            {
+                "id": r.id,
+                "text": r.text,
+                "image": r.image,
+                "gradient": [r.gradient_0, r.gradient_1],
+                "tags": list(r.tags or []),
+                "ageRangeId": r.age_range_id,
+            }
+            for r in rows
+        ]
     except Exception as e:
-        logger.exception(f"list_affirmations error: {e}")
+        logger.exception("list_affirmations error: %s", e)
         return []
 
 
@@ -184,79 +200,165 @@ async def list_subjects(
     child: Child = Depends(get_child_owned_query),
     session: AsyncSession = Depends(get_session),
 ):
-    any_row = (await session.execute(select(Subject.id).limit(1))).first()
-    if any_row is None:
-        _enqueue_seed_if_needed()
+    logger.info("list_subjects: child_id=%s", str(child.id))
+    age_range: Optional[AgeRange] = await get_age_range_for_child(child, session)
+    if age_range is None:
+        logger.warning("list_subjects: no age_range resolved child_id=%s birthday=%s", str(child.id), child.birthday)
         return []
 
-    rows = (await session.execute(select(Subject))).scalars().all()
-    return [{"id": r.id, "name": r.name, "icon": r.icon, "color": r.color} for r in rows]
+    rows = (
+        await session.execute(
+            select(Subject)
+            .join(SubjectAgeRange, Subject.id == SubjectAgeRange.subject_id)
+            .where(SubjectAgeRange.age_range_id == age_range.id)
+            .order_by(Subject.name.asc())
+        )
+    ).scalars().all()
+
+    logger.info(
+        "list_subjects: returned count=%s child_id=%s age_range_id=%s",
+        len(rows),
+        str(child.id),
+        str(age_range.id),
+    )
+
+    return [{"id": r.id, "code": r.code, "name": r.name, "icon": r.icon, "color": r.color} for r in rows]
+
 
 
 @router.get("/flashcards")
 async def list_flashcards(
-    subject_id: str = Query(..., alias="subjectId"),
-    difficulty: Literal["easy", "medium", "hard"] = Query(...),
+    subject_code: str = Query(..., alias="subjectCode"),
+    difficulty_code: str = Query(..., alias="difficultyCode"),
+    limit: int = Query(5, ge=1, le=50),
     child: Child = Depends(get_child_owned_query),
     session: AsyncSession = Depends(get_session),
 ):
-    # If the DB hasn't been seeded yet, trigger seed_content and return empty.
-    # This keeps /flashcards callable without requiring clients to call /subjects first.
+    logger.info(
+        "list_flashcards: child_id=%s subjectCode=%s difficultyCode=%s limit=%s",
+        str(child.id),
+        subject_code,
+        difficulty_code,
+        limit,
+    )
+
     any_subject = (await session.execute(select(Subject.id).limit(1))).first()
     any_flashcard = (await session.execute(select(Flashcard.id).limit(1))).first()
     if any_subject is None or any_flashcard is None:
-        _enqueue_seed_if_needed()
+        logger.warning(
+            "list_flashcards: DB looks unseeded any_subject=%s any_flashcard=%s triggering_seed",
+            bool(any_subject),
+            bool(any_flashcard),
+            str(child.id),
+        )
         return []
 
-    subject = (await session.execute(select(Subject).where(Subject.id == subject_id))).scalars().first()
-    if subject is None:
-        raise HTTPException(status_code=400, detail="Invalid subjectId; subject does not exist.")
-
-    # Get age range for filtering
-    age_range = await get_age_range_for_child(child, session)
-
-    # Build base query with subject and difficulty filters
-    stmt = select(Flashcard).where(Flashcard.subject_id == subject_id, Flashcard.difficulty == difficulty)
-
-    # Apply age range filter if available
-    if age_range:
-        stmt = stmt.where(Flashcard.age_range_id == age_range.id)
-
-    # Build performance-based ordering
-    # Join with performance data to get correct/incorrect counts
-    stmt = stmt.outerjoin(
-        ChildFlashcardPerformance,
-        (ChildFlashcardPerformance.child_id == child.id) &
-        (ChildFlashcardPerformance.flashcard_id == Flashcard.id)
+    age_range: Optional[AgeRange] = await get_age_range_for_child(child, session)
+    logger.info(
+        "list_flashcards: resolved age_range_id=%s interests=%s child_id=%s",
+        (str(age_range.id) if age_range else None),
+        child.interests,
+        str(child.id),
     )
 
-    # Order by: most wrong answers first, then fewer correct answers
-    perf_order_expr = case(
-        (ChildFlashcardPerformance.incorrect_count.is_(None), 0),  # never seen
-        else_=ChildFlashcardPerformance.incorrect_count
+    subject = (await session.execute(select(Subject).where(Subject.code == subject_code))).scalar_one_or_none()
+    if subject is None:
+        logger.warning("list_flashcards: invalid subjectCode=%s", subject_code)
+        raise HTTPException(status_code=400, detail="Invalid subjectCode.")
+
+    if age_range:
+        subject_in_range = (
+            await session.execute(
+                select(SubjectAgeRange)
+                .where(SubjectAgeRange.subject_id == subject.id)
+                .where(SubjectAgeRange.age_range_id == age_range.id)
+            )
+        ).scalar_one_or_none()
+        if not subject_in_range:
+            logger.warning(
+                "list_flashcards: subject not in age range subject_code=%s age_range_id=%s",
+                subject_code,
+                str(subject.id),
+                str(age_range.id),
+                str(child.id),
+            )
+            raise HTTPException(status_code=400, detail="Invalid subjectCode; subject is not available for this age range.")
+
+    # Validate difficulty exists (optional but nice)
+    diff_exists = (
+        await session.execute(select(DifficultyThreshold.id).where(DifficultyThreshold.code == difficulty_code))
+    ).scalar_one_or_none()
+    if diff_exists is None:
+        logger.warning("list_flashcards: invalid difficultyCode=%s child_id=%s", difficulty_code, str(child.id))
+        raise HTTPException(status_code=400, detail="Invalid difficultyCode.")
+
+    # Step 1: Get flashcard IDs with performance ordering data
+    # Using a subquery approach to avoid DISTINCT + complex ORDER BY issues
+    base_query = (
+        select(
+            Flashcard.id.label("fc_id"),
+            ChildFlashcardPerformance.incorrect_count.label("wrong_cnt"),
+            ChildFlashcardPerformance.correct_count.label("correct_cnt"),
+        )
+        .outerjoin(
+            ChildFlashcardPerformance,
+            (ChildFlashcardPerformance.child_id == child.id)
+            & (ChildFlashcardPerformance.flashcard_id == Flashcard.id),
+        )
+        .where(
+            Flashcard.subject_id == subject.id,
+            Flashcard.difficulty_code == difficulty_code,
+        )
+    )
+
+    if age_range:
+        base_query = base_query.where(Flashcard.age_range_id == age_range.id)
+
+    # Order: never seen first, then most wrong, then fewest correct
+    wrong_order = case(
+        (ChildFlashcardPerformance.incorrect_count.is_(None), 10_000),
+        else_=ChildFlashcardPerformance.incorrect_count,
     ).desc()
 
-    correct_order_expr = case(
-        (ChildFlashcardPerformance.correct_count.is_(None), 0),  # never seen
-        else_=ChildFlashcardPerformance.correct_count
+    correct_order = case(
+        (ChildFlashcardPerformance.correct_count.is_(None), 0),
+        else_=ChildFlashcardPerformance.correct_count,
     ).asc()
 
-    # Apply interest boost on top of performance ordering
     interest_order = _build_interest_boost_order(Flashcard, child.interests)
-
     if interest_order is not None:
-        stmt = stmt.order_by(perf_order_expr, correct_order_expr, interest_order, func.random())
+        base_query = base_query.order_by(wrong_order, correct_order, interest_order, func.random())
     else:
-        stmt = stmt.order_by(perf_order_expr, correct_order_expr, func.random())
+        base_query = base_query.order_by(wrong_order, correct_order, func.random())
 
-    rows = (await session.execute(stmt)).scalars().all()
+    # Create subquery from step 1
+    ordered_ids_subq = base_query.subquery()
+
+    # Step 2: Fetch full Flashcard objects using the ordered IDs
+    stmt = select(Flashcard).join(ordered_ids_subq, Flashcard.id == ordered_ids_subq.c.fc_id)
+
+    # Apply limit to step 2 and execute
+    result = await session.execute(stmt.limit(limit))
+    rows = result.scalars().all()
+    logger.info(
+        "list_flashcards: returned count=%s child_id=%s subjectCode=%s difficultyCode=%s age_range_id=%s",
+        len(rows),
+        str(child.id),
+        subject_code,
+        difficulty_code,
+        (str(age_range.id) if age_range else None),
+    )
+
     return [
         {
             "id": r.id,
+            "subjectId": r.subject_id,
             "question": r.question,
             "answer": r.answer,
             "acceptableAnswers": list(r.acceptable_answers or []),
-            "difficulty": r.difficulty,
+            "difficultyCode": r.difficulty_code,
+            "tags": list(r.tags or []),
+            "ageRangeId": r.age_range_id,
         }
         for r in rows
     ]
@@ -268,33 +370,61 @@ async def list_daily_chores(
     session: AsyncSession = Depends(get_session),
 ):
     try:
-        any_row = (await session.execute(select(Chore.id).limit(1))).first()
-        if any_row is None:
-            _enqueue_seed_if_needed()
-            logger.warning(f"list_daily_chores: no chores in DB, triggering seed")
-            return []
+        age_range: Optional[AgeRange] = await get_age_range_for_child(child, session)
 
-        age_range = await get_age_range_for_child(child, session)
-        logger.info(f"list_daily_chores: child_id={child.id}, age={child.birthday}, age_range={age_range.id if age_range else None}, interests={child.interests}")
-
-        stmt = select(Chore)
+        stmt = select(Chore).where(Chore.is_extra == False)
         if age_range:
             stmt = stmt.where(Chore.age_range_id == age_range.id)
 
         interest_order = _build_interest_boost_order(Chore, child.interests)
-        if interest_order is not None:
-            stmt = stmt.order_by(interest_order)
-        else:
-            stmt = stmt.order_by(func.random())
+        stmt = stmt.order_by(interest_order, func.random()) if interest_order is not None else stmt.order_by(func.random())
 
         rows = (await session.execute(stmt)).scalars().all()
-        result = [{"id": r.id, "label": r.label, "icon": r.icon, "isExtra": r.is_extra} for r in rows]
-        
-        logger.info(f"list_daily_chores: returning {len(result)} chores")
-        
-        return result
+        return [
+            {
+                "id": r.id,
+                "label": r.label,
+                "icon": r.icon,
+                "isExtra": r.is_extra,
+                "tags": list(r.tags or []),
+                "ageRangeId": r.age_range_id,
+            }
+            for r in rows
+        ]
     except Exception as e:
-        logger.exception(f"list_daily_chores error: {e}")
+        logger.exception("list_daily_chores error: %s", e)
+        return []
+
+
+@router.get("/chores/extra")
+async def list_extra_chores(
+    child: Child = Depends(get_child_owned_query),
+    session: AsyncSession = Depends(get_session),
+):
+    try:
+        age_range: Optional[AgeRange] = await get_age_range_for_child(child, session)
+
+        stmt = select(Chore).where(Chore.is_extra == True)
+        if age_range:
+            stmt = stmt.where(Chore.age_range_id == age_range.id)
+
+        interest_order = _build_interest_boost_order(Chore, child.interests)
+        stmt = stmt.order_by(interest_order, func.random()) if interest_order is not None else stmt.order_by(func.random())
+
+        rows = (await session.execute(stmt)).scalars().all()
+        return [
+            {
+                "id": r.id,
+                "label": r.label,
+                "icon": r.icon,
+                "isExtra": r.is_extra,
+                "tags": list(r.tags or []),
+                "ageRangeId": r.age_range_id,
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        logger.exception("list_extra_chores error: %s", e)
         return []
 
 
@@ -305,30 +435,19 @@ async def list_outdoor_activities(
     session: AsyncSession = Depends(get_session),
 ):
     try:
-        any_row = (await session.execute(select(OutdoorActivity.id).limit(1))).first()
-        if any_row is None:
-            _enqueue_seed_if_needed()
-            logger.warning(f"list_outdoor_activities: no outdoor activities in DB, triggering seed")
-            return []
-
-        age_range = await get_age_range_for_child(child, session)
-        logger.info(f"list_outdoor_activities: child_id={child.id}, is_daily={is_daily}, age={child.birthday}, age_range={age_range.id if age_range else None}, interests={child.interests}")
+        age_range: Optional[AgeRange] = await get_age_range_for_child(child, session)
 
         stmt = select(OutdoorActivity)
         if is_daily is not None:
             stmt = stmt.where(OutdoorActivity.is_daily == is_daily)
-
         if age_range:
             stmt = stmt.where(OutdoorActivity.age_range_id == age_range.id)
 
         interest_order = _build_interest_boost_order(OutdoorActivity, child.interests)
-        if interest_order is not None:
-            stmt = stmt.order_by(interest_order)
-        else:
-            stmt = stmt.order_by(func.random())
+        stmt = stmt.order_by(interest_order, func.random()) if interest_order is not None else stmt.order_by(func.random())
 
         rows = (await session.execute(stmt)).scalars().all()
-        result = [
+        return [
             {
                 "id": r.id,
                 "name": r.name,
@@ -337,13 +456,67 @@ async def list_outdoor_activities(
                 "time": r.time,
                 "points": r.points,
                 "isDaily": r.is_daily,
+                "tags": list(r.tags or []),
+                "ageRangeId": r.age_range_id,
             }
             for r in rows
         ]
-        
-        logger.info(f"list_outdoor_activities: returning {len(result)} activities")
-        
-        return result
     except Exception as e:
-        logger.exception(f"list_outdoor_activities error: {e}")
+        logger.exception("list_outdoor_activities error: %s", e)
+        return []
+
+
+@router.get("/avatars")
+async def list_avatars(
+    session: AsyncSession = Depends(get_session),
+):
+    """Get all available avatars for child profile creation."""
+    try:
+        rows = (await session.execute(select(Avatar).where(Avatar.is_active == True))).scalars().all()
+        return [
+            {
+                "id": r.id,
+                "name": r.name,
+                "imagePath": f"{settings.backend_img_url}/{r.image_path}",
+                "isActive": r.is_active,
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        logger.exception("list_avatars error: %s", e)
+        return []
+
+
+@router.get("/interests")
+async def list_interests(
+    session: AsyncSession = Depends(get_session),
+):
+    """Get all available interests for child onboarding."""
+    try:
+        rows = (await session.execute(select(Interest).where(Interest.is_active == True))).scalars().all()
+        return [
+            {
+                "id": r.id,
+                "name": r.name,
+                "label": r.label,
+                "icon": r.icon,
+                "isActive": r.is_active,
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        logger.exception("list_interests error: %s", e)
+        return []
+
+
+@router.get("/difficulties", response_model=list[DifficultyOut])
+async def list_difficulties(
+    session: AsyncSession = Depends(get_session),
+):
+    """Get all difficulty tiers with labels, icons, and colors."""
+    try:
+        rows = (await session.execute(select(DifficultyThreshold).where(DifficultyThreshold.is_active == True))).scalars().all()
+        return rows
+    except Exception as e:
+        logger.exception("list_difficulties error: %s", e)
         return []

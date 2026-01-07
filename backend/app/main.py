@@ -1,5 +1,6 @@
 # main.py
 from __future__ import annotations
+import httpx
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
@@ -19,6 +20,7 @@ from .routers.progress import router as progress_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await seed()
     yield
 
 app = FastAPI(title="MyBuddy Backend", lifespan=lifespan)

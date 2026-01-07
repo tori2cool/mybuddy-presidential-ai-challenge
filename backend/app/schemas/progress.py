@@ -1,34 +1,46 @@
 # app/schemas/progress.py
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import List, Literal, Optional
+from uuid import UUID
+
 from pydantic import Field
 from ._base import APIModel
 
-# NOTE: SubjectId is intentionally a plain string so subjects can be DB-driven.
-# TODO(aqueryus): when subjects become fully DB-driven, consider replacing ad-hoc strings
-# with a constrained type sourced from the database at the edges.
-SubjectId = str
-DifficultyTier = Literal["easy", "medium", "hard"]
+EventKind = Literal["flashcard", "chore", "outdoor", "affirmation"]
+
 
 class FlashcardAnsweredIn(APIModel):
-    subjectId: SubjectId
+    flashcardId: UUID
     correct: bool
-    flashcardId: Optional[str] = None
     answer: Optional[str] = None
 
+
 class ChoreCompletedIn(APIModel):
-    choreId: Optional[str] = None
-    isExtra: Optional[bool] = None
+    choreId: UUID
+    isExtra: Optional[bool] = None  # backend can also derive from Chore.is_extra
+
 
 class OutdoorCompletedIn(APIModel):
-    outdoorActivityId: Optional[str] = None
-    isDaily: Optional[bool] = None
+    outdoorActivityId: UUID
+    isDaily: Optional[bool] = None  # backend can also derive from OutdoorActivity.is_daily
+
 
 class AffirmationViewedIn(APIModel):
-    affirmationId: Optional[str] = None
+    affirmationId: UUID
+
+
+class PostEventIn(APIModel):
+    """
+    Generic wrapper that matches your existing client shape:
+    postEvent({ kind: "...", body: {...} })
+    """
+    kind: EventKind
+    body: FlashcardAnsweredIn | ChoreCompletedIn | OutdoorCompletedIn | AffirmationViewedIn
+
 
 class EventAckOut(APIModel):
     pointsAwarded: int = Field(ge=0)
-    # ids of achievements newly unlocked by this event
-    newAchievementIds: list[str] = Field(default_factory=list)
+
+    # unlocked achievements from this event
+    newAchievementCodes: List[str] = Field(default_factory=list)

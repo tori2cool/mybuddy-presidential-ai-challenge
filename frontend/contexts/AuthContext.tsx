@@ -90,7 +90,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setTokenRefresher(ensureFreshToken);
-    setUnauthorizedHandler(() => clear());
+    setUnauthorizedHandler((info) => {
+      // Only clear when we were actually authenticated; prevents races during bootstrap.
+      if (info?.hasToken) {
+        console.warn("[AuthContext] Clearing auth due to 401", info);
+        void clear();
+      } else {
+        console.warn("[AuthContext] 401 received without token (likely bootstrap race)", info);
+      }
+    });
 
     return () => {
       setTokenRefresher(null);

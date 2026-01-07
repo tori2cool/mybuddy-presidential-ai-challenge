@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from ..db import get_session
-from ..models import Project, ProjectCreate, ProjectRead, ProjectUpdate
 from ..security import get_current_user
 
 router = APIRouter(prefix="/v1", tags=["core"])
@@ -48,30 +47,3 @@ def create_job_v1(user: dict = Depends(get_current_user)):
 @router.get("/jobs/{job_id}")
 def get_job_status_v1(job_id: str, user: dict = Depends(get_current_user)):
     return get_job_status_payload(job_id)
-
-@router.post("/projects", response_model=ProjectRead)
-async def create_project_v1(
-    data: ProjectCreate,
-    session: AsyncSession = Depends(get_session),
-    user: dict = Depends(get_current_user),
-):
-    tenant_id = data.tenant_id or get_tenant_id_from_claims(user)
-    project = Project(name=data.name, description=data.description, tenant_id=tenant_id)
-    session.add(project)
-    await session.commit()
-    await session.refresh(project)
-    return project
-
-@router.get("/projects", response_model=List[ProjectRead])
-async def list_projects_v1(
-    session: AsyncSession = Depends(get_session),
-    user: dict = Depends(get_current_user),
-):
-    tenant_id = get_tenant_id_from_claims(user)
-    stmt = (
-        select(Project)
-        .where(Project.is_deleted == False, Project.tenant_id == tenant_id)
-        .order_by(Project.created_at.desc())
-    )
-    result = await session.execute(stmt)
-    return result.scalars().all()

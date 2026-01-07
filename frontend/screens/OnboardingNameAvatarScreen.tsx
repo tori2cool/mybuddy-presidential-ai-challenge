@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -17,16 +17,12 @@ import { OnboardingParamList } from "@/navigation/OnboardingNavigator";
 import { Spacing, Typography, BorderRadius } from "@/constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/hooks/useTheme";
-import { DatePicker } from "@/components/DatePicker";
+import { DatePicker } from "@/components/index";
+import { getAvatars } from "@/services/avatarsService";
+import { getInterests } from "@/services/interestsService";
 
-const avatars = [
-  { id: "astronaut", source: require("@/assets/avatars/astronaut_avatar.png") },
-  { id: "artist", source: require("@/assets/avatars/artist_avatar.png") },
-  { id: "athlete", source: require("@/assets/avatars/athlete_avatar.png") },
-  { id: "explorer", source: require("@/assets/avatars/explorer_avatar.png") },
-  { id: "scientist", source: require("@/assets/avatars/scientist_avatar.png") },
-  { id: "musician", source: require("@/assets/avatars/musician_avatar.png") },
-] as const;
+// IMPORTANT: use the API types you showed (no Avatar.key / Interest.key)
+import type { Avatar, Interest, UUID } from "@/types/models";
 
 type Props = NativeStackScreenProps<OnboardingParamList, "NameAvatar"> & {
   onComplete: (childId: string) => void | Promise<void>;
@@ -36,16 +32,83 @@ export default function OnboardingNameAvatarScreen({ route, onComplete }: Props)
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
-  const { interests } = route.params;
+  // Assumption based on your previous code: route params contains a list of interest IDs.
+  // If it's actually "keys" (like "sports"), then fix that at the source and pass UUIDs instead.
+const { interests } = route.params as Readonly<{ interests: number[] }>;
+
+const interestIds: UUID[] | null =
+  interests && interests.length > 0 ? interests.map((id) => String(id)) : null;
 
   const [name, setName] = useState("");
   const [birthday, setBirthday] = useState<Date | null>(null);
   const [showPicker, setShowPicker] = useState(false);
-  const [selectedAvatar, setSelectedAvatar] = useState<(typeof avatars)[number]["id"]>(
-    "astronaut"
-  );
+
+  const [avatars, setAvatars] = useState<Avatar[]>([]);
+  const [selectedAvatarId, setSelectedAvatarId] = useState<UUID | null>(null);
+
+  const [isLoadingAvatars, setIsLoadingAvatars] = useState(true);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  // You don't actually need the full interests list for submission anymore
+  // (since we should submit IDs), but keeping it if you display labels elsewhere.
+  const [interestsList, setInterestsList] = useState<Interest[]>([]);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let aborted = false;
+
+    const fetchAvatars = async () => {
+      try {
+        const data = await getAvatars();
+        if (aborted) return;
+
+        setAvatars(data);
+        setAvatarError(null);
+
+        // Default to first avatar ID if none selected
+        if (data.length > 0 && !selectedAvatarId) {
+          setSelectedAvatarId(data[0].id);
+        }
+      } catch (err: any) {
+        if (!aborted) {
+          setAvatarError(err?.message ?? "Failed to load avatars");
+        }
+      } finally {
+        if (!aborted) {
+          setIsLoadingAvatars(false);
+        }
+      }
+    };
+
+    fetchAvatars();
+
+    return () => {
+      aborted = true;
+    };
+    // selectedAvatarId intentionally omitted to avoid re-fetch loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let aborted = false;
+
+    const fetchInterests = async () => {
+      try {
+        const data = await getInterests();
+        if (!aborted) setInterestsList(data);
+      } catch (err: any) {
+        console.warn("Failed to load interests:", err);
+      }
+    };
+
+    fetchInterests();
+
+    return () => {
+      aborted = true;
+    };
+  }, []);
 
   const handleFinish = async () => {
     setSubmitting(true);
@@ -59,19 +122,20 @@ export default function OnboardingNameAvatarScreen({ route, onComplete }: Props)
 
     try {
       const birthdayIso = birthday.toISOString().slice(0, 10); // YYYY-MM-DD
+
       const created = await createChild({
         name: name.trim(),
         birthday: birthdayIso,
-        avatar: selectedAvatar,
-        interests: interests ?? [],
+        avatarId: selectedAvatarId,
+        interests: interestIds,
       });
 
-      onComplete(created.id);
-      setSubmitting(false);
+      await onComplete(created.id);
     } catch (e: any) {
       setError(e?.message ?? "Failed to create child");
-      setSubmitting(false);
       return;
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -99,27 +163,37 @@ export default function OnboardingNameAvatarScreen({ route, onComplete }: Props)
             Pick Your Avatar
           </ThemedText>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.avatarScroll}
-          >
-            {avatars.map((avatar) => (
-              <Pressable
-                key={avatar.id}
-                onPress={() => setSelectedAvatar(avatar.id)}
-                style={[
-                  styles.avatarContainer,
-                  {
-                    borderColor:
-                      selectedAvatar === avatar.id ? theme.primary : "transparent",
-                  },
-                ]}
-              >
-                <Image source={avatar.source} style={styles.avatar} />
-              </Pressable>
-            ))}
-          </ScrollView>
+          {isLoadingAvatars ? (
+            <ThemedText style={styles.centeredText}>Loading avatars...</ThemedText>
+          ) : avatarError ? (
+            <ThemedText style={[styles.centeredText, { color: theme.error }]}>
+              {avatarError}
+            </ThemedText>
+          ) : avatars.length === 0 ? (
+            <ThemedText style={styles.centeredText}>No avatars available</ThemedText>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.avatarScroll}
+            >
+              {avatars.map((avatar) => (
+                <Pressable
+                  key={avatar.id}
+                  onPress={() => setSelectedAvatarId(avatar.id)}
+                  style={[
+                    styles.avatarContainer,
+                    {
+                      borderColor:
+                        selectedAvatarId === avatar.id ? theme.primary : "transparent",
+                    },
+                  ]}
+                >
+                  <Image source={{ uri: avatar.imagePath }} style={styles.avatar} />
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -168,7 +242,7 @@ export default function OnboardingNameAvatarScreen({ route, onComplete }: Props)
             <DatePicker
               value={birthday ?? new Date(2018, 0, 1)}
               maximumDate={new Date()}
-              onChange={(selectedDate) => {
+              onChange={(selectedDate: Date | null) => {
                 setBirthday(selectedDate);
                 if (Platform.OS !== "ios") setShowPicker(false);
               }}
@@ -251,5 +325,10 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: Spacing.lg,
+  },
+  centeredText: {
+    ...Typography.body,
+    textAlign: "center",
+    paddingVertical: Spacing.xl,
   },
 });

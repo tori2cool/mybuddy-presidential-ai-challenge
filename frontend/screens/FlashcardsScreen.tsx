@@ -1,70 +1,155 @@
-import { useState, useEffect } from "react";
+// frontend/screens/FlashcardsScreen.tsx
+import { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Pressable, Dimensions } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { AsyncStatus } from "@/components/AsyncStatus";
 import { ProgressBar } from "@/components/ProgressBar";
+
 import { useTheme } from "@/hooks/useTheme";
-import { DifficultyTier, SubjectId } from "@/types/models";
-
-const SUBJECTS: SubjectId[] = ["math", "science", "reading", "history"];
-
 import { useDashboard } from "@/contexts/DashboardContext";
+import { useCurrentChild } from "@/contexts/ChildContext";
+
 import { Spacing, BorderRadius } from "@/constants/theme";
+
 import { getSubjects } from "@/services/subjectsService";
-import { DIFFICULTY_LABELS } from "@/constants/difficulty";
-import { Subject } from "@/types/models";
-import { useCurrentChildId } from "@/contexts/ChildContext";
+import { getDifficulties } from "@/services/difficultiesService";
+
+import type { Subject, UUID, DifficultyCode, DifficultyThreshold, SubjectProgress } from "@/types/models";
+
 import FlashcardPracticeModal from "@/components/FlashcardPracticeModal";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
+function difficultyLabelOf(d: DifficultyThreshold): string {
+  // Backend has label; fallback to name/code
+  if (typeof d.label === "string" && d.label.trim().length > 0) return d.label;
+  return d.code;
+}
+
 export default function FlashcardsScreen() {
   const { theme } = useTheme();
-  const { childId } = useCurrentChildId();
-  const { data: dashboardData, postEvent } = useDashboard();
-
-  console.log("FlashcardsScreen: current childId =", childId);
+  const { data: dashboardData } = useDashboard();
+  const { childId } = useCurrentChild();
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [difficulties, setDifficulties] = useState<DifficultyThreshold[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [practiceSubject, setPracticeSubject] = useState<Subject | null>(null);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyTier>("easy");
 
+  // DB-driven string (no union)
+  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyCode>("easy");
+
+  // Fetch subjects (age-range filtered server-side)
   useEffect(() => {
-    const loadSubjects = async () => {
+    let cancelled = false;
+
+    (async () => {
       try {
         setLoading(true);
         setError(null);
 
-        if (!childId) return; // wait until childId exists
+        if (!childId) return;
 
         const data = await getSubjects(childId);
-        setSubjects(data);
+        if (!cancelled) setSubjects(Array.isArray(data) ? data : []);
       } catch (e) {
         console.error("Failed to load subjects:", e);
-        setError("Couldn't load subjects. Please try again later.");
+        if (!cancelled) setError("Couldn't load subjects. Please try again later.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
+    })();
 
-    loadSubjects();
+    return () => {
+      cancelled = true;
+    };
   }, [childId]);
 
-  const dashboard = dashboardData;
-  const balancedProgress = dashboard?.balanced;
-  const flashcardsBySubject = dashboard?.flashcardsBySubject;
+  // Fetch difficulties on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const data = await getDifficulties();
+        if (!cancelled) setDifficulties(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("Failed to load difficulties:", e);
+        if (!cancelled) setDifficulties([]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Difficulty lookup map (by code)
+  const difficultyByCode = useMemo(() => {
+    const map = new Map<string, DifficultyThreshold>();
+    for (const d of difficulties) map.set(d.code, d);
+    return map;
+  }, [difficulties]);
+
+  // Sorted difficulties by threshold (backend-defined progression)
+  const sortedDifficulties = useMemo(() => {
+    return [...difficulties].sort((a, b) => a.threshold - b.threshold);
+  }, [difficulties]);
+
+  // Dashboard shapes (coming from your dashboard service)
+  const dashboard = dashboardData as any;
+  const balancedProgress = dashboard?.balanced as any | undefined;
+  const flashcardsBySubject = dashboard?.flashcardsBySubject as Record<string, any> | undefined;
+
+  const getSubjectProgress = (subjectCode: string): SubjectProgress => {
+    const stats = flashcardsBySubject?.[subjectCode];
+
+    const difficultyCode =
+      typeof stats?.difficultyCode === "string" && stats.difficultyCode.trim().length > 0
+        ? (stats.difficultyCode as DifficultyCode)
+        : null;
+
+    return {
+      correct: typeof stats?.correct === "number" ? stats.correct : 0,
+      correctStreak: typeof stats?.correctStreak === "number" ? stats.correctStreak : 0,
+      longestStreak: typeof stats?.longestStreak === "number" ? stats.longestStreak : 0,
+      completed: typeof stats?.completed === "number" ? stats.completed : 0,
+      difficultyCode,
+      nextDifficultyAtStreak:
+        stats?.nextDifficultyAtStreak === null
+          ? null
+          : typeof stats?.nextDifficultyAtStreak === "number"
+            ? stats.nextDifficultyAtStreak
+            : null,
+      currentTierStartAtStreak:
+        typeof stats?.currentTierStartAtStreak === "number" ? stats.currentTierStartAtStreak : 0,
+    };
+  };
+
+  const nextDifficultyLabelFor = (currentCode: string): string => {
+    const idx = sortedDifficulties.findIndex((d) => d.code === currentCode);
+    const next = idx >= 0 ? sortedDifficulties[idx + 1] : null;
+    return next ? difficultyLabelOf(next) : "Next";
+  };
 
   const handlePractice = (subject: Subject) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const difficulty = (flashcardsBySubject?.[subject.id]?.difficulty ?? "easy") as DifficultyTier;
-    setSelectedDifficulty(difficulty);
+
+    const stats = flashcardsBySubject?.[subject.code];
+    const difficultyCode =
+      typeof stats?.difficultyCode === "string" && stats.difficultyCode.trim().length > 0
+        ? (stats.difficultyCode as DifficultyCode)
+        : ("easy" as DifficultyCode);
+
+    setSelectedDifficulty(difficultyCode);
     setPracticeSubject(subject);
     setModalVisible(true);
   };
@@ -75,24 +160,11 @@ export default function FlashcardsScreen() {
     setSelectedDifficulty("easy");
   };
 
-  const getSubjectProgress = (subjectId: SubjectId) => {
-    const stats = flashcardsBySubject?.[subjectId];
-    return {
-      correct: stats?.correct ?? 0,
-      correctStreak: stats?.correctStreak ?? 0,
-      longestStreak: stats?.longestStreak ?? 0,
-      completed: stats?.completed ?? 0,
-      difficulty: (stats?.difficulty ?? "easy") as DifficultyTier,
-      nextDifficultyAtStreak: stats?.nextDifficultyAtStreak ?? null,
-      currentTierStartAtStreak: stats?.currentTierStartAtStreak ?? 0,
-    };
-  };
-
   if (error) {
     return (
       <ScreenScrollView>
         <View style={styles.loadingContainer}>
-          <AsyncStatus error={error} />
+          <AsyncStatus loading={false} error={error} />
         </View>
       </ScreenScrollView>
     );
@@ -114,51 +186,54 @@ export default function FlashcardsScreen() {
           </View>
 
           <ThemedText style={[styles.balanceMessage, { color: theme.textSecondary }]}>
-            {balancedProgress?.message ?? ""}
+            {typeof balancedProgress?.message === "string" ? balancedProgress.message : ""}
           </ThemedText>
 
           <View style={styles.subjectProgressContainer}>
             {balancedProgress
-              ? SUBJECTS.map((subjectId) => {
-                  const subject = subjects.find((s) => s.id === subjectId);
-                  if (!subject) return null;
-                  const subjectProg = balancedProgress.subjectProgress[subjectId];
-                  const progressPercent =
-                    balancedProgress.requiredPerSubject > 0
-                      ? Math.min(
-                          (subjectProg.current / balancedProgress.requiredPerSubject) * 100,
-                          100,
-                        )
-                      : 100;
+              ? subjects.map((subject) => {
+                  const subjectProg = balancedProgress?.subjectProgress?.[subject.code];
+                  if (!subjectProg) return null;
 
-              return (
-                <View key={subjectId} style={styles.subjectProgressItem}>
-                  <View style={styles.subjectProgressLabel}>
-                    <Feather name={subject.icon} size={14} color={subject.color} />
-                    <ThemedText style={[styles.subjectProgressName, { color: theme.textPrimary }]}>
-                      {subject.name}
-                    </ThemedText>
-                    <ThemedText style={[styles.subjectProgressCount, { color: theme.textSecondary }]}>
-                      {subjectProg.current}/{subjectProg.required}
-                    </ThemedText>
-                    {subjectProg.met ? (
-                      <Feather name="check-circle" size={14} color="#10B981" />
-                    ) : null}
-                  </View>
-                  <View style={[styles.miniProgressBar, { backgroundColor: theme.backgroundDefault }]}>
-                    <View
-                      style={[
-                        styles.miniProgressFill,
-                        {
-                          width: `${progressPercent}%`,
-                          backgroundColor: subjectProg.met ? "#10B981" : subject.color,
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-              );
-              })
+                  const current = typeof subjectProg.current === "number" ? subjectProg.current : 0;
+                  const required =
+                    typeof subjectProg.required === "number"
+                      ? subjectProg.required
+                      : typeof balancedProgress?.requiredPerSubject === "number"
+                        ? balancedProgress.requiredPerSubject
+                        : 0;
+
+                  const met = !!subjectProg.met;
+
+                  const progressPercent = required > 0 ? Math.min((current / required) * 100, 100) : 100;
+
+                  return (
+                    <View key={subject.id} style={styles.subjectProgressItem}>
+                      <View style={styles.subjectProgressLabel}>
+                        <Feather name={subject.icon as any} size={14} color={subject.color} />
+                        <ThemedText style={[styles.subjectProgressName, { color: theme.text }]}>
+                          {subject.name}
+                        </ThemedText>
+                        <ThemedText style={[styles.subjectProgressCount, { color: theme.textSecondary }]}>
+                          {current}/{required}
+                        </ThemedText>
+                        {met ? <Feather name="check-circle" size={14} color="#10B981" /> : null}
+                      </View>
+
+                      <View style={[styles.miniProgressBar, { backgroundColor: theme.backgroundDefault }]}>
+                        <View
+                          style={[
+                            styles.miniProgressFill,
+                            {
+                              width: `${progressPercent}%`,
+                              backgroundColor: met ? "#10B981" : subject.color,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  );
+                })
               : null}
           </View>
         </View>
@@ -168,42 +243,60 @@ export default function FlashcardsScreen() {
             <AsyncStatus loading={true} loadingMessage="Loading subjects..." />
           </View>
         ) : (
-          subjects.map((subject) => {
-            const subjectProgress = getSubjectProgress(subject.id);
-            const difficultyInfo = DIFFICULTY_LABELS[subjectProgress.difficulty];
-            const nextAt = subjectProgress.nextDifficultyAtStreak;
-            const currentStart = subjectProgress.currentTierStartAtStreak;
+        subjects.map((subject) => {
+          const subjectProgress = getSubjectProgress(subject.code);
 
-            let progressToNext = 1;
-            if (nextAt !== null) {
-              const tierSize = nextAt - currentStart;
-              if (tierSize > 0) {
-                progressToNext = (subjectProgress.correctStreak - currentStart) / tierSize;
-                progressToNext = Math.max(0, Math.min(progressToNext, 1));
-              }
+          const difficultyInfo =
+            subjectProgress.difficultyCode !== null
+              ? difficultyByCode.get(subjectProgress.difficultyCode)
+              : undefined;
+
+          const chipLabel = difficultyInfo
+            ? difficultyLabelOf(difficultyInfo)
+            : (subjectProgress.difficultyCode ?? "—");
+
+          const chipColor = difficultyInfo?.color ?? theme.primary;
+          const chipIcon = (difficultyInfo?.icon ?? "help-circle") as any;
+
+          const nextAt = subjectProgress.nextDifficultyAtStreak;
+          const currentStart = subjectProgress.currentTierStartAtStreak;
+
+          let progressToNext = 1;
+          if (nextAt !== null) {
+            const tierSize = nextAt - currentStart;
+            if (tierSize > 0) {
+              progressToNext = (subjectProgress.correctStreak - currentStart) / tierSize;
+              progressToNext = Math.max(0, Math.min(progressToNext, 1));
             }
+          }
+
+          const nextLabel =
+            subjectProgress.difficultyCode !== null
+              ? nextDifficultyLabelFor(subjectProgress.difficultyCode)
+              : "—";
 
             return (
-              <Pressable
-                key={subject.id}
-                style={[styles.card, { backgroundColor: theme.backgroundDefault }]}
-              >
+              <Pressable key={subject.id} style={[styles.card, { backgroundColor: theme.backgroundDefault }]}>
                 <View style={styles.cardHeader}>
                   <View style={[styles.iconContainer, { backgroundColor: subject.color + "20" }]}>
-                    <Feather name={subject.icon} size={28} color={subject.color} />
+                    <Feather name={subject.icon as any} size={28} color={subject.color} />
                   </View>
+
                   <View style={styles.cardContent}>
                     <View style={styles.cardTitleRow}>
                       <ThemedText type="headline">{subject.name}</ThemedText>
-                      <View style={[styles.difficultyChip, { backgroundColor: difficultyInfo.color + "20" }]}>
-                        <Feather name={difficultyInfo.icon as any} size={12} color={difficultyInfo.color} />
-                        <ThemedText style={[styles.difficultyChipText, { color: difficultyInfo.color }]}>
-                          {difficultyInfo.label}
+
+                      <View style={[styles.difficultyChip, { backgroundColor: chipColor + "20" }]}>
+                        <Feather name={chipIcon} size={12} color={chipColor} />
+                        <ThemedText style={[styles.difficultyChipText, { color: chipColor }]}>
+                          {chipLabel}
                         </ThemedText>
                       </View>
                     </View>
+
                     <ThemedText style={[styles.progress, { color: theme.textSecondary }]}>
-                      {subjectProgress.correct} correct • Streak: {subjectProgress.correctStreak} (Best: {subjectProgress.longestStreak})
+                      {subjectProgress.correct} correct • Streak: {subjectProgress.correctStreak} (Best:{" "}
+                      {subjectProgress.longestStreak})
                     </ThemedText>
                   </View>
                 </View>
@@ -212,7 +305,7 @@ export default function FlashcardsScreen() {
                   <View style={styles.progressToNextContainer}>
                     <View style={styles.progressToNextLabel}>
                       <ThemedText style={[styles.progressToNextText, { color: theme.textSecondary }]}>
-                        Progress to {subjectProgress.difficulty === "easy" ? "Medium" : "Hard"}:
+                        Progress to {nextLabel}:
                       </ThemedText>
                       <ThemedText style={[styles.progressToNextCount, { color: subject.color }]}>
                         {subjectProgress.correctStreak}/{nextAt} in a row
@@ -233,9 +326,7 @@ export default function FlashcardsScreen() {
                   style={[styles.practiceButton, { backgroundColor: subject.color }]}
                   onPress={() => handlePractice(subject)}
                 >
-                  <ThemedText style={styles.practiceButtonText}>
-                    Practice {difficultyInfo.label} Questions
-                  </ThemedText>
+                  <ThemedText style={styles.practiceButtonText}>Practice {chipLabel} Questions</ThemedText>
                 </Pressable>
               </Pressable>
             );
@@ -246,7 +337,8 @@ export default function FlashcardsScreen() {
       <FlashcardPracticeModal
         visible={modalVisible}
         subject={practiceSubject}
-        difficulty={selectedDifficulty}
+        difficultyCode={selectedDifficulty}
+        difficultyInfo={difficultyByCode.get(selectedDifficulty) ?? null}
         childId={childId}
         onClose={handleCloseModal}
       />

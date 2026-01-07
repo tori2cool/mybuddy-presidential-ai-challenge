@@ -1,19 +1,37 @@
 # app/services/progress_queries.py
-from __future__ import annotations
-
-from datetime import datetime, timedelta, timezone, date as date_type
 from typing import Dict, List, Literal, Optional
+from uuid import UUID
+from datetime import datetime, timedelta, timezone, date as date_type
 
 from sqlalchemy import func, distinct, case, text, literal_column
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from ..models import ChildActivityEvent, ChildAchievement, Subject, DifficultyThreshold, ChildSubjectStreak
-from .progress_rules import calculate_difficulty, calculate_difficulty_from_streak
+from ..models import (
+    Child,
+    ChildActivityEvent,
+    ChildAchievement,
+    AchievementDefinition,
+    Subject,
+    SubjectAgeRange,
+    DifficultyThreshold,
+    ChildSubjectStreak,
+)
+from ..utils.age_utils import get_age_range_for_child
+from .progress_rules import calculate_difficulty_from_streak
 
-EventKind = Literal["flashcard_answered", "chore_completed", "outdoor_completed", "affirmation_viewed"]
+import logging
 
+logger = logging.getLogger("mybuddy.api")
+
+# Canonical event kind names (match insert_event + routers)
+K_FLASHCARD = "flashcard"
+K_CHORE = "chore"
+K_OUTDOOR = "outdoor"
+K_AFFIRMATION = "affirmation"
+
+EventKind = Literal["flashcard", "chore", "outdoor", "affirmation"] 
 
 # ---------------------------------------------------------------------------
 # Time helpers (UTC-only)
@@ -52,24 +70,10 @@ UTC_TODAY_SQL = "((now() AT TIME ZONE 'UTC')::date)"
 async def insert_event(
     session: AsyncSession,
     *,
-    child_id: str,
+    child_id: UUID,
     kind: EventKind,
     meta: dict,
 ) -> ChildActivityEvent:
-    """
-    Insert an event with dedupe behavior:
-      (child_id, kind, UTC-day(created_at), coalesce(meta.dedupeKey, ''))
-    for rows that have a non-empty dedupeKey.
-
-    Returns:
-      - the inserted ChildActivityEvent, OR
-      - the existing (most recent) matching event if the insert was a duplicate.
-
-    Notes:
-      - created_at is NOT included in VALUES on purpose: the DB should supply it
-        via server_default (Option A). This avoids NULL created_at with Core inserts.
-      - The "duplicate fetch" uses the same UTC-day definition as the unique index.
-    """
     stmt = (
         insert(ChildActivityEvent)
         .values(child_id=child_id, kind=kind, meta=meta)
@@ -86,13 +90,12 @@ async def insert_event(
     )
 
     result = await session.execute(stmt)
-    ev = result.scalar_one_or_none()
 
-    # If it was a no-op (duplicate), fetch the existing event for consistency.
+    # IMPORTANT: always initialize ev
+    ev: ChildActivityEvent | None = result.scalar_one_or_none()
+
     if ev is None:
         dedupe_key = (meta or {}).get("dedupeKey", "") or ""
-        # Only attempt the lookup if the caller actually provided a dedupeKey
-        # (otherwise duplicates are not being deduped by our partial unique index).
         if dedupe_key:
             lookup = (
                 select(ChildActivityEvent)
@@ -104,12 +107,20 @@ async def insert_event(
                 )
                 .order_by(ChildActivityEvent.created_at.desc())
             )
-            ev = (await session.execute(lookup, {"dedupe_key": dedupe_key})).scalar_one()
+            ev = (await session.execute(lookup, {"dedupe_key": dedupe_key})).scalar_one_or_none()
 
-    # If ev is still None here, it means the insert conflicted but we couldn't
-    # find the existing row (e.g., empty dedupeKey). That's a programmer error.
     if ev is None:
         raise RuntimeError("insert_event resulted in no row and no matching duplicate was found")
+
+    # Safe: ev is guaranteed here
+    logger.debug(
+        "insert_event: child_id=%s kind=%s dedupeKey=%s event_id=%s created_at=%s",
+        str(child_id),
+        kind,
+        (meta or {}).get("dedupeKey"),
+        str(ev.id),
+        ev.created_at.isoformat() if ev.created_at else None,
+    )
 
     return ev
 
@@ -118,61 +129,100 @@ async def insert_event(
 # Achievements helpers
 # ---------------------------------------------------------------------------
 
-async def get_unlocked_achievement_ids(session: AsyncSession, *, child_id: str) -> set[str]:
+async def get_unlocked_achievement_codes(session: AsyncSession, *, child_id: UUID) -> set[str]:
     rows = (
         await session.execute(
-            select(ChildAchievement.achievement_id).where(ChildAchievement.child_id == child_id)
+            select(AchievementDefinition.code)
+            .join(ChildAchievement, ChildAchievement.achievement_id == AchievementDefinition.id)
+            .where(ChildAchievement.child_id == child_id)
         )
     ).all()
     return {r[0] for r in rows}
 
 
-async def get_unlocked_achievements_map(session: AsyncSession, *, child_id: str) -> Dict[str, datetime]:
-    """Return {achievement_id: unlocked_at} for a child."""
+async def get_unlocked_achievements_map(session: AsyncSession, *, child_id: UUID) -> Dict[str, datetime]:
     rows = (
         await session.execute(
-            select(ChildAchievement.achievement_id, ChildAchievement.unlocked_at).where(
-                ChildAchievement.child_id == child_id
-            )
+            select(AchievementDefinition.code, ChildAchievement.unlocked_at)
+            .join(ChildAchievement, ChildAchievement.achievement_id == AchievementDefinition.id)
+            .where(ChildAchievement.child_id == child_id)
         )
     ).all()
-    return {aid: ts for (aid, ts) in rows}
+    return {code: ts for (code, ts) in rows}
 
 
-async def unlock_achievements(session: AsyncSession, *, child_id: str, achievement_ids: List[str]) -> List[str]:
-    existing = await get_unlocked_achievement_ids(session, child_id=child_id)
-    new_ids = [aid for aid in achievement_ids if aid not in existing]
-    for aid in new_ids:
-        session.add(ChildAchievement(child_id=child_id, achievement_id=aid))
-    return new_ids
-
-# Difficulty Helpers
-async def get_difficulty_thresholds(session: AsyncSession) -> dict:
+async def unlock_achievements(session: AsyncSession, *, child_id: UUID, achievement_ids: List[str]) -> List[str]:
     """
-    Return difficulty thresholds as a dict the rules function can use.
-    Example: {"easy": 0, "medium": 20, "hard": 40}
+    NOTE: achievement_ids here are actually achievement *codes* (strings),
+    kept for backward compat with callers.
     """
+    existing_codes = await get_unlocked_achievement_codes(session, child_id=child_id)
+    wanted_codes = [c for c in achievement_ids if c not in existing_codes]
+    if not wanted_codes:
+        return []
+
+    # map codes -> ids
     rows = (
         await session.execute(
-            select(DifficultyThreshold.difficulty, DifficultyThreshold.threshold)
+            select(AchievementDefinition.code, AchievementDefinition.id)
+            .where(AchievementDefinition.code.in_(wanted_codes))
+        )
+    ).all()
+    code_to_id = {c: i for (c, i) in rows}
+
+    new_codes: list[str] = []
+    for code in wanted_codes:
+        ach_id = code_to_id.get(code)
+        if ach_id is None:
+            continue
+        session.add(ChildAchievement(child_id=child_id, achievement_id=ach_id))
+        new_codes.append(code)
+
+    return new_codes
+
+# Difficulty Helpers
+async def get_difficulty_thresholds(session: AsyncSession) -> dict[str, int]:
+    rows = (
+        await session.execute(
+            select(DifficultyThreshold.code, DifficultyThreshold.threshold)
             .where(DifficultyThreshold.is_active == True)  # noqa: E712
         )
     ).all()
 
-    # Fallback if table is empty / mis-seeded
-    thresholds = {difficulty: int(threshold) for difficulty, threshold in rows}
-    if not thresholds:
-        thresholds = {"easy": 0, "medium": 20, "hard": 40}
-
-    return thresholds
+    thresholds = {code: int(threshold) for code, threshold in rows}
+    return thresholds or {"easy": 0, "medium": 20, "hard": 40}
 
 
 # ---------------------------------------------------------------------------
 # Subjects
 # ---------------------------------------------------------------------------
 
-async def list_subject_ids(session: AsyncSession) -> list[str]:
-    rows = (await session.execute(select(Subject.id))).all()
+async def list_subject_ids(session: AsyncSession, child_id: Optional[UUID] = None) -> list[str]:
+    """
+    Returns Subject.code strings.
+    If child_id provided, filter by child's age range via SubjectAgeRange.
+    """
+    if child_id is None:
+        rows = (await session.execute(select(Subject.code).order_by(Subject.code))).all()
+        return [r[0] for r in rows]
+
+    child = (await session.execute(select(Child).where(Child.id == child_id))).scalar_one_or_none()
+    if child is None:
+        return []
+
+    age_range = await get_age_range_for_child(child, session)
+    if age_range is None:
+        return []
+
+    rows = (
+        await session.execute(
+            select(Subject.code)
+            .join(SubjectAgeRange, Subject.id == SubjectAgeRange.subject_id)
+            .where(SubjectAgeRange.age_range_id == age_range.id)
+            .order_by(Subject.code)
+        )
+    ).all()
+
     return [r[0] for r in rows]
 
 
@@ -196,12 +246,19 @@ async def compute_totals(session: AsyncSession, *, child_id: str) -> dict:
     )
     total_points = int((await session.execute(pts_stmt)).scalar_one())
 
+    logger.info(
+        "progress_totals: child_id=%s totalPoints=%s counts=%s",
+        str(child_id),
+        total_points,
+        counts,
+    )
+
     return {
         "totalPoints": total_points,
-        "totalAffirmationsViewed": counts.get("affirmation_viewed", 0),
-        "totalChoresCompleted": counts.get("chore_completed", 0),
-        "totalOutdoorActivities": counts.get("outdoor_completed", 0),
-        "totalFlashcardsCompleted": counts.get("flashcard_answered", 0),
+        "totalAffirmationsViewed": counts.get(K_AFFIRMATION, 0),
+        "totalChoresCompleted": counts.get(K_CHORE, 0),
+        "totalOutdoorActivities": counts.get(K_OUTDOOR, 0),
+        "totalFlashcardsCompleted": counts.get(K_FLASHCARD, 0),
     }
 
 
@@ -231,25 +288,36 @@ async def compute_today_stats(session: AsyncSession, *, child_id: str) -> dict:
 
     correct_stmt = select(func.count(ChildActivityEvent.id)).where(
         ChildActivityEvent.child_id == child_id,
-        ChildActivityEvent.kind == "flashcard_answered",
+        ChildActivityEvent.kind == K_FLASHCARD,
         ChildActivityEvent.created_at >= start,
         ChildActivityEvent.created_at < end,
         ChildActivityEvent.meta["correct"].as_boolean() == True,  # noqa: E712
     )
     flash_correct = int((await session.execute(correct_stmt)).scalar_one())
 
+    logger.info(
+        "progress_today: child_id=%s date=%s counts=%s flash_correct=%s totalPoints=%s",
+        str(child_id),
+        today.isoformat(),
+        counts,
+        flash_correct,
+        total_points,
+    )
+
+    flash_completed = counts.get(K_FLASHCARD, 0)
     return {
         "date": today.isoformat(),
-        "flashcardsCompleted": counts.get("flashcard_answered", 0),
+        "flashcardsCompleted": flash_completed,
         "flashcardsCorrect": flash_correct,
-        "choresCompleted": counts.get("chore_completed", 0),
-        "outdoorActivities": counts.get("outdoor_completed", 0),
-        "affirmationsViewed": counts.get("affirmation_viewed", 0),
+        "choresCompleted": counts.get(K_CHORE, 0),
+        "outdoorActivities": counts.get(K_OUTDOOR, 0),
+        "affirmationsViewed": counts.get(K_AFFIRMATION, 0),
         "totalPoints": total_points,
-        "hasFlashcards": counts.get("flashcard_answered", 0) > 0,
-        "hasChores": counts.get("chore_completed", 0) > 0,
-        "hasOutdoor": counts.get("outdoor_completed", 0) > 0,
+        "hasFlashcards": flash_completed > 0,
+        "hasChores": counts.get(K_CHORE, 0) > 0,
+        "hasOutdoor": counts.get(K_OUTDOOR, 0) > 0,
     }
+
 
 
 async def compute_week_stats(session: AsyncSession, *, child_id: str) -> dict:
@@ -265,7 +333,7 @@ async def compute_week_stats(session: AsyncSession, *, child_id: str) -> dict:
     )
     total_points = int((await session.execute(pts_stmt)).scalar_one())
 
-    # DISTINCT UTC-days active (avoid func.date(timestamptz) timezone ambiguity)
+    # DISTINCT UTC-days active
     days_stmt = select(
         func.count(distinct(literal_column(UTC_DAY_CREATED_AT_SQL)))
     ).where(
@@ -288,10 +356,10 @@ async def compute_week_stats(session: AsyncSession, *, child_id: str) -> dict:
     rows = (await session.execute(stmt)).all()
     counts = {k: int(v) for k, v in rows}
 
-    flash_total = counts.get("flashcard_answered", 0)
+    flash_total = counts.get(K_FLASHCARD, 0)
     flash_correct_stmt = select(func.count(ChildActivityEvent.id)).where(
         ChildActivityEvent.child_id == child_id,
-        ChildActivityEvent.kind == "flashcard_answered",
+        ChildActivityEvent.kind == K_FLASHCARD,
         ChildActivityEvent.created_at >= start,
         ChildActivityEvent.created_at < end,
         ChildActivityEvent.meta["correct"].as_boolean() == True,  # noqa: E712
@@ -299,127 +367,114 @@ async def compute_week_stats(session: AsyncSession, *, child_id: str) -> dict:
     flash_correct = int((await session.execute(flash_correct_stmt)).scalar_one())
     accuracy = int(round((flash_correct / flash_total) * 100)) if flash_total > 0 else 0
 
+    logger.info(
+        "progress_week: child_id=%s weekStart=%s counts=%s flash_correct=%s accuracyPct=%s totalPoints=%s daysActive=%s",
+        str(child_id),
+        week_start.isoformat(),
+        counts,
+        flash_correct,
+        accuracy,
+        total_points,
+        days_active,
+    )
+
     return {
         "weekStart": week_start.isoformat(),
         "totalPoints": total_points,
         "daysActive": days_active,
         "flashcardsCompleted": flash_total,
-        "choresCompleted": counts.get("chore_completed", 0),
-        "outdoorActivities": counts.get("outdoor_completed", 0),
+        "choresCompleted": counts.get(K_CHORE, 0),
+        "outdoorActivities": counts.get(K_OUTDOOR, 0),
         "accuracyPct": accuracy,
     }
 
 
-async def compute_flashcards_by_subject(session: AsyncSession, *, child_id: str) -> Dict[str, dict]:
-    """
-    Return per-subject flashcard stats:
-      {
-        "<subjectId>": {"completed": int, "correct": int, "correctStreak": int, "difficulty": "easy"|"medium"|"hard"},
-        ...
-      }
 
-    Notes:
-    - Initializes all known subjects from the DB so the client can render zeros.
-    - Difficulty is computed using DB-driven thresholds (difficulty_thresholds table).
-    - correctStreak is read from ChildSubjectStreak table (updated incrementally).
-    - longestStreak is read from ChildSubjectStreak table.
-    """
-    # Initialize with all DB subjects so the client can render 0s.
-    subject_ids = await list_subject_ids(session)
+async def compute_flashcards_by_subject(session: AsyncSession, *, child_id: UUID) -> Dict[str, dict]:
+    # Initialize with subject codes filtered for the child (age-range aware)
+    subject_codes = await list_subject_ids(session, child_id=child_id)
     by_subject: Dict[str, dict] = {
-        s: {"completed": 0, "correct": 0, "correctStreak": 0, "longestStreak": 0, "difficulty": "easy"} for s in subject_ids
+        c: {"completed": 0, "correct": 0, "correctStreak": 0, "longestStreak": 0, "difficultyCode": "easy"}
+        for c in subject_codes
     }
 
-    # Load difficulty thresholds once (DB-driven).
-    # Expected by calculate_difficulty(correct, thresholds)
+    # thresholds
     thr_rows = (
         await session.execute(
-            select(DifficultyThreshold.difficulty, DifficultyThreshold.threshold)
+            select(DifficultyThreshold.code, DifficultyThreshold.threshold)
             .where(DifficultyThreshold.is_active == True)  # noqa: E712
         )
     ).all()
+    thresholds = {code: int(th) for code, th in thr_rows} or {"easy": 0, "medium": 20, "hard": 40}
 
-    thresholds = {difficulty: int(threshold) for difficulty, threshold in thr_rows}
-    if not thresholds:
-        # Fallback if the table is empty / not seeded yet
-        thresholds = {"easy": 0, "medium": 20, "hard": 40}
+    # --- aggregate events ---
+    # events store meta["subjectId"] as string(UUID) (per your progress router)
+    # cast meta->>'subjectId' to uuid and join subjects to get code
+    subject_id_uuid = text("(child_activity_events.meta->>'subjectId')::uuid")
 
-    # Count completed/correct by subjectId (stored in meta).
-    # Use a subquery to avoid Postgres GROUP BY errors on JSONB expressions.
     ev = (
         select(
-            ChildActivityEvent.meta["subjectId"].as_string().label("subjectId"),
+            Subject.code.label("subject_code"),
             ChildActivityEvent.meta["correct"].as_boolean().label("correct"),
         )
+        .select_from(ChildActivityEvent)
+        .join(Subject, Subject.id == subject_id_uuid)
         .where(
             ChildActivityEvent.child_id == child_id,
-            ChildActivityEvent.kind == "flashcard_answered",
+            ChildActivityEvent.kind == "flashcard",
         )
         .subquery()
     )
 
     stmt = (
         select(
-            ev.c.subjectId,
+            ev.c.subject_code,
             func.count().label("completed"),
-            func.coalesce(
-                func.sum(case((ev.c.correct == True, 1), else_=0)), 0  # noqa: E712
-            ).label("correct"),
+            func.coalesce(func.sum(case((ev.c.correct == True, 1), else_=0)), 0).label("correct"),  # noqa: E712
         )
-        .group_by(ev.c.subjectId)
+        .group_by(ev.c.subject_code)
     )
-
     rows = (await session.execute(stmt)).all()
 
-    for subject_id, completed, correct_sum in rows:
-        sid = subject_id or "unknown"
-        if sid not in by_subject:
-            # Fallback for events referencing subjects not present in the DB.
-            by_subject[sid] = {"completed": 0, "correct": 0, "correctStreak": 0, "longestStreak": 0, "difficulty": "easy"}
+    for code, completed, correct_sum in rows:
+        if code not in by_subject:
+            by_subject[code] = {"completed": 0, "correct": 0, "correctStreak": 0, "longestStreak": 0, "difficultyCode": "easy"}
+        by_subject[code]["completed"] = int(completed or 0)
+        by_subject[code]["correct"] = int(correct_sum or 0)
 
-        correct = int(correct_sum or 0)
-        by_subject[sid]["completed"] = int(completed or 0)
-        by_subject[sid]["correct"] = correct
-
-    # Fetch streaks from ChildSubjectStreak table (both current and longest)
+    # --- streaks ---
     streak_rows = (
         await session.execute(
             select(
-                ChildSubjectStreak.subject_id,
+                Subject.code,
                 ChildSubjectStreak.current_streak,
                 ChildSubjectStreak.longest_streak,
-            ).where(
-                ChildSubjectStreak.child_id == child_id,
             )
+            .select_from(ChildSubjectStreak)
+            .join(Subject, Subject.id == ChildSubjectStreak.subject_id)
+            .where(ChildSubjectStreak.child_id == child_id)
         )
     ).all()
 
-    for subject_id, current_streak, longest_streak in streak_rows:
-        if subject_id in by_subject:
-            by_subject[subject_id]["correctStreak"] = current_streak
-            by_subject[subject_id]["longestStreak"] = longest_streak
+    for code, current_streak, longest_streak in streak_rows:
+        if code in by_subject:
+            by_subject[code]["correctStreak"] = int(current_streak or 0)
+            by_subject[code]["longestStreak"] = int(longest_streak or 0)
 
-    # Compute difficulty based on current streak (now from ChildSubjectStreak table)
-    for sid in by_subject:
-        by_subject[sid]["difficulty"] = calculate_difficulty_from_streak(by_subject[sid]["correctStreak"], thresholds)
+    # --- difficulty + tier boundaries ---
+    sorted_tiers = sorted(thresholds.items(), key=lambda x: x[1])
 
-    # Compute threshold boundaries for UI progress display
-    for sid in by_subject:
-        current_diff = by_subject[sid]["difficulty"]
-        
-        # Determine tier boundaries based on current difficulty
-        if current_diff == "easy":
-            current_start = thresholds.get("easy", 0)
-            next_threshold = thresholds.get("medium", 20)
-        elif current_diff == "medium":
-            current_start = thresholds.get("medium", 20)
-            next_threshold = thresholds.get("hard", 40)
-        else:  # hard
-            current_start = thresholds.get("hard", 40)
-            next_threshold = None  # Max tier reached
-        
-        by_subject[sid]["currentTierStartAtStreak"] = current_start
-        by_subject[sid]["nextDifficultyAtStreak"] = next_threshold
+    for code in list(by_subject.keys()):
+        streak = int(by_subject[code]["correctStreak"] or 0)
+        diff = calculate_difficulty_from_streak(streak, thresholds)
+        by_subject[code]["difficultyCode"] = diff
+
+        tier_index = next((i for i, (name, _) in enumerate(sorted_tiers) if name == diff), 0)
+        current_start = sorted_tiers[tier_index][1]
+        next_threshold = sorted_tiers[tier_index + 1][1] if tier_index + 1 < len(sorted_tiers) else None
+
+        by_subject[code]["currentTierStartAtStreak"] = current_start
+        by_subject[code]["nextDifficultyAtStreak"] = next_threshold
 
     return by_subject
 

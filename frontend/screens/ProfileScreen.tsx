@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+// frontend/screens/ProfileScreen.tsx
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
-  Image,
   Pressable,
   ScrollView,
   RefreshControl,
@@ -11,43 +11,48 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ScreenScrollView } from "@/components/ScreenScrollView";
+import { AvatarThumb } from "@/components/AvatarThumb";
 import { useTheme } from "@/hooks/useTheme";
-// NOTE: Completion/progress display numbers on this screen come from DashboardContext only.
 import { useDashboard } from "@/contexts/DashboardContext";
 import { Spacing, BorderRadius, Typography } from "@/constants/theme";
-import { useCurrentChildId } from "@/contexts/ChildContext";
+import { useCurrentChild } from "@/contexts/ChildContext";
 import { getChildById } from "@/services/childrenService";
+import { getAvatars } from "@/services/avatarsService";
+import { getSubjects } from "@/services/subjectsService";
+import { getDifficulties } from "@/services/difficultiesService";
+import type {
+  Subject,
+  DifficultyCode,
+  DifficultyThreshold,
+  UUID,
+} from "@/types/models";
 import { useNavigation } from "@react-navigation/native";
-
-const SUBJECT_INFO: Record<SubjectId, { name: string; icon: string; color: string }> = {
-  math: { name: "Math", icon: "grid", color: "#8B5CF6" },
-  science: { name: "Science", icon: "zap", color: "#10B981" },
-  reading: { name: "Reading", icon: "book-open", color: "#FB923C" },
-  history: { name: "History", icon: "globe", color: "#3B82F6" },
-};
-
-const DIFFICULTY_LABELS = {
-  easy: { label: "Easy", color: "#10B981" },
-  medium: { label: "Medium", color: "#F59E0B" },
-  hard: { label: "Hard", color: "#EF4444" },
-};
-
-type SubjectId = "math" | "science" | "reading" | "history";
-
-const SUBJECTS: SubjectId[] = ["math", "science", "reading", "history"];
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation();
-  const { childId } = useCurrentChildId();
-  const [childName, setChildName] = useState<string | null>(null);
+  const { childId } = useCurrentChild(); // string | null
 
+  const [childName, setChildName] = useState<string | null>(null);
+  const [childAvatarId, setChildAvatarId] = useState<string | null>(null);
+
+  const [avatarsById, setAvatarsById] = useState<Map<string, import("@/types/models").Avatar> | null>(null);
+  const avatarsFetchInFlight = useRef(false);
+
+  // ✅ Subjects are objects, keyed by subject.id (UUID)
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+
+  // ✅ Difficulties should be objects (DifficultyThreshold), not DifficultyCode[]
+  const [difficulties, setDifficulties] = useState<DifficultyThreshold[]>([]);
+
+  // ---- Load child name ----
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      if (!childId) {
+      if (!childId || childId.trim().length === 0) {
         setChildName(null);
+        setChildAvatarId(null);
         return;
       }
 
@@ -55,8 +60,12 @@ export default function ProfileScreen() {
         const child = await getChildById(childId);
         if (cancelled) return;
         setChildName(child?.name ?? null);
+        setChildAvatarId(child?.avatarId ?? null);
       } catch {
-        if (!cancelled) setChildName(null);
+        if (!cancelled) {
+          setChildName(null);
+          setChildAvatarId(null);
+        }
       }
     })();
 
@@ -64,6 +73,30 @@ export default function ProfileScreen() {
       cancelled = true;
     };
   }, [childId]);
+
+  // ---- Fetch avatars catalog once (non-blocking; fall back to initials if it fails) ----
+  useEffect(() => {
+    let cancelled = false;
+
+    if (avatarsById || avatarsFetchInFlight.current) return;
+    avatarsFetchInFlight.current = true;
+
+    void (async () => {
+      try {
+        const list = await getAvatars();
+        if (cancelled) return;
+        setAvatarsById(new Map(list.map((a) => [a.id, a])));
+      } catch (e) {
+        console.warn("[ProfileScreen] Failed to load avatars", e);
+      } finally {
+        avatarsFetchInFlight.current = false;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [avatarsById]);
 
   const {
     data: dashboard,
@@ -75,12 +108,10 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
-    if (!childId) return;
+    if (!childId || childId.trim().length === 0) return;
     setRefreshing(true);
     try {
       await refreshDashboard({ force: true });
-    } catch {
-      // Error is surfaced via DashboardContext.error
     } finally {
       setRefreshing(false);
     }
@@ -100,14 +131,15 @@ export default function ProfileScreen() {
   const balancedProgress = dashboard?.balanced;
 
   const totalFlashcards = Object.values(dashboard?.flashcardsBySubject ?? {}).reduce(
-    (acc, s) => acc + (s?.completed ?? 0),
+    (acc: number, s: any) => acc + (s?.completed ?? 0),
     0,
   );
   const totalCorrect = Object.values(dashboard?.flashcardsBySubject ?? {}).reduce(
-    (acc, s) => acc + (s?.correct ?? 0),
+    (acc: number, s: any) => acc + (s?.correct ?? 0),
     0,
   );
-  const accuracy = totalFlashcards > 0 ? Math.round((totalCorrect / totalFlashcards) * 100) : 0;
+  const accuracy =
+    totalFlashcards > 0 ? Math.round((totalCorrect / totalFlashcards) * 100) : 0;
 
   const unlockedAchievements = dashboard?.achievementsUnlocked ?? [];
   const lockedAchievements = dashboard?.achievementsLocked ?? [];
@@ -117,14 +149,83 @@ export default function ProfileScreen() {
     refreshDashboard({ force: false }).catch(() => {});
   }, [refreshDashboard]);
 
+  // ---- Fetch subjects for this child ----
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSubjects = async () => {
+      if (!childId || childId.trim().length === 0) {
+        setSubjects([]);
+        return;
+      }
+      try {
+        const data = await getSubjects(childId);
+        if (!cancelled) setSubjects(data);
+      } catch (e) {
+        console.error("Failed to load subjects:", e);
+        if (!cancelled) setSubjects([]);
+      }
+    };
+
+    loadSubjects();
+    return () => {
+      cancelled = true;
+    };
+  }, [childId]);
+
+  // ---- Fetch difficulties (thresholds/config) ----
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDifficulties = async () => {
+      try {
+        const data = await getDifficulties();
+        if (!cancelled) setDifficulties(data);
+      } catch (e) {
+        console.error("Failed to load difficulties:", e);
+        if (!cancelled) setDifficulties([]);
+      }
+    };
+
+    loadDifficulties();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ✅ Lookup difficulty info by code ("easy"/"medium"/"hard"/etc)
+  const difficultyByCode = useMemo(() => {
+    const map = new Map<DifficultyCode, DifficultyThreshold>();
+    for (const d of difficulties) map.set(d.code, d);
+    return map;
+  }, [difficulties]);
+
+  // Helper: get subject stats from dashboard map using subject.code (string)
+  const getSubjectStats = useCallback(
+    (subjectCode: string) => {
+      // Backend now keys flashcardsBySubject by Subject.code (string), not UUID
+      return (dashboard?.flashcardsBySubject as any)?.[subjectCode] as
+        | {
+            difficultyCode?: DifficultyCode | null;
+            difficulty?: DifficultyCode | null; // tolerate older field name
+          }
+        | undefined;
+    },
+    [dashboard],
+  );
+
   return (
     <ScreenScrollView refreshControl={refreshControl}>
       <ThemedView style={styles.container}>
         <View style={styles.avatarSection}>
-          <Image
-            source={require("@/assets/avatars/astronaut_avatar.png")}
-            style={styles.avatar}
+          <AvatarThumb
+            name={childName ?? "Profile"}
+            imageUri={(childAvatarId ? avatarsById?.get(childAvatarId)?.imagePath : null) ?? null}
+            backgroundColor={theme.backgroundSecondary}
+            size={100}
+            borderRadius={BorderRadius.lg}
           />
+
           <ThemedText type="title" style={styles.name}>
             {childName ?? "Profile"}
           </ThemedText>
@@ -145,8 +246,6 @@ export default function ProfileScreen() {
           {childName ? (
             <Pressable
               onPress={() => {
-                // Profile stack is nested inside Main tabs, which are inside the Root stack.
-                // Navigate via parent to reach the Root route.
                 navigation.getParent()?.navigate("ChildSelect" as never);
               }}
               accessibilityRole="button"
@@ -165,6 +264,7 @@ export default function ProfileScreen() {
               </ThemedText>
             </Pressable>
           ) : null}
+
           <View
             style={[
               styles.levelBadge,
@@ -176,9 +276,7 @@ export default function ProfileScreen() {
               size={16}
               color="white"
             />
-            <ThemedText style={styles.levelText}>
-              {reward?.level ?? ""}
-            </ThemedText>
+            <ThemedText style={styles.levelText}>{reward?.level ?? ""}</ThemedText>
           </View>
         </View>
 
@@ -205,7 +303,7 @@ export default function ProfileScreen() {
                 Best Streak
               </ThemedText>
             </View>
-            <View style={[styles.streakDivider, { backgroundColor: theme.border }]} />
+            <View style={[styles.streakDivider, { backgroundColor: theme.backgroundSecondary }]} />
             <View style={styles.streakStat}>
               <ThemedText style={[styles.streakStatValue, { color: theme.text }]}>
                 {dashboard?.totalPoints ?? 0}
@@ -224,27 +322,26 @@ export default function ProfileScreen() {
               Level Progress
             </ThemedText>
           </View>
-          
+
           <View style={styles.levelInfo}>
             <ThemedText style={[styles.currentLevelLabel, { color: theme.textSecondary }]}>
               Current Level
             </ThemedText>
             <View style={styles.currentLevelRow}>
               <View
-              style={[
-                styles.levelBadgeSmall,
-                { backgroundColor: reward?.color ?? theme.primary },
-              ]}
-            >
-              <Feather
-                name={(reward?.icon ?? "award") as any}
-                size={14}
-                color="white"
-              />
-              <ThemedText style={styles.levelTextSmall}>
-                {reward?.level ?? ""}
-              </ThemedText>
-            </View>
+                style={[
+                  styles.levelBadgeSmall,
+                  { backgroundColor: reward?.color ?? theme.primary },
+                ]}
+              >
+                <Feather
+                  name={(reward?.icon ?? "award") as any}
+                  size={14}
+                  color="white"
+                />
+                <ThemedText style={styles.levelTextSmall}>{reward?.level ?? ""}</ThemedText>
+              </View>
+
               {balancedProgress?.nextLevel ? (
                 <View style={styles.nextLevelInfo}>
                   <Feather name="arrow-right" size={16} color={theme.textSecondary} />
@@ -260,9 +357,7 @@ export default function ProfileScreen() {
             style={[
               styles.balanceMessage,
               {
-                color: balancedProgress?.canLevelUp
-                  ? theme.success
-                  : theme.textSecondary,
+                color: balancedProgress?.canLevelUp ? theme.success : theme.textSecondary,
               },
             ]}
           >
@@ -274,58 +369,51 @@ export default function ProfileScreen() {
               <ThemedText style={[styles.subjectProgressTitle, { color: theme.textSecondary }]}>
                 Correct Answers Needed Per Subject:
               </ThemedText>
-              {SUBJECTS.map((subjectId) => {
-                const subjectInfo = SUBJECT_INFO[subjectId];
-                const subjectProg = balancedProgress?.subjectProgress?.[subjectId] as
+
+              {subjects.map((subject) => {
+                // ✅ subjectProgress is keyed by subject.code (string)
+                const subjectProg = (balancedProgress?.subjectProgress as any)?.[subject.code] as
                   | { current: number; required: number; met: boolean }
                   | undefined;
 
-                const difficulty =
-                  dashboard?.flashcardsBySubject?.[subjectId]?.difficulty ?? "easy";
-                const diffInfo = DIFFICULTY_LABELS[difficulty];
+                // ✅ stats map is keyed by subject.code (string)
+                const stats = getSubjectStats(subject.code);
 
-                const required = balancedProgress?.requiredPerSubject ?? 0;
+                // Prefer difficultyCode; tolerate old "difficulty"
+                const difficultyCode: DifficultyCode =
+                  (stats?.difficultyCode ??
+                    stats?.difficulty ??
+                    "easy") as DifficultyCode;
+
+                const diffInfo = difficultyByCode.get(difficultyCode);
+                if (!diffInfo) return null;
+
+                const required = subjectProg?.required ?? balancedProgress?.requiredPerSubject ?? 0;
                 const current = subjectProg?.current ?? 0;
                 const met = subjectProg?.met ?? false;
-                const progressPercent = required > 0 ? Math.min((current / required) * 100, 100) : 100;
+
+                const progressPercent =
+                  required > 0 ? Math.min((current / required) * 100, 100) : 100;
 
                 return (
-                  <View key={subjectId} style={styles.subjectProgressItem}>
+                  <View key={subject.id} style={styles.subjectProgressItem}>
                     <View style={styles.subjectProgressHeader}>
                       <View style={styles.subjectProgressLabelRow}>
-                        <View
-                          style={[
-                            styles.subjectIcon,
-                            { backgroundColor: subjectInfo.color + "20" },
-                          ]}
-                        >
-                          <Feather
-                            name={subjectInfo.icon as any}
-                            size={14}
-                            color={subjectInfo.color}
-                          />
+                        <View style={[styles.subjectIcon, { backgroundColor: subject.color + "20" }]}>
+                          <Feather name={subject.icon as any} size={14} color={subject.color} />
                         </View>
-                        <ThemedText
-                          style={[styles.subjectName, { color: theme.textPrimary }]}
-                        >
-                          {subjectInfo.name}
+
+                        <ThemedText style={[styles.subjectName, { color: theme.text }]}>
+                          {subject.name}
                         </ThemedText>
-                        <View
-                          style={[
-                            styles.difficultyPill,
-                            { backgroundColor: diffInfo.color + "20" },
-                          ]}
-                        >
-                          <ThemedText
-                            style={[
-                              styles.difficultyPillText,
-                              { color: diffInfo.color },
-                            ]}
-                          >
+
+                        <View style={[styles.difficultyPill, { backgroundColor: diffInfo.color + "20" }]}>
+                          <ThemedText style={[styles.difficultyPillText, { color: diffInfo.color }]}>
                             {diffInfo.label}
                           </ThemedText>
                         </View>
                       </View>
+
                       <View style={styles.subjectProgressCountRow}>
                         <ThemedText
                           style={[
@@ -335,27 +423,18 @@ export default function ProfileScreen() {
                         >
                           {current}/{required}
                         </ThemedText>
-                        {met ? (
-                          <Feather
-                            name="check-circle"
-                            size={16}
-                            color="#10B981"
-                          />
-                        ) : null}
+
+                        {met ? <Feather name="check-circle" size={16} color="#10B981" /> : null}
                       </View>
                     </View>
-                    <View
-                      style={[
-                        styles.subjectProgressBar,
-                        { backgroundColor: theme.border },
-                      ]}
-                    >
+
+                    <View style={[styles.subjectProgressBar, { backgroundColor: theme.backgroundDefault }]}>
                       <View
                         style={[
                           styles.subjectProgressFill,
                           {
                             width: `${progressPercent}%`,
-                            backgroundColor: met ? "#10B981" : subjectInfo.color,
+                            backgroundColor: met ? "#10B981" : subject.color,
                           },
                         ]}
                       />
@@ -374,6 +453,7 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* Everything below here is unchanged from your file */}
         <ThemedText type="headline" style={styles.sectionTitle}>
           Today's Progress
         </ThemedText>
@@ -480,20 +560,25 @@ export default function ProfileScreen() {
         </View>
 
         <ThemedText type="headline" style={styles.sectionTitle}>
-          Achievements ({unlockedAchievements.length}/{(dashboard?.achievementsUnlocked?.length ?? 0) + (dashboard?.achievementsLocked?.length ?? 0)})
+          Achievements ({unlockedAchievements.length}/
+          {(dashboard?.achievementsUnlocked?.length ?? 0) +
+            (dashboard?.achievementsLocked?.length ?? 0)})
         </ThemedText>
 
         {unlockedAchievements.length > 0 ? (
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.achievementsScroll}
             contentContainerStyle={styles.achievementsContent}
           >
-            {unlockedAchievements.map((achievement) => (
-              <View 
+            {unlockedAchievements.map((achievement: any) => (
+              <View
                 key={achievement.id}
-                style={[styles.achievementCard, { backgroundColor: theme.primary + "15" }]}
+                style={[
+                  styles.achievementCard,
+                  { backgroundColor: theme.primary + "15" },
+                ]}
               >
                 <View style={[styles.achievementIcon, { backgroundColor: theme.primary }]}>
                   <Feather name={achievement.icon as any} size={20} color="white" />
@@ -501,8 +586,8 @@ export default function ProfileScreen() {
                 <ThemedText style={styles.achievementTitle} numberOfLines={1}>
                   {achievement.title}
                 </ThemedText>
-                <ThemedText 
-                  style={[styles.achievementDesc, { color: theme.textSecondary }]} 
+                <ThemedText
+                  style={[styles.achievementDesc, { color: theme.textSecondary }]}
                   numberOfLines={2}
                 >
                   {achievement.description}
@@ -524,16 +609,16 @@ export default function ProfileScreen() {
         </ThemedText>
 
         <View style={styles.lockedGrid}>
-          {lockedAchievements.slice(0, 6).map((achievement) => (
-            <View 
+          {lockedAchievements.slice(0, 6).map((achievement: any) => (
+            <View
               key={achievement.id}
               style={[styles.lockedCard, { backgroundColor: theme.backgroundDefault }]}
             >
-              <View style={[styles.lockedIcon, { backgroundColor: theme.border }]}>
+              <View style={[styles.lockedIcon, { backgroundColor: theme.backgroundSecondary }]}>
                 <Feather name="lock" size={16} color={theme.textSecondary} />
               </View>
-              <ThemedText 
-                style={[styles.lockedTitle, { color: theme.textSecondary }]} 
+              <ThemedText
+                style={[styles.lockedTitle, { color: theme.textSecondary }]}
                 numberOfLines={1}
               >
                 {achievement.title}
@@ -591,25 +676,19 @@ export default function ProfileScreen() {
           Settings
         </ThemedText>
 
-        <Pressable
-          style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}
-        >
+        <Pressable style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}>
           <Feather name="bell" size={20} color={theme.text} />
           <ThemedText style={styles.settingText}>Notifications</ThemedText>
           <Feather name="chevron-right" size={20} color={theme.textSecondary} />
         </Pressable>
 
-        <Pressable
-          style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}
-        >
+        <Pressable style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}>
           <Feather name="droplet" size={20} color={theme.text} />
           <ThemedText style={styles.settingText}>Theme</ThemedText>
           <Feather name="chevron-right" size={20} color={theme.textSecondary} />
         </Pressable>
 
-        <Pressable
-          style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}
-        >
+        <Pressable style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}>
           <Feather name="help-circle" size={20} color={theme.text} />
           <ThemedText style={styles.settingText}>Help & Support</ThemedText>
           <Feather name="chevron-right" size={20} color={theme.textSecondary} />
@@ -635,9 +714,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: BorderRadius.lg,
     marginBottom: Spacing.md,
   },
   name: {

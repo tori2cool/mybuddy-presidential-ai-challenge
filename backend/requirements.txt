@@ -16,6 +16,9 @@ redis[hiredis]
 # Celery
 celery
 
+# OpenAI
+openai>=1.0.0
+
 # JWT / Keycloak
 python-jose[cryptography]
 requests
