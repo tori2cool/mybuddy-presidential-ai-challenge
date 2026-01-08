@@ -30,6 +30,7 @@ export function AvatarThumb({
 
     // Relative URL - prefix with backend image base
     const base = process.env.EXPO_PUBLIC_BACKEND_IMG_URL;
+    console.log('Backend IMG URL from env:', process.env.EXPO_PUBLIC_BACKEND_IMG_URL);
     if (!base) return imageUri;
 
     const baseTrimmed = base.replace(/\/+$/, "");
@@ -51,6 +52,8 @@ export function AvatarThumb({
   }, [normalizedUri]);
 
   const resolvedBorderRadius = borderRadius ?? Math.max(0, Math.round(size / 6));
+
+  console.log('Full thumbnail URL being requested:', normalizedUri);
 
   return (
     <View

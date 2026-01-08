@@ -52,7 +52,7 @@ class Settings(BaseModel):
     )
 
     # If we generate images from backend, this is the base URL for them
-    backend_img_url: str = os.getenv("BACKEND_IMG_URL", "http://localhost:80/img")
+    backend_img_url: str = os.getenv("BACKEND_IMG_URL", "http://localhost:3000")
 
     # ---- Content Expansion ----
     # Maximum auto-generated flashcards per subject/age/difficulty combination
