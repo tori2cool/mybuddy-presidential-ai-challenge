@@ -11,7 +11,7 @@ import Animated, {
   runOnJS,
   interpolate,
   Extrapolation,
-  SharedValue,
+  SharedValue
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -134,10 +134,6 @@ export function FloatingBuddy() {
     setIsChatOpen(true);
   };
 
-  const handleOpenCustomizer = () => {
-    setIsCustomizerOpen(true);
-  };
-
   const handleShowBuddy = () => {
     const targetX = hiddenOnLeft.value ? leftEdge : rightEdge;
     const targetY = Math.max(topEdge, Math.min(bottomEdge, lastPositionY.value || defaultPositionY));
@@ -146,8 +142,11 @@ export function FloatingBuddy() {
     setIsVisible(true);
   };
 
+  const startTime = useSharedValue(0);
+
   const panGesture = Gesture.Pan()
     .onStart(() => {
+      startTime.value = Date.now();
       startX.value = translateX.value;
       startY.value = translateY.value;
       scale.value = withSpring(1.1);
@@ -157,31 +156,42 @@ export function FloatingBuddy() {
       translateY.value = startY.value + event.translationY;
     })
     .onEnd((event) => {
-      scale.value = withSpring(1);
+      const duration = Date.now() - startTime.value;
+      const movedX = Math.abs(event.translationX);
+      const movedY = Math.abs(event.translationY);
 
-      const currentX = translateX.value;
-      const currentY = translateY.value;
-      const velocityX = event.velocityX;
-
-      if (velocityX > 500 || event.translationX > HIDE_THRESHOLD) {
-        hiddenOnLeft.value = false;
-        lastPositionY.value = currentY;
-        translateX.value = withSpring(SCREEN_WIDTH + BUDDY_SIZE);
-        runOnJS(setIsVisible)(false);
-      } else if (velocityX < -500 || event.translationX < -HIDE_THRESHOLD) {
-        hiddenOnLeft.value = true;
-        lastPositionY.value = currentY;
-        translateX.value = withSpring(-BUDDY_SIZE - 20);
-        runOnJS(setIsVisible)(false);
+      if (duration < 250 && movedX < 10 && movedY < 10) {
+        // Short tap detected — open chat
+        runOnJS(() => alert('Short tap detected! Opening chat...'))();
+        runOnJS(handleOpenChat)();
       } else {
-        const snapToRight = currentX > SCREEN_WIDTH / 2;
-        const snapToBottom = currentY > SCREEN_HEIGHT / 2;
+        // Drag ended — your existing minimize/snap logic
+        scale.value = withSpring(1);
 
-        const targetX = snapToRight ? rightEdge : leftEdge;
-        const targetY = snapToBottom ? bottomEdge : topEdge;
+        const currentX = translateX.value;
+        const currentY = translateY.value;
+        const velocityX = event.velocityX;
 
-        translateX.value = withSpring(targetX, { damping: 18, stiffness: 180 });
-        translateY.value = withSpring(targetY, { damping: 18, stiffness: 180 });
+        if (velocityX > 500 || event.translationX > HIDE_THRESHOLD) {
+          hiddenOnLeft.value = false;
+          lastPositionY.value = currentY;
+          translateX.value = withSpring(SCREEN_WIDTH + BUDDY_SIZE);
+          runOnJS(setIsVisible)(false);
+        } else if (velocityX < -500 || event.translationX < -HIDE_THRESHOLD) {
+          hiddenOnLeft.value = true;
+          lastPositionY.value = currentY;
+          translateX.value = withSpring(-BUDDY_SIZE - 20);
+          runOnJS(setIsVisible)(false);
+        } else {
+          const snapToRight = currentX > SCREEN_WIDTH / 2;
+          const snapToBottom = currentY > SCREEN_HEIGHT / 2;
+
+          const targetX = snapToRight ? rightEdge : leftEdge;
+          const targetY = snapToBottom ? bottomEdge : topEdge;
+
+          translateX.value = withSpring(targetX, { damping: 18, stiffness: 180 });
+          translateY.value = withSpring(targetY, { damping: 18, stiffness: 180 });
+        }
       }
     });
 
@@ -190,14 +200,7 @@ export function FloatingBuddy() {
       runOnJS(handleOpenChat)();
     });
 
-  const longPressGesture = Gesture.LongPress()
-    .minDuration(600)
-    .onEnd(() => {
-      runOnJS(handleOpenCustomizer)();
-    });
-
-  const tapLongPress = Gesture.Exclusive(longPressGesture, tapGesture);
-  const combinedGesture = Gesture.Simultaneous(panGesture, tapLongPress);
+  const combinedGesture = Gesture.Race(tapGesture, panGesture);
 
   const buddyAnimatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
@@ -243,14 +246,18 @@ export function FloatingBuddy() {
 
   return (
     <>
-      <GestureDetector gesture={combinedGesture}>
-        <Animated.View style={[styles.buddyContainer, buddyAnimatedStyle]}>
+    <GestureDetector gesture={combinedGesture}>
+      <Animated.View style={[styles.buddyContainer, buddyAnimatedStyle]}>
+        <Pressable onPress={() => {
+          runOnJS(handleOpenChat)();
+        }}>
           <View style={[styles.buddyBubble, { backgroundColor: appearance.skinColor || theme.primary }]}>
             <BuddyFace appearance={appearance as any} size={BUDDY_SIZE * 0.8} />
           </View>
-          <View style={[styles.statusIndicator, { backgroundColor: theme.success }]} />
-        </Animated.View>
-      </GestureDetector>
+        </Pressable>
+        <View style={[styles.statusIndicator, { backgroundColor: theme.success }]} />
+      </Animated.View>
+    </GestureDetector>
 
       {isTabVisible ? (
         <Animated.View 

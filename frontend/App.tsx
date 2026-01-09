@@ -1,6 +1,7 @@
 import React from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
+import { useNavigationState } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -8,10 +9,35 @@ import { StatusBar } from "expo-status-bar";
 
 import RootNavigator from "@/navigation/RootNavigator";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-
+import { BuddyProvider } from "@/contexts/BuddyContext";
 import { ChildProvider } from "@/contexts/ChildContext";
 import { DashboardProvider } from "@/contexts/DashboardContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemedText } from "./components/ThemedText";
+import { FloatingBuddy } from "./components/FloatingBuddy";
+import { BuddyChatSheet } from "./components/BuddyChatSheet";
+import { useBuddy } from "@/contexts/BuddyContext"; 
+import { BuddyCustomizer } from "./components/BuddyCustomizer";
+import { useCurrentChild } from "@/contexts/ChildContext";
+
+export function BuddyOverlays() {
+  const { isChatOpen, isCustomizerOpen } = useBuddy();
+  const { childId, isSessionActive } = useCurrentChild();
+
+  const shouldShowBuddy = !!childId && isSessionActive;
+
+  if (!shouldShowBuddy) {
+    return null;
+  }
+
+  return (
+    <>
+      <FloatingBuddy />
+      {isChatOpen && <BuddyChatSheet />}
+      {isCustomizerOpen && <BuddyCustomizer />}
+    </>
+  );
+}
 
 function AppInner() {
   const { loading } = useAuth();
@@ -22,9 +48,15 @@ function AppInner() {
 
   return (
     <>
-      <NavigationContainer>
-        <RootNavigator />
-      </NavigationContainer>
+      <BuddyProvider>
+        <DashboardProvider>
+          <NavigationContainer>
+            <RootNavigator />
+            <BuddyOverlays />
+          </NavigationContainer>         
+        </DashboardProvider>
+      </BuddyProvider>
+
       <StatusBar style="auto" />
     </>
   );
@@ -35,16 +67,14 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <ChildProvider>
-          <DashboardProvider>
-              <SafeAreaProvider>
-                <GestureHandlerRootView style={styles.root}>
-                  <KeyboardProvider>
-                    <AppInner />
-                  </KeyboardProvider>
-                </GestureHandlerRootView>
-              </SafeAreaProvider>
-            </DashboardProvider>
-          </ChildProvider>
+          <SafeAreaProvider>
+            <GestureHandlerRootView style={styles.root}>
+              <KeyboardProvider>
+                <AppInner />
+              </KeyboardProvider>
+            </GestureHandlerRootView>
+          </SafeAreaProvider>
+        </ChildProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

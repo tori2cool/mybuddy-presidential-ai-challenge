@@ -22,10 +22,10 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
 import { ThemedText } from '@/components/ThemedText';
 import { useBuddy, ConversationMessage } from '@/contexts/BuddyContext';
-import { useProgress } from '@/contexts/ProgressContext';
 import { useTheme } from '@/hooks/useTheme';
 import { getBuddyResponse, extractLearningsFromMessage } from '@/services/aiService';
 import { Spacing, BorderRadius } from '@/constants/theme';
+import { useDashboard } from '@/contexts/DashboardContext';
 
 const QUICK_ACTIONS = [
   { id: 'flashcards', label: 'Help with flashcards', icon: 'book' },
@@ -70,7 +70,8 @@ export function BuddyChatSheet() {
     addLearnedFact,
     getRecentMessages 
   } = useBuddy();
-  const { progress, getTodayStats, getLevelInfo } = useProgress();
+
+  const dashboard = useDashboard();
 
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -123,16 +124,15 @@ export function BuddyChatSheet() {
     setIsLoading(true);
 
     try {
-      const todayStats = getTodayStats();
-      const levelInfo = getLevelInfo();
-      
+      const dashboardData = dashboard.data ?? {};
       const progressInfo = {
-        flashcardsCompleted: todayStats?.flashcardsCompleted || 0,
-        choresCompleted: todayStats?.choresCompleted || 0,
-        outdoorActivities: todayStats?.outdoorActivities || 0,
-        currentStreak: progress.currentStreak,
-        currentGrade: levelInfo.gradeInfo.name,
-        currentLevel: levelInfo.gradeLevel,
+        flashcardsCompleted: dashboardData?.today?.flashcardsCompleted ?? 0,
+        choresCompleted: dashboardData?.today?.choresCompleted ?? 0,
+        outdoorActivitiesCompleted: dashboardData?.today?.outdoorActivities ?? 0,
+        affirmationsViewed: dashboardData?.today?.affirmationsViewed ?? 0,
+        currentLevel: dashboardData?.balanced?.currentLevel ?? '1',
+        xpToNextLevel: dashboardData?.reward?.nextAt ?? 100,
+        currentXP: dashboardData?.reward?.progress ?? 0,
       };
 
       const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';

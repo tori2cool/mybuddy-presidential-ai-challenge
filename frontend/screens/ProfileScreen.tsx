@@ -27,6 +27,7 @@ import type {
   UUID,
 } from "@/types/models";
 import { useNavigation } from "@react-navigation/native";
+import { AINoticeFooter } from "@/components/AINoticeFooter";
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
@@ -695,6 +696,7 @@ export default function ProfileScreen() {
         </Pressable>
 
         <View style={styles.bottomPadding} />
+        <AINoticeFooter />
       </ThemedView>
     </ScreenScrollView>
   );

@@ -11,6 +11,7 @@ import {
   setTokenRefresher,
   setUnauthorizedHandler,
 } from "@/services/apiClient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type AuthUser = {
   sub: string;
@@ -131,6 +132,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function logout() {
     await clear();
+    await AsyncStorage.removeItem("selected_child_id");
+    await AsyncStorage.removeItem("child_session_active");
   }
 
   return (

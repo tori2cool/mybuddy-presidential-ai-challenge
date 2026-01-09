@@ -15,10 +15,20 @@ export function DatePicker({
         maximumDate={maximumDate}
         mode="date"
         display={Platform.OS === "ios" ? "spinner" : "default"}
-        onChange={(_, date) => {
-          // Android fires with undefined on cancel
-          if (date) {
-            onChange(date);
+        onChange={(_, selectedDate) => {
+          // Android fires with undefined when user cancels
+          if (selectedDate) {
+            // Normalize to noon local time to avoid timezone offset rollover
+            const normalizedDate = new Date(
+              selectedDate.getFullYear(),
+              selectedDate.getMonth(),
+              selectedDate.getDate(),
+              12, // noon — prevents DST/timezone edge cases
+              0,
+              0,
+              0
+            );
+            onChange(normalizedDate);
           }
         }}
       />

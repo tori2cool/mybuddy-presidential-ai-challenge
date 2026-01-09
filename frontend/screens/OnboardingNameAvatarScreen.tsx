@@ -121,7 +121,9 @@ const interestIds: UUID[] | null =
     }
 
     try {
-      const birthdayIso = birthday.toISOString().slice(0, 10); // YYYY-MM-DD
+      const birthdayIso = birthday
+      ? `${birthday.getFullYear()}-${String(birthday.getMonth() + 1).padStart(2, '0')}-${String(birthday.getDate()).padStart(2, '0')}`
+      : '';
 
       const created = await createChild({
         name: name.trim(),
@@ -234,7 +236,8 @@ const interestIds: UUID[] | null =
             ]}
           >
             <ThemedText style={{ color: birthday ? theme.text : theme.textSecondary }}>
-              {birthday ? birthday.toLocaleDateString() : "Tap to pick your birthday"}
+              {birthday ? `${birthday.getFullYear()}-${String(birthday.getMonth() + 1).padStart(2, '0')}-${String(birthday.getDate()).padStart(2, '0')}` 
+              : 'Tap to pick your birthday'}
             </ThemedText>
           </Pressable>
 
