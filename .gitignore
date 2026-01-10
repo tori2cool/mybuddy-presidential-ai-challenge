@@ -1,4 +1,8 @@
 # -------------------------------------------------------
+# get our seed images in then ignore img/*
+#img/*
+
+# -------------------------------------------------------
 # Python bytecode and cache
 # -------------------------------------------------------
 __pycache__/
@@ -72,7 +76,6 @@ expo-env.d.ts
 dist/
 web-build/
 assets/
-img/
 
 # Native build outputs
 ios/

@@ -135,12 +135,12 @@ async def _fetch_map(conn, model, key_col, val_col) -> dict[Any, Any]:
 
 # ========== AVATARS ==========
 AVATARS_SEED = [
-    {"name": "astronaut", "image_path": "avatars/astronaut_avatar.png"},
-    {"name": "artist", "image_path": "avatars/artist_avatar.png"},
-    {"name": "athlete", "image_path": "avatars/athlete_avatar.png"},
-    {"name": "explorer", "image_path": "avatars/explorer_avatar.png"},
-    {"name": "scientist", "image_path": "avatars/scientist_avatar.png"},
-    {"name": "musician", "image_path": "avatars/musician_avatar.png"},
+    {"name": "astronaut", "image_path": "avatars/astronaut_avatar.webp"},
+    {"name": "artist", "image_path": "avatars/artist_avatar.webp"},
+    {"name": "athlete", "image_path": "avatars/athlete_avatar.webp"},
+    {"name": "explorer", "image_path": "avatars/explorer_avatar.webp"},
+    {"name": "scientist", "image_path": "avatars/scientist_avatar.webp"},
+    {"name": "musician", "image_path": "avatars/musician_avatar.webp"},
 ]
 
 # ========== INTERESTS ==========
