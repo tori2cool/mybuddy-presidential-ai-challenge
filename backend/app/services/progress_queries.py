@@ -1,10 +1,10 @@
 # app/services/progress_queries.py
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Any
 from uuid import UUID
 from datetime import datetime, timedelta, timezone, date as date_type
 
-from sqlalchemy import func, distinct, case, text, literal_column
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import func, distinct, case, literal_column, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -55,6 +55,15 @@ def _week_start_utc(d: date_type) -> date_type:
     shift = (d.weekday() + 1) % 7
     return d - timedelta(days=shift)
 
+def _uuid_or_none(value: Any) -> Optional[UUID]:
+    if value is None:
+        return None
+    if isinstance(value, UUID):
+        return value
+    try:
+        return UUID(str(value))
+    except Exception:
+        return None
 
 # SQL snippets we reuse to ensure DB-side "day" math is UTC-consistent.
 # IMPORTANT: Keep these aligned with your unique index definition in models.py:
@@ -71,56 +80,83 @@ async def insert_event(
     session: AsyncSession,
     *,
     child_id: UUID,
-    kind: EventKind,
-    meta: dict,
-) -> ChildActivityEvent:
-    stmt = (
-        insert(ChildActivityEvent)
-        .values(child_id=child_id, kind=kind, meta=meta)
-        .on_conflict_do_nothing(
-            index_elements=[
-                ChildActivityEvent.child_id,
-                ChildActivityEvent.kind,
-                text("((created_at AT TIME ZONE 'UTC')::date)"),
-                text("(coalesce(meta->>'dedupeKey', ''))"),
-            ],
-            index_where=text("(meta ? 'dedupeKey') AND (meta->>'dedupeKey' <> '')"),
-        )
-        .returning(ChildActivityEvent)
+    kind: str,
+    meta: Optional[dict[str, Any]] = None,
+) -> Optional[ChildActivityEvent]:
+    """
+    Insert an append-only ChildActivityEvent.
+
+    Backwards compatible:
+    - keeps writing meta exactly as before (dedupeKey still works via your unique index)
+    - also populates typed columns when values are present in meta
+    """
+    meta = meta or {}
+
+    ev = ChildActivityEvent(
+        child_id=child_id,
+        kind=kind,
+        meta=meta,
     )
 
-    result = await session.execute(stmt)
+    # ------------------------------------------------------------
+    # Typed column extraction (based on the payloads you send today)
+    # ------------------------------------------------------------
 
-    # IMPORTANT: always initialize ev
-    ev: ChildActivityEvent | None = result.scalar_one_or_none()
+    # Common:
+    if "points" in meta:
+        try:
+            ev.points = int(meta["points"])
+        except Exception:
+            # leave as None if malformed
+            pass
 
-    if ev is None:
-        dedupe_key = (meta or {}).get("dedupeKey", "") or ""
-        if dedupe_key:
-            lookup = (
-                select(ChildActivityEvent)
-                .where(
-                    ChildActivityEvent.child_id == child_id,
-                    ChildActivityEvent.kind == kind,
-                    text(f"{UTC_DAY_CREATED_AT_SQL} = {UTC_TODAY_SQL}"),
-                    text("coalesce(child_activity_events.meta->>'dedupeKey', '') = :dedupe_key"),
-                )
-                .order_by(ChildActivityEvent.created_at.desc())
-            )
-            ev = (await session.execute(lookup, {"dedupe_key": dedupe_key})).scalar_one_or_none()
+    # flashcard event
+    if kind == "flashcard":
+        ev.flashcard_id = _uuid_or_none(meta.get("flashcardId"))
+        ev.subject_id = _uuid_or_none(meta.get("subjectId"))
 
-    if ev is None:
-        raise RuntimeError("insert_event resulted in no row and no matching duplicate was found")
+        # correct can be bool already
+        if "correct" in meta:
+            try:
+                ev.correct = bool(meta["correct"])
+            except Exception:
+                pass
 
-    # Safe: ev is guaranteed here
-    logger.debug(
-        "insert_event: child_id=%s kind=%s dedupeKey=%s event_id=%s created_at=%s",
-        str(child_id),
-        kind,
-        (meta or {}).get("dedupeKey"),
-        str(ev.id),
-        ev.created_at.isoformat() if ev.created_at else None,
-    )
+        if "answer" in meta and meta["answer"] is not None:
+            ev.answer = str(meta["answer"])[:500]
+
+    # chore event
+    elif kind == "chore":
+        ev.chore_id = _uuid_or_none(meta.get("choreId"))
+        # isExtra stays in meta (typed col not required, you can add later if you want)
+
+    # outdoor event
+    elif kind == "outdoor":
+        ev.outdoor_activity_id = _uuid_or_none(meta.get("outdoorActivityId"))
+        # isDaily stays in meta (same reasoning)
+
+    # affirmation event
+    elif kind == "affirmation":
+        ev.affirmation_id = _uuid_or_none(meta.get("affirmationId"))
+
+    session.add(ev)
+
+    # flush gives you constraint errors (dedupe) immediately and populates defaults/ids
+    try:
+        await session.flush()
+    except IntegrityError as e:
+        # Dedupe is enforced by a unique constraint/index (uq_child_kind_dedupe_per_day).
+        # If we hit it, we want idempotent behavior: treat as success/no-op.
+        msg = str(e)
+        orig = getattr(e, "orig", None)
+        orig_cls_name = orig.__class__.__name__ if orig is not None else ""
+
+        is_unique_violation = ("UniqueViolationError" in orig_cls_name) or ("uq_child_kind_dedupe_per_day" in msg)
+        if is_unique_violation:
+            # Important: rollback clears the session state so later DB access/logging won't raise PendingRollbackError.
+            await session.rollback()
+            return None
+        raise
 
     return ev
 
@@ -197,10 +233,12 @@ async def get_difficulty_thresholds(session: AsyncSession) -> dict[str, int]:
 # Subjects
 # ---------------------------------------------------------------------------
 
-async def list_subject_ids(session: AsyncSession, child_id: Optional[UUID] = None) -> list[str]:
+async def list_subject_codes(session: AsyncSession, *, child_id: Optional[UUID] = None) -> list[str]:
     """
-    Returns Subject.code strings.
-    If child_id provided, filter by child's age range via SubjectAgeRange.
+    Return Subject.code strings (never UUIDs).
+
+    If child_id is provided, subjects are filtered by the child's age range via
+    SubjectAgeRange.
     """
     if child_id is None:
         rows = (await session.execute(select(Subject.code).order_by(Subject.code))).all()
@@ -226,12 +264,42 @@ async def list_subject_ids(session: AsyncSession, child_id: Optional[UUID] = Non
     return [r[0] for r in rows]
 
 
+async def list_subject_uuids(session: AsyncSession, *, child_id: Optional[UUID] = None) -> list[UUID]:
+    """
+    Return Subject.id UUIDs (never codes).
+
+    If child_id is provided, subjects are filtered by the child's age range via
+    SubjectAgeRange (mirrors list_subject_codes).
+    """
+    if child_id is None:
+        rows = (await session.execute(select(Subject.id).order_by(Subject.code))).all()
+        return [r[0] for r in rows]
+
+    child = (await session.execute(select(Child).where(Child.id == child_id))).scalar_one_or_none()
+    if child is None:
+        return []
+
+    age_range = await get_age_range_for_child(child, session)
+    if age_range is None:
+        return []
+
+    rows = (
+        await session.execute(
+            select(Subject.id)
+            .join(SubjectAgeRange, Subject.id == SubjectAgeRange.subject_id)
+            .where(SubjectAgeRange.age_range_id == age_range.id)
+            .order_by(Subject.code)
+        )
+    ).all()
+
+    return [r[0] for r in rows]
+
+
 # ---------------------------------------------------------------------------
 # Aggregations used by the dashboard
 # ---------------------------------------------------------------------------
 
-async def compute_totals(session: AsyncSession, *, child_id: str) -> dict:
-    # totals by kind
+async def compute_totals(session: AsyncSession, *, child_id: UUID) -> dict:
     stmt = (
         select(ChildActivityEvent.kind, func.count(ChildActivityEvent.id))
         .where(ChildActivityEvent.child_id == child_id)
@@ -240,8 +308,7 @@ async def compute_totals(session: AsyncSession, *, child_id: str) -> dict:
     rows = (await session.execute(stmt)).all()
     counts = {kind: int(cnt) for kind, cnt in rows}
 
-    # points: sum meta.points if present
-    pts_stmt = select(func.coalesce(func.sum((ChildActivityEvent.meta["points"].as_integer())), 0)).where(
+    pts_stmt = select(func.coalesce(func.sum(ChildActivityEvent.points), 0)).where(
         ChildActivityEvent.child_id == child_id
     )
     total_points = int((await session.execute(pts_stmt)).scalar_one())
@@ -262,7 +329,7 @@ async def compute_totals(session: AsyncSession, *, child_id: str) -> dict:
     }
 
 
-async def compute_today_stats(session: AsyncSession, *, child_id: str) -> dict:
+async def compute_today_stats(session: AsyncSession, *, child_id: UUID) -> dict:
     today = _today_utc_date()
     start = datetime(today.year, today.month, today.day, tzinfo=timezone.utc)
     end = start + timedelta(days=1)
@@ -279,7 +346,7 @@ async def compute_today_stats(session: AsyncSession, *, child_id: str) -> dict:
     rows = (await session.execute(stmt)).all()
     counts = {k: int(v) for k, v in rows}
 
-    pts_stmt = select(func.coalesce(func.sum((ChildActivityEvent.meta["points"].as_integer())), 0)).where(
+    pts_stmt = select(func.coalesce(func.sum(ChildActivityEvent.points), 0)).where(
         ChildActivityEvent.child_id == child_id,
         ChildActivityEvent.created_at >= start,
         ChildActivityEvent.created_at < end,
@@ -291,7 +358,7 @@ async def compute_today_stats(session: AsyncSession, *, child_id: str) -> dict:
         ChildActivityEvent.kind == K_FLASHCARD,
         ChildActivityEvent.created_at >= start,
         ChildActivityEvent.created_at < end,
-        ChildActivityEvent.meta["correct"].as_boolean() == True,  # noqa: E712
+        ChildActivityEvent.correct == True,  # noqa: E712
     )
     flash_correct = int((await session.execute(correct_stmt)).scalar_one())
 
@@ -306,7 +373,7 @@ async def compute_today_stats(session: AsyncSession, *, child_id: str) -> dict:
 
     flash_completed = counts.get(K_FLASHCARD, 0)
     return {
-        "date": today.isoformat(),
+        "date": today.isoformat(),  # ISO string is OK; pydantic date can parse it
         "flashcardsCompleted": flash_completed,
         "flashcardsCorrect": flash_correct,
         "choresCompleted": counts.get(K_CHORE, 0),
@@ -319,31 +386,26 @@ async def compute_today_stats(session: AsyncSession, *, child_id: str) -> dict:
     }
 
 
-
-async def compute_week_stats(session: AsyncSession, *, child_id: str) -> dict:
+async def compute_week_stats(session: AsyncSession, *, child_id: UUID) -> dict:
     today = _today_utc_date()
     week_start = _week_start_utc(today)
     start = datetime(week_start.year, week_start.month, week_start.day, tzinfo=timezone.utc)
     end = start + timedelta(days=7)
 
-    pts_stmt = select(func.coalesce(func.sum((ChildActivityEvent.meta["points"].as_integer())), 0)).where(
+    pts_stmt = select(func.coalesce(func.sum(ChildActivityEvent.points), 0)).where(
         ChildActivityEvent.child_id == child_id,
         ChildActivityEvent.created_at >= start,
         ChildActivityEvent.created_at < end,
     )
     total_points = int((await session.execute(pts_stmt)).scalar_one())
 
-    # DISTINCT UTC-days active
-    days_stmt = select(
-        func.count(distinct(literal_column(UTC_DAY_CREATED_AT_SQL)))
-    ).where(
+    days_stmt = select(func.count(distinct(literal_column(UTC_DAY_CREATED_AT_SQL)))).where(
         ChildActivityEvent.child_id == child_id,
         ChildActivityEvent.created_at >= start,
         ChildActivityEvent.created_at < end,
     )
     days_active = int((await session.execute(days_stmt)).scalar_one())
 
-    # counts by kind
     stmt = (
         select(ChildActivityEvent.kind, func.count(ChildActivityEvent.id))
         .where(
@@ -362,7 +424,7 @@ async def compute_week_stats(session: AsyncSession, *, child_id: str) -> dict:
         ChildActivityEvent.kind == K_FLASHCARD,
         ChildActivityEvent.created_at >= start,
         ChildActivityEvent.created_at < end,
-        ChildActivityEvent.meta["correct"].as_boolean() == True,  # noqa: E712
+        ChildActivityEvent.correct == True,  # noqa: E712
     )
     flash_correct = int((await session.execute(flash_correct_stmt)).scalar_one())
     accuracy = int(round((flash_correct / flash_total) * 100)) if flash_total > 0 else 0
@@ -389,50 +451,40 @@ async def compute_week_stats(session: AsyncSession, *, child_id: str) -> dict:
     }
 
 
+async def compute_flashcards_by_subject(
+    session: AsyncSession,
+    *,
+    child_id: UUID,
+    subject_codes: Optional[list[str]] = None,
+) -> Dict[str, dict]:
+    if subject_codes is None:
+        subject_codes = await list_subject_codes(session, child_id=child_id)
 
-async def compute_flashcards_by_subject(session: AsyncSession, *, child_id: UUID) -> Dict[str, dict]:
-    # Initialize with subject codes filtered for the child (age-range aware)
-    subject_codes = await list_subject_ids(session, child_id=child_id)
     by_subject: Dict[str, dict] = {
         c: {"completed": 0, "correct": 0, "correctStreak": 0, "longestStreak": 0, "difficultyCode": "easy"}
         for c in subject_codes
     }
 
-    # thresholds
-    thr_rows = (
-        await session.execute(
-            select(DifficultyThreshold.code, DifficultyThreshold.threshold)
-            .where(DifficultyThreshold.is_active == True)  # noqa: E712
-        )
-    ).all()
-    thresholds = {code: int(th) for code, th in thr_rows} or {"easy": 0, "medium": 20, "hard": 40}
+    # ✅ reuse the helper (single source of truth)
+    thresholds = await get_difficulty_thresholds(session)
 
-    # --- aggregate events ---
-    # events store meta["subjectId"] as string(UUID) (per your progress router)
-    # cast meta->>'subjectId' to uuid and join subjects to get code
-    subject_id_uuid = text("(child_activity_events.meta->>'subjectId')::uuid")
-
-    ev = (
-        select(
-            Subject.code.label("subject_code"),
-            ChildActivityEvent.meta["correct"].as_boolean().label("correct"),
-        )
-        .select_from(ChildActivityEvent)
-        .join(Subject, Subject.id == subject_id_uuid)
-        .where(
-            ChildActivityEvent.child_id == child_id,
-            ChildActivityEvent.kind == "flashcard",
-        )
-        .subquery()
-    )
-
+    # Aggregate events (typed subject_id join)
     stmt = (
         select(
-            ev.c.subject_code,
-            func.count().label("completed"),
-            func.coalesce(func.sum(case((ev.c.correct == True, 1), else_=0)), 0).label("correct"),  # noqa: E712
+            Subject.code.label("subject_code"),
+            func.count(ChildActivityEvent.id).label("completed"),
+            func.coalesce(
+                func.sum(case((ChildActivityEvent.correct == True, 1), else_=0)),  # noqa: E712
+                0,
+            ).label("correct"),
         )
-        .group_by(ev.c.subject_code)
+        .select_from(ChildActivityEvent)
+        .join(Subject, Subject.id == ChildActivityEvent.subject_id)
+        .where(
+            ChildActivityEvent.child_id == child_id,
+            ChildActivityEvent.kind == K_FLASHCARD,
+        )
+        .group_by(Subject.code)
     )
     rows = (await session.execute(stmt)).all()
 
@@ -442,7 +494,7 @@ async def compute_flashcards_by_subject(session: AsyncSession, *, child_id: UUID
         by_subject[code]["completed"] = int(completed or 0)
         by_subject[code]["correct"] = int(correct_sum or 0)
 
-    # --- streaks ---
+    # Streaks
     streak_rows = (
         await session.execute(
             select(
@@ -461,8 +513,9 @@ async def compute_flashcards_by_subject(session: AsyncSession, *, child_id: UUID
             by_subject[code]["correctStreak"] = int(current_streak or 0)
             by_subject[code]["longestStreak"] = int(longest_streak or 0)
 
-    # --- difficulty + tier boundaries ---
-    sorted_tiers = sorted(thresholds.items(), key=lambda x: x[1])
+    # Difficulty tier boundaries
+    # Stable ordering by threshold then name, so ties don't scramble.
+    sorted_tiers = sorted(thresholds.items(), key=lambda x: (x[1], x[0]))
 
     for code in list(by_subject.keys()):
         streak = int(by_subject[code]["correctStreak"] or 0)
@@ -479,14 +532,10 @@ async def compute_flashcards_by_subject(session: AsyncSession, *, child_id: UUID
     return by_subject
 
 
-async def compute_streaks(session: AsyncSession, *, child_id: str) -> dict:
-    """
-    Compute streaks from distinct active UTC-days (any event counts as activity).
-    """
+async def compute_streaks(session: AsyncSession, *, child_id: UUID) -> dict:
     today = _today_utc_date()
     start_dt = datetime(today.year, today.month, today.day, tzinfo=timezone.utc) - timedelta(days=180)
 
-    # Use literal_column so it can be labeled and selected cleanly.
     date_expr = literal_column(UTC_DAY_CREATED_AT_SQL).label("d")
 
     stmt = (

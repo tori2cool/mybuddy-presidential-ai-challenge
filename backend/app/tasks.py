@@ -37,5 +37,5 @@ def seed_content() -> dict:
 @celery_app.task(name="app.tasks.heartbeat")
 def heartbeat() -> str:
     msg = "Heartbeat task ran"
-    print(msg)
+    logger.info(msg)
     return msg
