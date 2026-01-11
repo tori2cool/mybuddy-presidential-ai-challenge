@@ -31,7 +31,7 @@ from typing import Any
 from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
 
-from app.db import engine
+from app.db import get_engine
 
 logger = logging.getLogger(__name__)
 
@@ -516,6 +516,7 @@ async def seed_subject_age_ranges(
 async def seed() -> None:
     logger.info("Seeding progress data...")
 
+    engine = get_engine()
     async with engine.begin() as conn:
         if not await db_looks_empty(conn):
             logger.info("Seed skipped (database not empty)")

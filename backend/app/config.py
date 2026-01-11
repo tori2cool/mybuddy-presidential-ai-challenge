@@ -58,13 +58,33 @@ class Settings(BaseModel):
     # Maximum auto-generated flashcards per subject/age/difficulty combination
     max_auto_flashcards: int = int(os.getenv("MAX_AUTO_FLASHCARDS", "500"))
 
+    # Dedupe bucket size (minutes) for content expansion request idempotency.
+    #
+    # - Default: 60 (i.e., max 1 request/hour per context).
+    # - If set to 0 (or < 1): disable time-bucket dedupe by using a unique
+    #   suffix in the dedupe_key for each request.
+    # - Capped to 1440 (24h) to avoid unexpectedly huge buckets.
+    content_expansion_dedupe_bucket_minutes: int = min(
+        max(int(os.getenv("CONTENT_EXPANSION_DEDUPE_BUCKET_MINUTES", "60")), 0),
+        24 * 60,
+    )
+
     # ---- AI / Content Generation ----
     # OpenAI API key for flashcard generation
-    flashcard_api_key: str = os.getenv("FLASHCARD_API_KEY", "")
+    #
+    # NOTE: Support both naming schemes for backward compatibility.
+    # Prefer the docker-compose style (with underscore between FLASH and CARD).
+    flashcard_api_key: str = os.getenv("FLASHCARD_API_KEY", os.getenv("FLASHCARD_API_KEY", ""))
     # OpenAI API base URL
-    flashcard_api_base: str = os.getenv("FLASHCARD_API_BASE", "https://api.openai.com/v1")
+    flashcard_api_base: str = os.getenv(
+        "FLASHCARD_API_BASE",
+        os.getenv("FLASHCARD_API_BASE", "https://api.openai.com/v1"),
+    )
     # Model to use for flashcard generation
-    flashcard_model: str = os.getenv("FLASHCARD_MODEL", "gpt-5-mini")
+    flashcard_model: str = os.getenv(
+        "FLASHCARD_API_MODEL",
+        os.getenv("FLASHCARD_MODEL", "gpt-5-mini"),
+    )
 
     # ---- Keycloak (this is what security.py uses) ----
     keycloak: KeycloakSettings = KeycloakSettings()

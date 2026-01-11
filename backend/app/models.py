@@ -420,11 +420,40 @@ class ChildFlashcardPerformance(TimestampsMixin, SQLModel, table=True):
     last_seen_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
 
 
-class ChildSubjectHighest(SQLModel, table=True):
-    __tablename__ = "child_subject_highest"
+# ---------------------------------------------------------------------------
+# CONTENT EXPANSION QUEUE
+# ---------------------------------------------------------------------------
 
-    child_id: UUID = Field(foreign_key="children.id", primary_key=True, nullable=False)
-    subject_id: UUID = Field(foreign_key="subjects.id", primary_key=True, nullable=False)
+class ContentExpansionRequest(SQLModel, table=True):
+    __tablename__ = "content_expansion_requests"
 
-    highest_difficulty_code: str = Field(default="easy", max_length=20, nullable=False)
-    reached_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, server_default=UTC_NOW_SQL))
+    id: UUID = Field(sa_column=uuid_pk())
+
+    child_id: UUID = Field(foreign_key="children.id", index=True, nullable=False)
+    subject_id: UUID = Field(foreign_key="subjects.id", index=True, nullable=False)
+    age_range_id: Optional[UUID] = Field(default=None, foreign_key="age_ranges.id", index=True)
+
+    difficulty_code: str = Field(nullable=False, max_length=20, index=True)
+
+    trigger: str = Field(nullable=False, max_length=100)
+
+    # pending/running/completed/skipped/failed
+    status: str = Field(nullable=False, max_length=20, index=True, default="pending")
+
+    # Idempotency key for request creation (see services/content_expansion_queue.py).
+    # Dedupe is per (child+subject+age_range+difficulty+trigger+UTC-bucket).
+    # Bucket size is configurable via CONTENT_EXPANSION_DEDUPE_BUCKET_MINUTES.
+    # If set to 0 (or < 1), bucket dedupe is disabled (dedupe_key becomes unique per request).
+    dedupe_key: str = Field(nullable=False, max_length=255, index=True)
+
+    attempts: int = Field(default=0, nullable=False)
+    error: Optional[str] = Field(default=None)
+
+    created_at: datetime = created_at_field()
+    updated_at: datetime = updated_at_field()
+    completed_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+
+    __table_args__ = (
+        UniqueConstraint("dedupe_key", name="uq_content_expansion_dedupe_key"),
+        Index("ix_content_expansion_status_created", "status", "created_at"),
+    )
