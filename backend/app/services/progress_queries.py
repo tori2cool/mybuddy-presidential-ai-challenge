@@ -1,5 +1,6 @@
 # app/services/progress_queries.py
 from typing import Dict, List, Literal, Optional, Any
+from dataclasses import dataclass
 from uuid import UUID
 from datetime import datetime, timedelta, timezone, date as date_type
 
@@ -76,19 +77,28 @@ UTC_TODAY_SQL = "((now() AT TIME ZONE 'UTC')::date)"
 # Writes
 # ---------------------------------------------------------------------------
 
+@dataclass
+class InsertEventResult:
+    inserted: bool
+    deduped: bool
+    event: Optional[ChildActivityEvent]
+
+
 async def insert_event(
     session: AsyncSession,
     *,
     child_id: UUID,
     kind: str,
     meta: Optional[dict[str, Any]] = None,
-) -> Optional[ChildActivityEvent]:
-    """
-    Insert an append-only ChildActivityEvent.
+) -> InsertEventResult:
+    """Insert an append-only ChildActivityEvent.
 
-    Backwards compatible:
-    - keeps writing meta exactly as before (dedupeKey still works via your unique index)
-    - also populates typed columns when values are present in meta
+    Uses a SAVEPOINT (nested transaction) around the insert+flush so that a
+    dedupe/unique violation does NOT roll back the caller's outer transaction.
+
+    Returns:
+    - inserted=True: event row created (event populated)
+    - deduped=True: idempotent no-op due to unique constraint (event=None)
     """
     meta = meta or {}
 
@@ -101,21 +111,16 @@ async def insert_event(
     # ------------------------------------------------------------
     # Typed column extraction (based on the payloads you send today)
     # ------------------------------------------------------------
-
-    # Common:
     if "points" in meta:
         try:
             ev.points = int(meta["points"])
         except Exception:
-            # leave as None if malformed
             pass
 
-    # flashcard event
     if kind == "flashcard":
         ev.flashcard_id = _uuid_or_none(meta.get("flashcardId"))
         ev.subject_id = _uuid_or_none(meta.get("subjectId"))
 
-        # correct can be bool already
         if "correct" in meta:
             try:
                 ev.correct = bool(meta["correct"])
@@ -125,40 +130,30 @@ async def insert_event(
         if "answer" in meta and meta["answer"] is not None:
             ev.answer = str(meta["answer"])[:500]
 
-    # chore event
     elif kind == "chore":
         ev.chore_id = _uuid_or_none(meta.get("choreId"))
-        # isExtra stays in meta (typed col not required, you can add later if you want)
 
-    # outdoor event
     elif kind == "outdoor":
         ev.outdoor_activity_id = _uuid_or_none(meta.get("outdoorActivityId"))
-        # isDaily stays in meta (same reasoning)
 
-    # affirmation event
     elif kind == "affirmation":
         ev.affirmation_id = _uuid_or_none(meta.get("affirmationId"))
 
-    session.add(ev)
-
-    # flush gives you constraint errors (dedupe) immediately and populates defaults/ids
     try:
-        await session.flush()
+        async with session.begin_nested():
+            session.add(ev)
+            await session.flush()
     except IntegrityError as e:
-        # Dedupe is enforced by a unique constraint/index (uq_child_kind_dedupe_per_day).
-        # If we hit it, we want idempotent behavior: treat as success/no-op.
         msg = str(e)
         orig = getattr(e, "orig", None)
         orig_cls_name = orig.__class__.__name__ if orig is not None else ""
 
-        is_unique_violation = ("UniqueViolationError" in orig_cls_name) or ("uq_child_kind_dedupe_per_day" in msg)
-        if is_unique_violation:
-            # Important: rollback clears the session state so later DB access/logging won't raise PendingRollbackError.
-            await session.rollback()
-            return None
+        is_unique = ("UniqueViolationError" in orig_cls_name) or ("uq_child_kind_dedupe_per_day" in msg)
+        if is_unique:
+            return InsertEventResult(inserted=False, deduped=True, event=None)
         raise
 
-    return ev
+    return InsertEventResult(inserted=True, deduped=False, event=ev)
 
 
 # ---------------------------------------------------------------------------

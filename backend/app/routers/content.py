@@ -294,6 +294,12 @@ async def list_flashcards(
 
     # Step 1: Get flashcard IDs with performance ordering data
     # Using a subquery approach to avoid DISTINCT + complex ORDER BY issues
+
+    # IMPORTANT: When selecting ordered IDs in a subquery then re-joining to
+    # Flashcard, Postgres does NOT guarantee that the outer query preserves the
+    # subquery's ORDER BY unless we also ORDER BY on the outer statement.
+    # To keep ordering stable + apply LIMIT correctly, we project the computed
+    # ordering keys into the subquery and order by them again in the outer query.
     base_query = (
         select(
             Flashcard.id.label("fc_id"),
@@ -315,27 +321,75 @@ async def list_flashcards(
         base_query = base_query.where(Flashcard.age_range_id == age_range.id)
 
     # Order: never seen first, then most wrong, then fewest correct
-    wrong_order = case(
+    wrong_score = case(
         (ChildFlashcardPerformance.incorrect_count.is_(None), 10_000),
         else_=ChildFlashcardPerformance.incorrect_count,
-    ).desc()
+    )
 
-    correct_order = case(
+    correct_score = case(
         (ChildFlashcardPerformance.correct_count.is_(None), 0),
         else_=ChildFlashcardPerformance.correct_count,
-    ).asc()
+    )
 
     interest_order = _build_interest_boost_order(Flashcard, child.interests)
+
+    # Boost newly auto-generated flashcards (tagged with 'auto') ahead of other cards.
+    auto_score = case(
+        (func.coalesce(Flashcard.tags, text("'[]'::jsonb")).op("?")("auto"), 0),
+        else_=1,
+    )
+
+    # Random tie-breaker to avoid returning the same cards when scores are equal.
+    # Projected into subquery so the outer query can re-order deterministically.
+    rnd = func.random()
+
+    # Project ordering keys into the subquery so the outer query can ORDER BY them.
+    base_query = base_query.add_columns(
+        wrong_score.label("wrong_score"),
+        correct_score.label("correct_score"),
+        auto_score.label("auto_score"),
+        rnd.label("rnd"),
+    )
+
     if interest_order is not None:
-        base_query = base_query.order_by(wrong_order, correct_order, interest_order, func.random())
+        base_query = base_query.add_columns(interest_order.label("interest_score"))
+        base_query = base_query.order_by(
+            wrong_score.desc(),
+            correct_score.asc(),
+            auto_score.asc(),
+            interest_order.asc(),
+            rnd,
+        )
     else:
-        base_query = base_query.order_by(wrong_order, correct_order, func.random())
+        base_query = base_query.order_by(
+            wrong_score.desc(),
+            correct_score.asc(),
+            auto_score.asc(),
+            rnd,
+        )
 
     # Create subquery from step 1
     ordered_ids_subq = base_query.subquery()
 
     # Step 2: Fetch full Flashcard objects using the ordered IDs
     stmt = select(Flashcard).join(ordered_ids_subq, Flashcard.id == ordered_ids_subq.c.fc_id)
+
+    # Preserve the ordering from the subquery.
+    if "interest_score" in ordered_ids_subq.c:
+        stmt = stmt.order_by(
+            ordered_ids_subq.c.wrong_score.desc(),
+            ordered_ids_subq.c.correct_score.asc(),
+            ordered_ids_subq.c.auto_score.asc(),
+            ordered_ids_subq.c.interest_score.asc(),
+            ordered_ids_subq.c.rnd.asc(),
+        )
+    else:
+        stmt = stmt.order_by(
+            ordered_ids_subq.c.wrong_score.desc(),
+            ordered_ids_subq.c.correct_score.asc(),
+            ordered_ids_subq.c.auto_score.asc(),
+            ordered_ids_subq.c.rnd.asc(),
+        )
 
     # Apply limit to step 2 and execute
     result = await session.execute(stmt.limit(limit))
@@ -348,6 +402,63 @@ async def list_flashcards(
         difficulty_code,
         (str(age_range.id) if age_range else None),
     )
+
+    # Ordering/selection diagnostics: log the returned flashcard IDs plus key ordering signals
+    # (wrong/correct counts, tags, and auto flag).
+    # NOTE: use INFO here (not DEBUG) so these show up in production logs when needed.
+    try:
+        returned_ids = [r.id for r in rows]
+
+        perf_rows = (
+            await session.execute(
+                select(
+                    Flashcard.id,
+                    Flashcard.tags,
+                    ChildFlashcardPerformance.incorrect_count,
+                    ChildFlashcardPerformance.correct_count,
+                )
+                .outerjoin(
+                    ChildFlashcardPerformance,
+                    (ChildFlashcardPerformance.child_id == child.id)
+                    & (ChildFlashcardPerformance.flashcard_id == Flashcard.id),
+                )
+                .where(Flashcard.id.in_(returned_ids))
+            )
+        ).all()
+
+        perf_map = {
+            row[0]: {
+                "wrong_cnt": row[2],
+                "correct_cnt": row[3],
+                "tags": list(row[1] or []),
+                "auto": ("auto" in (row[1] or [])),
+            }
+            for row in perf_rows
+        }
+
+        debug_rows = []
+        for i, fc_id in enumerate(returned_ids):
+            sig = perf_map.get(fc_id, {})
+            debug_rows.append(
+                {
+                    "i": i,
+                    "id": str(fc_id),
+                    "wrong_cnt": sig.get("wrong_cnt"),
+                    "correct_cnt": sig.get("correct_cnt"),
+                    "auto": sig.get("auto"),
+                    "tags": sig.get("tags"),
+                }
+            )
+
+        logger.info(
+            "list_flashcards: returned_debug child_id=%s subjectCode=%s difficultyCode=%s rows=%s",
+            str(child.id),
+            subject_code,
+            difficulty_code,
+            debug_rows,
+        )
+    except Exception as e:
+        logger.exception("list_flashcards: returned_debug failed child_id=%s err=%s", str(child.id), e)
 
     return [
         {

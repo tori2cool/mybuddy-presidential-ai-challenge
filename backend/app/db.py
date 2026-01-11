@@ -1,8 +1,10 @@
 # backend/app/db.py
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncGenerator
 from pathlib import Path
+from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
@@ -12,23 +14,108 @@ from sqlmodel import SQLModel
 from .config import settings
 
 
-# Async engine using DATABASE_URL from settings
-engine: AsyncEngine = create_async_engine(
-    settings.database_url,
-    echo=False,
-    future=True,
-)
+# NOTE: Celery uses a prefork worker model by default. Async SQLAlchemy engines
+# (and their underlying asyncpg pools) are not fork-safe. If an engine is
+# created at import-time in the parent process, child workers can inherit the
+# pool and then hit cross-loop/cross-connection issues.
+#
+# To avoid this, we lazily initialize the engine/sessionmaker per-process and
+# recreate them automatically if the PID changes.
 
-# Async session factory
-AsyncSessionLocal = sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+_ENGINE: Optional[AsyncEngine] = None
+_ENGINE_PID: Optional[int] = None
+_ENGINE_LOOP_ID: Optional[int] = None
+_SESSIONMAKER: Optional[sessionmaker] = None
+_SESSIONMAKER_PID: Optional[int] = None
+_SESSIONMAKER_LOOP_ID: Optional[int] = None
+
+
+def _get_running_loop_id() -> Optional[int]:
+    """Return current running loop id, or None if not in an event loop.
+
+    Celery tasks call asyncio.run() per task, which creates a *new* event loop
+    each time. asyncpg pools are bound to the loop they were created in, so we
+    must not reuse an AsyncEngine (or its pool) across different loops within
+    the same worker process.
+    """
+    try:
+        import asyncio
+
+        return id(asyncio.get_running_loop())
+    except RuntimeError:
+        return None
+
+
+def get_engine() -> AsyncEngine:
+    global _ENGINE, _ENGINE_PID, _ENGINE_LOOP_ID, _SESSIONMAKER, _SESSIONMAKER_LOOP_ID
+
+    pid = os.getpid()
+    loop_id = _get_running_loop_id()
+
+    needs_new = _ENGINE is None or _ENGINE_PID != pid
+    if loop_id is not None and _ENGINE_LOOP_ID is not None and _ENGINE_LOOP_ID != loop_id:
+        # Loop changed inside same PID (common with asyncio.run() per Celery task).
+        # Do NOT dispose here (can schedule work onto a closing/closed loop and
+        # produce "Event loop is closed"). Instead, drop references so a new
+        # engine/pool is created for the new loop.
+        _ENGINE = None
+        _SESSIONMAKER = None
+        _SESSIONMAKER_LOOP_ID = loop_id
+        needs_new = True
+
+    if needs_new:
+        _ENGINE = create_async_engine(
+            settings.database_url,
+            echo=False,
+            future=True,
+        )
+        _ENGINE_PID = pid
+        _ENGINE_LOOP_ID = loop_id
+
+    return _ENGINE
+
+
+class _EngineProxy:
+    """Backward-compatible proxy for legacy `from app.db import engine` imports.
+
+    This object is *fork-safe*: it never creates an engine at import-time.
+    Each attribute access is delegated to the per-process engine returned by
+    `get_engine()`.
+    """
+
+    def __getattr__(self, name: str):
+        return getattr(get_engine(), name)
+
+
+# Legacy alias (do NOT create a real engine at import-time).
+engine = _EngineProxy()
+
+
+def get_async_sessionmaker() -> sessionmaker:
+    global _SESSIONMAKER, _SESSIONMAKER_PID, _SESSIONMAKER_LOOP_ID
+
+    pid = os.getpid()
+    loop_id = _get_running_loop_id()
+
+    needs_new = _SESSIONMAKER is None or _SESSIONMAKER_PID != pid
+    if loop_id is not None and _SESSIONMAKER_LOOP_ID is not None and _SESSIONMAKER_LOOP_ID != loop_id:
+        needs_new = True
+
+    if needs_new:
+        _SESSIONMAKER = sessionmaker(
+            bind=get_engine(),
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
+        _SESSIONMAKER_PID = pid
+        _SESSIONMAKER_LOOP_ID = loop_id
+
+    return _SESSIONMAKER
 
 
 # Dependency for FastAPI routes
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    AsyncSessionLocal = get_async_sessionmaker()
     async with AsyncSessionLocal() as session:
         yield session
 
@@ -79,7 +166,8 @@ async def init_db() -> None:
     - Then applies any pending `backend/migrations/*.sql` migrations.
     """
     # 1) Create all tables defined in SQLModel
-    async with engine.begin() as conn:
+    engine_ = get_engine()
+    async with engine_.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
     # 2) Apply SQL migrations in order (if any exist)
@@ -88,7 +176,8 @@ async def init_db() -> None:
         return
 
     # Create migrations tracking table (single statement)
-    async with engine.begin() as conn:
+    engine_ = get_engine()
+    async with engine_.begin() as conn:
         await conn.exec_driver_sql(
             """
             CREATE TABLE IF NOT EXISTS _migrations_applied (
@@ -99,7 +188,8 @@ async def init_db() -> None:
         )
 
     # Get list of applied migrations
-    async with engine.begin() as conn:
+    engine_ = get_engine()
+    async with engine_.begin() as conn:
         result = await conn.execute(
             text("SELECT filename FROM _migrations_applied ORDER BY filename")
         )
@@ -113,7 +203,8 @@ async def init_db() -> None:
         print(f"Applying migration: {migration_file.name}")
         sql = migration_file.read_text()
 
-        async with engine.begin() as conn:
+        engine_ = get_engine()
+        async with engine_.begin() as conn:
             await _exec_sql_script(conn, sql)
             await conn.execute(
                 text("INSERT INTO _migrations_applied (filename) VALUES (:filename)"),

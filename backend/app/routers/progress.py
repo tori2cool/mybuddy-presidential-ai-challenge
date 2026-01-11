@@ -7,7 +7,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..config import settings
 from ..db import get_session
 from ..deps import get_child_owned_path
 from ..models import (
@@ -27,11 +26,9 @@ from ..schemas.progress import (
     OutdoorCompletedIn,
 )
 from ..services import progress_rules as rules
-from ..services.content_expansion import (
-    check_auto_flashcard_limit,
-    get_flashcard_context_with_interests,
-    seed_new_flashcards,
-    should_expand_content,
+from ..services.content_expansion_queue import (
+    create_content_expansion_request,
+    enqueue_content_expansion_request_after_commit,
 )
 from ..services.progress_queries import (
     compute_flashcards_by_subject,
@@ -276,8 +273,8 @@ async def flashcard_answered(
 
         subject_id_str = str(subject_id)
 
-        # Insert append-only event
-        inserted = await insert_event(
+        # Insert append-only event (idempotent per day+dedupeKey)
+        insert_res = await insert_event(
             session,
             child_id=child.id,
             kind="flashcard",
@@ -290,8 +287,78 @@ async def flashcard_answered(
                 "points": points,
             },
         )
-        if inserted is None:
-            logger.info("event_flashcard: deduped child_id=%s flashcardId=%s", child_id_str, flashcard_id_str)
+
+        if insert_res.deduped:
+            # Dedupe repeat: still treat as answered for streak/performance so the card
+            # is not considered "unseen". Award 0 points, but still queue content expansion.
+            logger.info(
+                "event_flashcard: deduped child_id=%s flashcardId=%s (award_points=0, update_perf=1, update_streak=0)",
+                child_id_str,
+                flashcard_id_str,
+            )
+
+            # NOTE: For deduped flashcard events, do NOT update subject streaks.
+            # We still update flashcard performance and may queue content expansion.
+
+            # Update performance tracking (same behavior as non-deduped)
+            perf = (
+                await session.execute(
+                    select(ChildFlashcardPerformance).where(
+                        ChildFlashcardPerformance.child_id == child.id,
+                        ChildFlashcardPerformance.flashcard_id == payload.flashcardId,
+                    )
+                )
+            ).scalar_one_or_none()
+
+            if perf is None:
+                logger.info(
+                    "event_flashcard: dedupe_create_perf child_id=%s flashcardId=%s correct=%s",
+                    child_id_str,
+                    flashcard_id_str,
+                    payload.correct,
+                )
+                perf = ChildFlashcardPerformance(
+                    child_id=child.id,
+                    flashcard_id=payload.flashcardId,
+                    correct_count=1 if payload.correct else 0,
+                    incorrect_count=0 if payload.correct else 1,
+                    last_seen_at=datetime.now(timezone.utc),
+                )
+                session.add(perf)
+            else:
+                prev_c = perf.correct_count
+                prev_i = perf.incorrect_count
+
+                if payload.correct:
+                    perf.correct_count += 1
+                else:
+                    perf.incorrect_count += 1
+                perf.last_seen_at = datetime.now(timezone.utc)
+
+                logger.info(
+                    "event_flashcard: dedupe_update_perf child_id=%s flashcardId=%s correct %s->%s incorrect %s->%s",
+                    child_id_str,
+                    flashcard_id_str,
+                    prev_c,
+                    perf.correct_count,
+                    prev_i,
+                    perf.incorrect_count,
+                )
+
+            create_res = await create_content_expansion_request(
+                session,
+                child_id=child.id,
+                subject_id=subject_id,
+                age_range_id=flashcard.age_range_id,
+                difficulty_code=flashcard.difficulty_code,
+                trigger="dedupe_repeat",
+            )
+
+            await session.commit()
+
+            if create_res.created:
+                enqueue_content_expansion_request_after_commit(create_res.request.id)
+
             return EventAckOut(pointsAwarded=0, newAchievementCodes=[])
 
         logger.info("event_flashcard: inserted_event child_id=%s", child_id_str)
@@ -386,52 +453,6 @@ async def flashcard_answered(
                 prev_i,
                 perf.incorrect_count,
             )
-
-        # CONTENT EXPANSION
-        if payload.correct and await should_expand_content(session, child.id, payload.flashcardId, threshold=2):
-            logger.warning(
-                "content_expansion: triggered child_id=%s flashcardId=%s",
-                child_id_str,
-                flashcard_id_str,
-            )
-
-            context = await get_flashcard_context_with_interests(session, payload.flashcardId, child.id)
-
-            auto_count, should_expand = await check_auto_flashcard_limit(
-                session,
-                context["subject_id"],
-                context["age_range_id"],
-                context["difficulty"],
-            )
-
-            if should_expand:
-                new_ids = await seed_new_flashcards(
-                    session,
-                    subject_id=context["subject_id"],
-                    age_range_id=context["age_range_id"],
-                    difficulty=context["difficulty"],
-                    interests=context["interests"],
-                    count=10,
-                )
-                logger.warning(
-                    "content_expansion: seeded count=%s subject_id=%s age_range_id=%s difficulty=%s auto_count=%s max=%s",
-                    len(new_ids),
-                    str(context["subject_id"]),
-                    str(context["age_range_id"]),
-                    str(context["difficulty"]),
-                    auto_count,
-                    settings.max_auto_flashcards,
-                )
-            else:
-                logger.warning(
-                    "content_expansion: limit_reached subject_id=%s age_range_id=%s difficulty=%s auto_count=%s max=%s",
-                    str(context["subject_id"]),
-                    str(context["age_range_id"]),
-                    str(context["difficulty"]),
-                    auto_count,
-                    settings.max_auto_flashcards,
-                )
-
         core_subjects = await list_subject_codes(session, child_id=child.id)
         new_codes = await _unlock_from_current_state(session, child, core_subjects=core_subjects)
 
@@ -473,7 +494,7 @@ async def chore_completed(
         points_values = await rules.fetch_points_values(session)
         points = points_values["chore_completed"]
 
-        inserted = await insert_event(
+        insert_res = await insert_event(
             session,
             child_id=child.id,
             kind="chore",
@@ -484,7 +505,7 @@ async def chore_completed(
                 "points": points,
             },
         )
-        if inserted is None:
+        if insert_res.deduped:
             logger.info("event_chore: deduped child_id=%s choreId=%s", child_id_str, chore_id_str)
             return EventAckOut(pointsAwarded=0, newAchievementCodes=[])
 
@@ -519,7 +540,7 @@ async def outdoor_completed(
         points_values = await rules.fetch_points_values(session)
         points = points_values["outdoor_completed"]
 
-        inserted = await insert_event(
+        insert_res = await insert_event(
             session,
             child_id=child.id,
             kind="outdoor",
@@ -530,7 +551,7 @@ async def outdoor_completed(
                 "points": points,
             },
         )
-        if inserted is None:
+        if insert_res.deduped:
             logger.info("event_outdoor: deduped child_id=%s outdoorActivityId=%s", child_id_str, outdoor_activity_id_str)
             return EventAckOut(pointsAwarded=0, newAchievementCodes=[])
 
@@ -564,7 +585,7 @@ async def affirmation_viewed(
         points_values = await rules.fetch_points_values(session)
         points = points_values["affirmation_viewed"]
 
-        inserted = await insert_event(
+        insert_res = await insert_event(
             session,
             child_id=child.id,
             kind="affirmation",
@@ -574,7 +595,7 @@ async def affirmation_viewed(
                 "points": points,
             },
         )
-        if inserted is None:
+        if insert_res.deduped:
             logger.info("event_affirmation: deduped child_id=%s affirmationId=%s", child_id_str, affirmation_id_str)
             return EventAckOut(pointsAwarded=0, newAchievementCodes=[])
 
