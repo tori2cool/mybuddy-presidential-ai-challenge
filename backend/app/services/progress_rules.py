@@ -6,53 +6,73 @@ No hardcoded constants.
 """
 
 from __future__ import annotations
-from typing import Dict, List
 
+from typing import Dict, Tuple, List
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..models import DifficultyThreshold, LevelThreshold, PointsValue
+
+
+def _cache(db: AsyncSession) -> dict:
+    c = getattr(db, "_mybuddy_cache", None)
+    if c is None:
+        c = {}
+        setattr(db, "_mybuddy_cache", c)
+    return c
 
 
 # ========== FETCH FUNCTIONS (NO CONSTANTS) ==========
 
-async def fetch_level_thresholds(db: AsyncSession) -> Dict[str, int]:
-    """Fetch level thresholds from database."""
-    from sqlalchemy import select
-    from ..models import LevelThreshold
+async def fetch_levels(db: AsyncSession) -> tuple[dict[str, int], dict[str, dict]]:
+    """
+    Fetch BOTH level thresholds and metadata in one DB round-trip.
+    Returns:
+      - thresholds: {level_name: threshold_int}
+      - metadata:   {level_name: {"icon": str | None, "color": str | None}}
+    """
+    c = _cache(db)
+    if "levels" in c:
+        return c["levels"]
 
-    result = await db.execute(select(LevelThreshold).where(LevelThreshold.is_active == True))
-    thresholds = {row.name: row.threshold for row in result.scalars().all()}
-    return thresholds
+    result = await db.execute(
+        select(LevelThreshold).where(LevelThreshold.is_active == True)  # noqa: E712
+    )
+    rows = result.scalars().all()
 
-
-async def fetch_level_metadata(db: AsyncSession) -> Dict[str, Dict]:
-    """Fetch level metadata (icon, color) from database."""
-    from sqlalchemy import select
-    from ..models import LevelThreshold
-
-    result = await db.execute(select(LevelThreshold).where(LevelThreshold.is_active == True))
-    return {
-        row.name: {"icon": row.icon, "color": row.color}
-        for row in result.scalars().all()
+    thresholds: dict[str, int] = {row.name: int(row.threshold) for row in rows}
+    metadata: dict[str, dict] = {
+        row.name: {"icon": row.icon, "color": row.color} for row in rows
     }
+    c["levels"] = (thresholds, metadata)
+    return thresholds, metadata
 
 
 async def fetch_difficulty_thresholds(db: AsyncSession) -> Dict[str, int]:
     """Fetch difficulty thresholds from database. Keyed by code (easy/medium/hard)."""
-    from sqlalchemy import select
-    from ..models import DifficultyThreshold
+    c = _cache(db)
+    if "difficulty_thresholds" in c:
+        return c["difficulty_thresholds"]
 
     result = await db.execute(
         select(DifficultyThreshold).where(DifficultyThreshold.is_active == True)  # noqa: E712
     )
-    return {row.code: int(row.threshold) for row in result.scalars().all()}
+    thresholds = {row.code: int(row.threshold) for row in result.scalars().all()}
+    c["difficulty_thresholds"] = thresholds
+    return thresholds
 
 
 async def fetch_points_values(db: AsyncSession) -> Dict[str, int]:
     """Fetch points values from database. Keyed by code (stable identifier)."""
-    from sqlalchemy import select
-    from ..models import PointsValue
+    c = _cache(db)
+    if "points_values" in c:
+        return c["points_values"]
 
     result = await db.execute(select(PointsValue).where(PointsValue.is_active == True))  # noqa: E712
-    return {row.code: int(row.points) for row in result.scalars().all()}
+    points = {row.code: int(row.points) for row in result.scalars().all()}
+    c["points_values"] = points
+    return points
 
 
 # ========== CALCULATION FUNCTIONS ==========
@@ -65,8 +85,8 @@ def calculate_difficulty(correct: int, thresholds: Dict[str, int]) -> str:
     Note: For streak-based difficulty progression, use calculate_difficulty_from_streak.
     Returns the highest tier where correct >= threshold (sorted ascending by threshold).
     """
-    # Sort tiers by threshold ascending
-    sorted_tiers = sorted(thresholds.items(), key=lambda x: x[1])
+    # Sort tiers by threshold ascending (then by tier name for determinism)
+    sorted_tiers = sorted(thresholds.items(), key=lambda x: (x[1], x[0]))
     
     # Return the highest tier whose threshold is <= correct
     for tier_name, threshold in reversed(sorted_tiers):
@@ -86,8 +106,9 @@ def calculate_difficulty_from_streak(streak: int, thresholds: Dict[str, int]) ->
     which now uses streaks instead of total correct answers.
     Returns the highest tier where streak >= threshold (sorted ascending by threshold).
     """
-    # Sort tiers by threshold ascending (e.g., [("easy", 0), ("medium", 20), ("hard", 40)])
-    sorted_tiers = sorted(thresholds.items(), key=lambda x: x[1])
+    # Sort tiers by threshold ascending (then by tier name for determinism)
+    # (e.g., [("easy", 0), ("medium", 20), ("hard", 40)])
+    sorted_tiers = sorted(thresholds.items(), key=lambda x: (x[1], x[0]))
     
     # Return the highest tier whose threshold is <= streak
     for tier_name, threshold in reversed(sorted_tiers):

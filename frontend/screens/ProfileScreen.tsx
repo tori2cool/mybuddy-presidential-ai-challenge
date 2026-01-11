@@ -25,7 +25,11 @@ import type {
   DifficultyCode,
   DifficultyThreshold,
   UUID,
+  AchievementOut,
+  SubjectStatsOut,
+  SubjectProgressOut,
 } from "@/types/models";
+
 import { useNavigation } from "@react-navigation/native";
 import { AINoticeFooter } from "@/components/AINoticeFooter";
 
@@ -132,18 +136,18 @@ export default function ProfileScreen() {
   const balancedProgress = dashboard?.balanced;
 
   const totalFlashcards = Object.values(dashboard?.flashcardsBySubject ?? {}).reduce(
-    (acc: number, s: any) => acc + (s?.completed ?? 0),
+    (acc: number, s: SubjectStatsOut) => acc + (s?.completed ?? 0),
     0,
   );
   const totalCorrect = Object.values(dashboard?.flashcardsBySubject ?? {}).reduce(
-    (acc: number, s: any) => acc + (s?.correct ?? 0),
+    (acc: number, s: SubjectStatsOut) => acc + (s?.correct ?? 0),
     0,
   );
   const accuracy =
     totalFlashcards > 0 ? Math.round((totalCorrect / totalFlashcards) * 100) : 0;
 
-  const unlockedAchievements = dashboard?.achievementsUnlocked ?? [];
-  const lockedAchievements = dashboard?.achievementsLocked ?? [];
+  const unlockedAchievements: AchievementOut[] = dashboard?.achievementsUnlocked ?? [];
+  const lockedAchievements: AchievementOut[] = dashboard?.achievementsLocked ?? [];
 
   // Initial background refresh (SWR); keep non-blocking.
   useEffect(() => {
@@ -205,12 +209,9 @@ export default function ProfileScreen() {
   const getSubjectStats = useCallback(
     (subjectCode: string) => {
       // Backend now keys flashcardsBySubject by Subject.code (string), not UUID
-      return (dashboard?.flashcardsBySubject as any)?.[subjectCode] as
-        | {
-            difficultyCode?: DifficultyCode | null;
-            difficulty?: DifficultyCode | null; // tolerate older field name
-          }
-        | undefined;
+      return (dashboard?.flashcardsBySubject as Record<string, SubjectStatsOut> | undefined)?.[
+        subjectCode
+      ];
     },
     [dashboard],
   );
@@ -373,25 +374,21 @@ export default function ProfileScreen() {
 
               {subjects.map((subject) => {
                 // ✅ subjectProgress is keyed by subject.code (string)
-                const subjectProg = (balancedProgress?.subjectProgress as any)?.[subject.code] as
-                  | { current: number; required: number; met: boolean }
-                  | undefined;
+                const subjectProg = (
+                  balancedProgress?.subjectProgress as Record<string, SubjectProgressOut> | undefined
+                )?.[subject.code];
 
                 // ✅ stats map is keyed by subject.code (string)
                 const stats = getSubjectStats(subject.code);
 
-                // Prefer difficultyCode; tolerate old "difficulty"
-                const difficultyCode: DifficultyCode =
-                  (stats?.difficultyCode ??
-                    stats?.difficulty ??
-                    "easy") as DifficultyCode;
+                const difficultyCode: DifficultyCode = (stats?.difficultyCode ?? "easy") as DifficultyCode;
 
                 const diffInfo = difficultyByCode.get(difficultyCode);
                 if (!diffInfo) return null;
 
                 const required = subjectProg?.required ?? balancedProgress?.requiredPerSubject ?? 0;
-                const current = subjectProg?.current ?? 0;
-                const met = subjectProg?.met ?? false;
+                const current = subjectProg?.correct ?? 0;
+                const met = subjectProg?.meetsRequirement ?? false;
 
                 const progressPercent =
                   required > 0 ? Math.min((current / required) * 100, 100) : 100;
@@ -573,7 +570,7 @@ export default function ProfileScreen() {
             style={styles.achievementsScroll}
             contentContainerStyle={styles.achievementsContent}
           >
-            {unlockedAchievements.map((achievement: any) => (
+            {unlockedAchievements.map((achievement) => (
               <View
                 key={achievement.id}
                 style={[
@@ -610,7 +607,7 @@ export default function ProfileScreen() {
         </ThemedText>
 
         <View style={styles.lockedGrid}>
-          {lockedAchievements.slice(0, 6).map((achievement: any) => (
+          {lockedAchievements.slice(0, 6).map((achievement) => (
             <View
               key={achievement.id}
               style={[styles.lockedCard, { backgroundColor: theme.backgroundDefault }]}
@@ -644,7 +641,7 @@ export default function ProfileScreen() {
             <View style={styles.statItem}>
               <Feather name="check-circle" size={20} color="#10B981" />
               <ThemedText style={styles.statValue}>
-                {dashboard?.totals.choresCompleted ?? 0}
+                {dashboard?.totalChoresCompleted ?? 0}
               </ThemedText>
               <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
                 Chores
@@ -655,7 +652,7 @@ export default function ProfileScreen() {
             <View style={styles.statItem}>
               <Feather name="sun" size={20} color="#FB923C" />
               <ThemedText style={styles.statValue}>
-                {dashboard?.totals.outdoorActivities ?? 0}
+                {dashboard?.totalOutdoorActivities ?? 0}
               </ThemedText>
               <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
                 Outdoor
@@ -664,7 +661,7 @@ export default function ProfileScreen() {
             <View style={styles.statItem}>
               <Feather name="heart" size={20} color="#EC4899" />
               <ThemedText style={styles.statValue}>
-                {dashboard?.totals.affirmationsViewed ?? 0}
+                {dashboard?.totalAffirmationsViewed ?? 0}
               </ThemedText>
               <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
                 Affirmations

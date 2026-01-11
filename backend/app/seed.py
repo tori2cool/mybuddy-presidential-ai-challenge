@@ -205,9 +205,9 @@ LEVEL_THRESHOLDS_SEED = [
 
 # ========== DIFFICULTY THRESHOLDS ==========
 DIFFICULTY_THRESHOLDS_SEED = [
-    {"code": "easy", "name": "Easy", "threshold": 0, "label": "Easy", "icon": "smile", "color": "#10B981"},
-    {"code": "medium", "name": "Medium", "threshold": 20, "label": "Medium", "icon": "zap", "color": "#F59E0B"},
-    {"code": "hard", "name": "Hard", "threshold": 40, "label": "Hard", "icon": "award", "color": "#EF4444"},
+    {"code": "easy", "name": "Beginner", "threshold": 0, "label": "Beginner", "icon": "smile", "color": "#10B981"},
+    {"code": "medium", "name": "Intermediate", "threshold": 20, "label": "Intermediate", "icon": "zap", "color": "#F59E0B"},
+    {"code": "hard", "name": "Advamced", "threshold": 40, "label": "Advanced", "icon": "award", "color": "#EF4444"},
 ]
 
 # ========== POINTS VALUES ==========

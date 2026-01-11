@@ -106,10 +106,6 @@ export function useChildSessionActive(): boolean {
 }
 
 /**
- * Back-compat exports (optional)
- * Prefer the explicit names below.
+ * Back-compat export. Prefer using `useCurrentChild()` directly.
  */
 export const useCurrentChildId = useCurrentChild;
-
-/** @deprecated Old naming; use useCurrentChildId / useCurrentChild */
-export const useCurrentChildSlug = useCurrentChild;

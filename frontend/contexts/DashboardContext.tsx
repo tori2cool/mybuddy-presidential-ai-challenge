@@ -15,7 +15,7 @@ import { useCurrentChild } from "@/contexts/ChildContext";
 import { useAuth } from "@/contexts/AuthContext";
 import type { UUID } from "@/types/models";
 
-import type { DashboardData } from "@/services/dashboardService";
+import type { DashboardOut } from "@/types/models";
 import { getDashboard } from "@/services/dashboardService";
 import type { EventAckOut, ProgressEvent } from "@/services/eventsService";
 import { postProgressEvent } from "@/services/eventsService";
@@ -23,7 +23,7 @@ import { postProgressEvent } from "@/services/eventsService";
 export type DashboardStatus = "idle" | "loading" | "refreshing" | "error";
 
 export type DashboardState = {
-  data: DashboardData | null;
+  data: DashboardOut | null;
   status: DashboardStatus;
   error: string | null;
 
@@ -58,7 +58,7 @@ function safeJsonParse<T>(text: string): T | null {
 }
 
 type CachedDashboard = {
-  dashboard: DashboardData;
+  dashboard: DashboardOut;
 };
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
@@ -158,7 +158,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         }));
 
         try {
-          // getDashboard returns DashboardData (no fetchedAt)
           const dashboard = await getDashboard(childId);
 
           setState((s) => ({
