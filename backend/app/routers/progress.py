@@ -14,6 +14,7 @@ from ..models import (
     Child,
     ChildFlashcardPerformance,
     ChildSubjectStreak,
+    ChildSubjectDifficulty,
     Flashcard,
     Subject,
 )
@@ -35,6 +36,7 @@ from ..services.progress_queries import (
     compute_streaks,
     compute_today_stats,
     compute_totals,
+    compute_today_completed_ids,
     compute_week_stats,
     get_unlocked_achievements_map,
     insert_event,
@@ -44,6 +46,110 @@ from ..services.progress_queries import (
 import logging
 logger = logging.getLogger("mybuddy.api")
 router = APIRouter(prefix="/v1", tags=["mybuddy-progress"])
+
+
+async def _apply_subject_streak_and_tier_progression(
+    session: AsyncSession,
+    *,
+    child_id: UUID,
+    subject_id: UUID,
+    correct: bool,
+    thresholds: dict[str, int],
+    age_range_id: UUID | None,
+) -> UUID | None:
+    """Update per-subject tier streak + persisted difficulty tier.
+
+    Used for BOTH inserted and deduped flashcard answers.
+
+    Rules:
+    - Update ChildSubjectStreak.current_streak / longest_streak based on `correct`
+    - Ensure ChildSubjectDifficulty exists (default easy)
+    - If correct and tier streak >= required (next.threshold):
+      advance difficulty_code and reset tier streak to 0
+    """
+
+    difficulty_row = (
+        await session.execute(
+            select(ChildSubjectDifficulty).where(
+                ChildSubjectDifficulty.child_id == child_id,
+                ChildSubjectDifficulty.subject_id == subject_id,
+            )
+        )
+    ).scalar_one_or_none()
+
+    if difficulty_row is None:
+        difficulty_row = ChildSubjectDifficulty(
+            child_id=child_id,
+            subject_id=subject_id,
+            difficulty_code="easy",
+            last_updated=datetime.now(timezone.utc),
+        )
+        session.add(difficulty_row)
+
+    streak = (
+        await session.execute(
+            select(ChildSubjectStreak).where(
+                ChildSubjectStreak.child_id == child_id,
+                ChildSubjectStreak.subject_id == subject_id,
+            )
+        )
+    ).scalar_one_or_none()
+
+    if streak is None:
+        streak = ChildSubjectStreak(
+            child_id=child_id,
+            subject_id=subject_id,
+            current_streak=1 if correct else 0,
+            longest_streak=1 if correct else 0,
+        )
+        session.add(streak)
+    else:
+        if correct:
+            streak.current_streak += 1
+            if streak.current_streak > streak.longest_streak:
+                streak.longest_streak = streak.current_streak
+        else:
+            streak.current_streak = 0
+        streak.last_updated = datetime.now(timezone.utc)
+
+    current_code, next_code, _current_threshold, required = rules.difficulty_tier_progress(
+        thresholds=thresholds,
+        current_code=difficulty_row.difficulty_code,
+    )
+    difficulty_row.difficulty_code = current_code
+
+    tier_up_request_id: UUID | None = None
+
+    if correct and next_code is not None and required is not None:
+        if required == 0 or streak.current_streak >= required:
+            promoted_to = next_code
+            difficulty_row.difficulty_code = promoted_to
+            difficulty_row.last_updated = datetime.now(timezone.utc)
+
+            streak.current_streak = 0
+            streak.last_updated = datetime.now(timezone.utc)
+
+            # IMPORTANT: do not enqueue here; caller controls commit timing.
+            # The worker can load interests via req.child_id; only include subject that tiered up.
+            if age_range_id is None:
+                logger.warning(
+                    "tier_up: missing age_range_id; skipping tier-up content expansion request (child_id=%s subject_id=%s)",
+                    str(child_id),
+                    str(subject_id),
+                )
+            else:
+                create_res = await create_content_expansion_request(
+                    session,
+                    child_id=child_id,
+                    subject_id=subject_id,
+                    age_range_id=age_range_id,
+                    difficulty_code=promoted_to,
+                    trigger="tier_up",
+                )
+                if create_res.created:
+                    tier_up_request_id = create_res.request.id
+
+    return tier_up_request_id
 
 
 async def _achievement_catalog(session: AsyncSession) -> dict[str, AchievementDefinition]:
@@ -61,6 +167,7 @@ async def _build_dashboard(session: AsyncSession, child: Child) -> DashboardOut:
     totals = await compute_totals(session, child_id=child.id)
     today = await compute_today_stats(session, child_id=child.id)
     week = await compute_week_stats(session, child_id=child.id)
+    today_completed_ids = await compute_today_completed_ids(session, child_id=child.id)
 
     core_subjects = await list_subject_codes(session, child_id=child.id)
     by_subject = await compute_flashcards_by_subject(session, child_id=child.id, subject_codes=core_subjects)
@@ -139,6 +246,8 @@ async def _build_dashboard(session: AsyncSession, child: Child) -> DashboardOut:
         totalChoresCompleted=totals["totalChoresCompleted"],
         totalOutdoorActivities=totals["totalOutdoorActivities"],
         totalAffirmationsViewed=totals["totalAffirmationsViewed"],
+        todayCompletedChoreIds=today_completed_ids["todayCompletedChoreIds"],
+        todayCompletedOutdoorActivityIds=today_completed_ids["todayCompletedOutdoorActivityIds"],
         achievementsUnlocked=unlocked,
         achievementsLocked=locked,
         balanced=balanced,
@@ -289,16 +398,24 @@ async def flashcard_answered(
         )
 
         if insert_res.deduped:
-            # Dedupe repeat: still treat as answered for streak/performance so the card
-            # is not considered "unseen". Award 0 points, but still queue content expansion.
+            # Dedupe repeat: award 0 points, but STILL update tier streak + difficulty
+            # (product decision: repeats in same UTC day count toward tier streak).
+            # Also update flashcard performance and attempt content expansion.
             logger.info(
-                "event_flashcard: deduped child_id=%s flashcardId=%s (award_points=0, update_perf=1, update_streak=0)",
+                "event_flashcard: deduped child_id=%s flashcardId=%s (award_points=0, update_perf=1, update_streak=1)",
                 child_id_str,
                 flashcard_id_str,
             )
 
-            # NOTE: For deduped flashcard events, do NOT update subject streaks.
-            # We still update flashcard performance and may queue content expansion.
+            thresholds = await rules.fetch_difficulty_thresholds(session)
+            tier_up_request_id = await _apply_subject_streak_and_tier_progression(
+                session,
+                child_id=child.id,
+                subject_id=subject_id,
+                correct=payload.correct,
+                thresholds=thresholds,
+                age_range_id=flashcard.age_range_id,
+            )
 
             # Update performance tracking (same behavior as non-deduped)
             perf = (
@@ -358,56 +475,22 @@ async def flashcard_answered(
 
             if create_res.created:
                 enqueue_content_expansion_request_after_commit(create_res.request.id)
+            if tier_up_request_id is not None:
+                enqueue_content_expansion_request_after_commit(tier_up_request_id)
 
             return EventAckOut(pointsAwarded=0, newAchievementCodes=[])
 
         logger.info("event_flashcard: inserted_event child_id=%s", child_id_str)
 
-        # Update subject streaks (FKs are UUID)
-        streak = (
-            await session.execute(
-                select(ChildSubjectStreak).where(
-                    ChildSubjectStreak.child_id == child.id,
-                    ChildSubjectStreak.subject_id == subject_id,
-                )
-            )
-        ).scalar_one_or_none()
-
-        if streak is None:
-            logger.info(
-                "event_flashcard: create_streak child_id=%s subject_id=%s start=%s",
-                child_id_str,
-                subject_id_str,
-                1 if payload.correct else 0,
-            )
-            streak = ChildSubjectStreak(
-                child_id=child.id,
-                subject_id=subject_id,
-                current_streak=1 if payload.correct else 0,
-                longest_streak=1 if payload.correct else 0,
-            )
-            session.add(streak)
-        else:
-            prev_current = streak.current_streak
-            prev_longest = streak.longest_streak
-
-            if payload.correct:
-                streak.current_streak += 1
-                if streak.current_streak > streak.longest_streak:
-                    streak.longest_streak = streak.current_streak
-            else:
-                streak.current_streak = 0
-
-            streak.last_updated = datetime.now(timezone.utc)
-            logger.info(
-                "event_flashcard: update_streak child_id=%s subject_id=%s current %s->%s longest %s->%s",
-                child_id_str,
-                subject_id_str,
-                prev_current,
-                streak.current_streak,
-                prev_longest,
-                streak.longest_streak,
-            )
+        thresholds = await rules.fetch_difficulty_thresholds(session)
+        tier_up_request_id = await _apply_subject_streak_and_tier_progression(
+            session,
+            child_id=child.id,
+            subject_id=subject_id,
+            correct=payload.correct,
+            thresholds=thresholds,
+            age_range_id=flashcard.age_range_id,
+        )
 
         # Update performance tracking (FKs are UUID)
         perf = (
@@ -464,6 +547,10 @@ async def flashcard_answered(
         )
 
         await session.commit()
+
+        if tier_up_request_id is not None:
+            enqueue_content_expansion_request_after_commit(tier_up_request_id)
+
         logger.info("event_flashcard: success child_id=%s", child_id_str)
         return EventAckOut(pointsAwarded=points, newAchievementCodes=new_codes)
 

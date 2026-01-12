@@ -1,0 +1,332 @@
+[
+  {
+    "subject": "History",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "tags": [
+      "horseback"
+    ],
+    "question": "Before cars, many people traveled on horseback 🏇. What animal did they ride?",
+    "choices": [
+      "Horse",
+      "Dog",
+      "Cat",
+      "Fish"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! People rode a horse 🏇.",
+      "Dogs don’t carry people for travel like horses do.",
+      "Cats are too small to ride.",
+      "Fish live in water and can’t be ridden."
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "tags": [
+      "auto"
+    ],
+    "question": "The Underground Railroad helped people escape from slavery. What was its main purpose?",
+    "choices": [
+      "To help enslaved people escape to freedom",
+      "To build train tracks across the country",
+      "To teach people how to drive trains",
+      "To move goods faster for factories"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! It was a secret network to help enslaved people reach freedom.",
+      "It wasn’t a real railroad with tracks and trains.",
+      "It wasn’t a school for train drivers.",
+      "Its purpose was helping people escape, not shipping factory goods."
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "tags": [
+      "auto"
+    ],
+    "question": "What is the Bill of Rights?",
+    "choices": [
+      "The first 10 amendments to the U.S. Constitution",
+      "The rules for becoming a U.S. president",
+      "A list of all U.S. states in order",
+      "A plan for building the first railroad"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! The Bill of Rights is the first 10 amendments to the Constitution.",
+      "That’s about elections and government roles, not the Bill of Rights.",
+      "That’s geography, not constitutional rights.",
+      "That’s transportation history, not constitutional rights."
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "Who was the first President of the United States?",
+    "choices": [
+      "George Washington",
+      "Abraham Lincoln",
+      "Thomas Jefferson",
+      "Benjamin Franklin"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct—George Washington was chosen as the first U.S. President.",
+      "Abraham Lincoln was president later, during the Civil War.",
+      "Thomas Jefferson was the third U.S. President, not the first.",
+      "Benjamin Franklin helped the country get started, but he was not a president."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "What is a word that means “a very old time long ago”?",
+    "choices": [
+      "History",
+      "Homework",
+      "Future",
+      "Weather"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct—history is about what happened long ago.",
+      "Homework is school work you do at home, not the past.",
+      "The future is time that has not happened yet.",
+      "Weather describes what the sky is like, not events long ago."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "What did people use to send messages far away before phones and email were common?",
+    "choices": [
+      "Letters",
+      "Televisions",
+      "Microwaves",
+      "Flashlights"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct—people wrote letters and sent them through the mail.",
+      "Televisions show programs, but they are not used to send personal messages.",
+      "Microwaves heat food, not messages.",
+      "Flashlights help you see in the dark, but they do not deliver messages."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "Which job did many people do in early America to grow food for their families and towns?",
+    "choices": [
+      "Farmer",
+      "Astronaut",
+      "Movie actor",
+      "Computer programmer"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct—farmers grew crops and raised animals so people could eat.",
+      "Astronauts travel to space, which was not a common job in early America.",
+      "Movie actors perform in films, but movies did not exist in early America.",
+      "Computer programmers write code on computers, which did not exist in early America."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "What is a main reason historians study primary sources like letters and diaries?",
+    "choices": [
+      "To learn what people thought and experienced at the time",
+      "To find the fastest way to travel in the past",
+      "To make sure every story from the past is exactly the same",
+      "To replace maps so we do not need geography"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Primary sources were made by people who lived then, so they give firsthand clues about life and feelings.",
+      "Letters and diaries can mention travel, but their main purpose is not to teach the fastest travel routes.",
+      "Different people describe events differently, and primary sources do not make all stories identical.",
+      "Primary sources do not replace maps; geography and maps are still needed to understand places."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "Which event is celebrated on Independence Day in the United States?",
+    "choices": [
+      "The Declaration of Independence was adopted",
+      "The first U.S. president was elected",
+      "The Civil War ended",
+      "The Constitution was written"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Independence Day marks when the Declaration of Independence was approved in 1776.",
+      "Electing a president is important, but it is not what July 4 celebrates.",
+      "The Civil War ended in 1865, which is a different event and date.",
+      "The Constitution was written in 1787, not the event celebrated on July 4."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "What was the main job of a medieval knight?",
+    "choices": [
+      "To fight and protect a lord's land",
+      "To teach children in village schools",
+      "To run elections for the kingdom",
+      "To invent new farming machines"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Knights were trained soldiers who served a lord and helped defend people and land.",
+      "Some knights could read, but teaching was not their main role.",
+      "Elections like we have today were not a typical job for knights in medieval times.",
+      "Farming tools changed over time, but inventing machines was not the main duty of knights."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "Why did many early civilizations grow near rivers like the Nile, Tigris, and Euphrates?",
+    "choices": [
+      "Rivers provided water for drinking and farming",
+      "Rivers made summers colder everywhere nearby",
+      "Rivers stopped all enemies from ever attacking",
+      "Rivers made it unnecessary to trade with others"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Rivers gave fresh water and helped crops grow, which made it easier for cities to develop.",
+      "Rivers can affect local weather a little, but they do not make summers colder everywhere.",
+      "Rivers could be obstacles, but they did not prevent all attacks or wars.",
+      "People still traded for goods they did not have, even if they lived near a river."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "What was the main purpose of the Magna Carta, signed in 1215?",
+    "choices": [
+      "To limit the king’s power by putting some rights into law",
+      "To create the first democratic election for everyone in England",
+      "To end all wars between England and France forever",
+      "To make the king the head of the Christian church"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct: The Magna Carta forced the king to follow certain laws and recognized some rights for nobles.",
+      "Wrong: It did not create voting rights for everyone; broad democracy came much later.",
+      "Wrong: It was about power and law inside England, not a permanent peace treaty with France.",
+      "Wrong: Making the king head of the church is linked to Henry VIII in the 1500s, not 1215."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "Which event is commonly seen as the start of the French Revolution in 1789?",
+    "choices": [
+      "The storming of the Bastille",
+      "The signing of the Treaty of Versailles",
+      "The crowning of Napoleon as emperor",
+      "The start of the Industrial Revolution"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct: The Bastille’s fall became a powerful symbol of people rising against royal authority.",
+      "Wrong: The Treaty of Versailles was signed in 1919 after World War I, not in 1789.",
+      "Wrong: Napoleon’s coronation happened later (1804) and did not begin the revolution.",
+      "Wrong: Industrialization began earlier in Britain and isn’t the single starting event of the French Revolution."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "What was one main goal of the Underground Railroad in the United States?",
+    "choices": [
+      "To help enslaved people escape to freedom",
+      "To transport gold quickly between mining towns",
+      "To move soldiers secretly during the Civil War",
+      "To build the first subway system in New York City"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct: It was a network of people and safe places that helped enslaved people reach free states or Canada.",
+      "Wrong: It was not a system for shipping valuables like gold; it focused on human freedom and safety.",
+      "Wrong: While it involved secrecy, its purpose wasn’t moving soldiers; it was aiding escaping enslaved people.",
+      "Wrong: It wasn’t a real railroad or subway; the name was a metaphor for a secret route."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "In ancient Rome, what was a republic?",
+    "choices": [
+      "A government where citizens elect representatives to make decisions",
+      "A government ruled by a king who inherits the throne",
+      "A government controlled entirely by priests and temples",
+      "A government where every law is voted on by one emperor"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct: The Roman Republic used elected officials (like consuls) and representative bodies (like the Senate).",
+      "Wrong: A hereditary king describes a monarchy, not a republic.",
+      "Wrong: Rule by priests is a theocracy, which is not how the Roman Republic was organized.",
+      "Wrong: An emperor is one ruler; the republic was not run by a single emperor voting on laws."
+    ],
+    "tags": [
+      "auto"
+    ]
+  }
+]

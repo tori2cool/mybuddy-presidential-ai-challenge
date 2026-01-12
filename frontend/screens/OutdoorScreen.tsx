@@ -1,5 +1,5 @@
 // frontend/screens/OutdoorScreen.tsx
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Feather } from "@expo/vector-icons";
@@ -23,12 +23,12 @@ const SEP = " · "; // nice middle-dot separator
 export default function OutdoorScreen() {
   const { theme } = useTheme();
   const { childId } = useCurrentChildId();
-  const { data: dashboard, postEvent } = useDashboard();
+  const { data: dashboard, postEvent, refreshDashboard } = useDashboard();
 
   const [activities, setActivities] = useState<OutdoorActivity[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [completed, setCompleted] = useState<UUID[]>([]);
+  const [pendingCompleted, setPendingCompleted] = useState<Set<UUID>>(new Set());
 
   useEffect(() => {
     if (!childId) return;
@@ -58,27 +58,49 @@ export default function OutdoorScreen() {
     };
   }, [childId]);
 
+  const completedSet = useMemo(() => {
+    const ids = dashboard?.todayCompletedOutdoorActivityIds ?? [];
+    const s = new Set<UUID>(ids);
+    for (const id of pendingCompleted) s.add(id);
+    return s;
+  }, [dashboard?.todayCompletedOutdoorActivityIds, pendingCompleted]);
+
   const outdoorToday = dashboard?.today?.outdoorActivities ?? 0;
-  const outdoorTotal = dashboard?.totals?.outdoorActivities ?? 0;
+  const outdoorTotal = dashboard?.totalOutdoorActivities ?? 0;
 
   const markComplete = (id: UUID) => {
-    const wasCompleted = completed.includes(id);
+    const alreadyCompletedToday = (dashboard?.todayCompletedOutdoorActivityIds ?? []).includes(id);
+    if (alreadyCompletedToday) return;
 
-    if (!wasCompleted) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (childId) {
-        const activity = activities.find((a) => a.id === id);
-        postEvent({
-          kind: "outdoor",
-          body: {
-            outdoorActivityId: id,
-            isDaily: activity?.isDaily ?? false,
-          },
-        }).catch(() => {});
-      }
+    if (completedSet.has(id)) return;
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    setPendingCompleted((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+
+    if (childId) {
+      const activity = activities.find((a) => a.id === id);
+      postEvent({
+        kind: "outdoor",
+        body: {
+          outdoorActivityId: id,
+          isDaily: activity?.isDaily ?? false,
+        },
+      })
+        .then(() => refreshDashboard({ force: true }))
+        .finally(() => {
+          setPendingCompleted((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        })
+        .catch(() => {});
     }
-
-    setCompleted((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
   };
 
   return (
@@ -130,7 +152,7 @@ export default function OutdoorScreen() {
         {!loading &&
           !error &&
           activities.map((activity) => {
-            const isCompleted = completed.includes(activity.id);
+            const isCompleted = completedSet.has(activity.id);
 
             return (
               <View

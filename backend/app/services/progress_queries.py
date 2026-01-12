@@ -18,9 +18,10 @@ from ..models import (
     SubjectAgeRange,
     DifficultyThreshold,
     ChildSubjectStreak,
+    ChildSubjectDifficulty,
 )
 from ..utils.age_utils import get_age_range_for_child
-from .progress_rules import calculate_difficulty_from_streak
+from .progress_rules import difficulty_tier_progress
 
 import logging
 
@@ -508,23 +509,81 @@ async def compute_flashcards_by_subject(
             by_subject[code]["correctStreak"] = int(current_streak or 0)
             by_subject[code]["longestStreak"] = int(longest_streak or 0)
 
-    # Difficulty tier boundaries
-    # Stable ordering by threshold then name, so ties don't scramble.
-    sorted_tiers = sorted(thresholds.items(), key=lambda x: (x[1], x[0]))
+    # Fetch persisted difficulty tiers per subject (source of truth)
+    difficulty_rows = (
+        await session.execute(
+            select(Subject.code, ChildSubjectDifficulty.difficulty_code)
+            .select_from(ChildSubjectDifficulty)
+            .join(Subject, Subject.id == ChildSubjectDifficulty.subject_id)
+            .where(ChildSubjectDifficulty.child_id == child_id)
+        )
+    ).all()
+    diff_map: dict[str, str] = {code: diff for code, diff in difficulty_rows}
 
     for code in list(by_subject.keys()):
-        streak = int(by_subject[code]["correctStreak"] or 0)
-        diff = calculate_difficulty_from_streak(streak, thresholds)
-        by_subject[code]["difficultyCode"] = diff
+        # Persisted difficulty (default easy if missing)
+        current_diff = diff_map.get(code, "easy")
+        by_subject[code]["difficultyCode"] = current_diff
 
-        tier_index = next((i for i, (name, _) in enumerate(sorted_tiers) if name == diff), 0)
-        current_start = sorted_tiers[tier_index][1]
-        next_threshold = sorted_tiers[tier_index + 1][1] if tier_index + 1 < len(sorted_tiers) else None
+        # correctStreak is now tier-streak, so the current tier always starts at 0.
+        by_subject[code]["currentTierStartAtStreak"] = 0
 
-        by_subject[code]["currentTierStartAtStreak"] = current_start
-        by_subject[code]["nextDifficultyAtStreak"] = next_threshold
+        # Next difficulty requires the NEXT tier's absolute threshold.
+        _cur, _next, _cur_threshold, required = difficulty_tier_progress(
+            thresholds=thresholds,
+            current_code=current_diff,
+        )
+        by_subject[code]["nextDifficultyAtStreak"] = required
 
     return by_subject
+
+
+async def compute_today_completed_ids(session: AsyncSession, *, child_id: UUID) -> dict:
+    """Return distinct IDs completed today (UTC day) for chore/outdoor events.
+
+    - chore: distinct ChildActivityEvent.chore_id where kind==K_CHORE
+    - outdoor: distinct ChildActivityEvent.outdoor_activity_id where kind==K_OUTDOOR
+    - ignores null ids
+
+    Output keys:
+      - todayCompletedChoreIds: list[UUID]
+      - todayCompletedOutdoorActivityIds: list[UUID]
+    """
+
+    today = _today_utc_date()
+    start = datetime(today.year, today.month, today.day, tzinfo=timezone.utc)
+    end = start + timedelta(days=1)
+
+    chores_stmt = (
+        select(distinct(ChildActivityEvent.chore_id))
+        .where(
+            ChildActivityEvent.child_id == child_id,
+            ChildActivityEvent.kind == K_CHORE,
+            ChildActivityEvent.created_at >= start,
+            ChildActivityEvent.created_at < end,
+            ChildActivityEvent.chore_id.is_not(None),
+        )
+    )
+    chore_rows = (await session.execute(chores_stmt)).all()
+    chore_ids = [r[0] for r in chore_rows if r and r[0] is not None]
+
+    outdoor_stmt = (
+        select(distinct(ChildActivityEvent.outdoor_activity_id))
+        .where(
+            ChildActivityEvent.child_id == child_id,
+            ChildActivityEvent.kind == K_OUTDOOR,
+            ChildActivityEvent.created_at >= start,
+            ChildActivityEvent.created_at < end,
+            ChildActivityEvent.outdoor_activity_id.is_not(None),
+        )
+    )
+    outdoor_rows = (await session.execute(outdoor_stmt)).all()
+    outdoor_ids = [r[0] for r in outdoor_rows if r and r[0] is not None]
+
+    return {
+        "todayCompletedChoreIds": chore_ids,
+        "todayCompletedOutdoorActivityIds": outdoor_ids,
+    }
 
 
 async def compute_streaks(session: AsyncSession, *, child_id: UUID) -> dict:

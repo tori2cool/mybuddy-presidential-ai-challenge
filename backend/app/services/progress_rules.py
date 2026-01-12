@@ -15,6 +15,50 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..models import DifficultyThreshold, LevelThreshold, PointsValue
 
 
+def difficulty_tier_progress(
+    *,
+    thresholds: Dict[str, int],
+    current_code: str,
+) -> tuple[str, str | None, int, int | None]:
+    """Compute tier progression info based on persisted tier.
+
+    Returns:
+      (current_code, next_code, current_threshold, required_tier_streak_to_advance)
+
+    required_tier_streak_to_advance is computed as the *absolute* threshold
+    for the next tier (next.threshold).
+
+    Example thresholds: easy=0, medium=20, hard=40
+      - current=easy   -> required=20
+      - current=medium -> required=40 (NOT delta 20)
+    If current_code is the max tier (no next), next_code and required are None.
+
+    Sorting is stable: (threshold asc, code asc).
+    """
+
+    if not thresholds:
+        return ("easy", None, 0, None)
+
+    sorted_tiers = sorted(thresholds.items(), key=lambda kv: (kv[1], kv[0]))
+    codes = [c for (c, _) in sorted_tiers]
+
+    if current_code not in thresholds:
+        current_code = codes[0]
+
+    idx = codes.index(current_code)
+    current_threshold = int(thresholds[current_code])
+
+    if idx >= len(sorted_tiers) - 1:
+        return (current_code, None, current_threshold, None)
+
+    next_code = sorted_tiers[idx + 1][0]
+    next_threshold = int(sorted_tiers[idx + 1][1])
+    # Required is the absolute streak threshold for the NEXT tier.
+    required = max(0, next_threshold)
+    return (current_code, next_code, current_threshold, required)
+
+
+
 def _cache(db: AsyncSession) -> dict:
     c = getattr(db, "_mybuddy_cache", None)
     if c is None:

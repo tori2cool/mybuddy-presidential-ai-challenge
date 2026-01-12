@@ -1,0 +1,135 @@
+[
+  {
+    "title": "Brain Starter",
+    "description": "Complete your first flashcard",
+    "icon": "zap",
+    "achievement_type": "special",
+    "flashcards_count_threshold": 1
+  },
+  {
+    "title": "Helper Bee",
+    "description": "Complete your first chore",
+    "icon": "check-circle",
+    "achievement_type": "special",
+    "chores_count_threshold": 1
+  },
+  {
+    "title": "Nature Explorer",
+    "description": "Complete your first outdoor activity",
+    "icon": "sun",
+    "achievement_type": "special",
+    "outdoor_count_threshold": 1
+  },
+  {
+    "title": "On Fire!",
+    "description": "Keep a 3-day streak",
+    "icon": "flame",
+    "achievement_type": "daily",
+    "streak_days_threshold": 3
+  },
+  {
+    "title": "Super Star",
+    "description": "Keep a 7-day streak",
+    "icon": "star",
+    "achievement_type": "weekly",
+    "streak_days_threshold": 7
+  },
+  {
+    "title": "Champion",
+    "description": "Keep a 30-day streak",
+    "icon": "award",
+    "achievement_type": "monthly",
+    "streak_days_threshold": 30
+  },
+  {
+    "title": "Rising Star",
+    "description": "Earn 100 points",
+    "icon": "trending-up",
+    "achievement_type": "daily",
+    "points_threshold": 100
+  },
+  {
+    "title": "Superstar",
+    "description": "Earn 500 points",
+    "icon": "star",
+    "achievement_type": "weekly",
+    "points_threshold": 500
+  },
+  {
+    "title": "Legend",
+    "description": "Earn 2000 points",
+    "icon": "award",
+    "achievement_type": "monthly",
+    "points_threshold": 2000
+  },
+  {
+    "title": "Quick Learner",
+    "description": "Complete 10 flashcards",
+    "icon": "book",
+    "achievement_type": "daily",
+    "flashcards_count_threshold": 10
+  },
+  {
+    "title": "Knowledge Seeker",
+    "description": "Complete 50 flashcards",
+    "icon": "book-open",
+    "achievement_type": "weekly",
+    "flashcards_count_threshold": 50
+  },
+  {
+    "title": "Tidy Champion",
+    "description": "Complete 7 chores",
+    "icon": "home",
+    "achievement_type": "weekly",
+    "chores_count_threshold": 7
+  },
+  {
+    "title": "Adventure Kid",
+    "description": "Complete 5 outdoor activities",
+    "icon": "compass",
+    "achievement_type": "weekly",
+    "outdoor_count_threshold": 5
+  },
+  {
+    "title": "Math Whiz",
+    "description": "Reach Medium difficulty in Math",
+    "icon": "grid",
+    "achievement_type": "special"
+  },
+  {
+    "title": "Science Star",
+    "description": "Reach Medium difficulty in Science",
+    "icon": "zap",
+    "achievement_type": "special"
+  },
+  {
+    "title": "Bookworm",
+    "description": "Reach Medium difficulty in Reading",
+    "icon": "book-open",
+    "achievement_type": "special"
+  },
+  {
+    "title": "History Buff",
+    "description": "Reach Medium difficulty in History",
+    "icon": "globe",
+    "achievement_type": "special"
+  },
+  {
+    "title": "Master Student",
+    "description": "Reach Hard difficulty in any subject",
+    "icon": "award",
+    "achievement_type": "special"
+  },
+  {
+    "title": "Balanced Learner",
+    "description": "Get 10+ correct in all subjects",
+    "icon": "target",
+    "achievement_type": "special"
+  },
+  {
+    "title": "Perfect Day",
+    "description": "Complete activities in all categories in one day",
+    "icon": "sun",
+    "achievement_type": "daily"
+  }
+]

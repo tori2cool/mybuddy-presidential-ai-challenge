@@ -1,0 +1,442 @@
+[
+  {
+    "subject": "Science",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "tags": [
+      "animals"
+    ],
+    "question": "Which animal says 'meow'? 🐱",
+    "choices": [
+      "Cat",
+      "Dog",
+      "Cow",
+      "Duck"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! A cat 🐱 says 'meow'.",
+      "A dog says 'woof', not 'meow'.",
+      "A cow says 'moo', not 'meow'.",
+      "A duck says 'quack', not 'meow'."
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "tags": [
+      "space"
+    ],
+    "question": "In space, what path does a planet follow around the Sun?",
+    "choices": [
+      "Orbit",
+      "Triangle",
+      "Zigzag",
+      "Bounce"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! A planet follows an orbit around the Sun.",
+      "A triangle is a shape, not a path planets follow.",
+      "Planets don't move in a zigzag path around the Sun.",
+      "Planets don't bounce around the Sun."
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "tags": [
+      "horseback"
+    ],
+    "question": "After a sunny horseback ride 🏇, a puddle dries up as water turns into vapor. What is this called?",
+    "choices": [
+      "Evaporation",
+      "Condensation",
+      "Freezing",
+      "Melting"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! Evaporation is when liquid water turns into vapor.",
+      "Condensation is vapor turning back into liquid (like droplets).",
+      "Freezing is liquid turning into solid ice.",
+      "Melting is solid ice turning into liquid."
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "question": "Which animal is a baby frog?",
+    "choices": [
+      "tadpole",
+      "kitten",
+      "chick",
+      "calf"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "A tadpole is a baby frog that lives in water.",
+      "A kitten is a baby cat, not a frog.",
+      "A chick is a baby chicken, not a frog.",
+      "A calf is a baby cow, not a frog."
+    ],
+    "tags": [
+      "animals"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "question": "What do plants need to grow?",
+    "choices": [
+      "sunlight",
+      "candy",
+      "toys",
+      "shoes"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Plants use sunlight to help them grow.",
+      "Candy is food for people, not something plants use to grow.",
+      "Toys are for playing and do not help plants grow.",
+      "Shoes are worn on feet and do not help plants grow."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "question": "Which one is a part of your body that helps you see?",
+    "choices": [
+      "eyes",
+      "ears",
+      "nose",
+      "hands"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Eyes help you see things around you.",
+      "Ears help you hear sounds, not see.",
+      "A nose helps you smell, not see.",
+      "Hands help you hold and touch, not see."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "question": "What do you call water that falls from clouds?",
+    "choices": [
+      "rain",
+      "sand",
+      "smoke",
+      "rock"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Rain is water that falls from clouds.",
+      "Sand is tiny pieces of rock, not water from clouds.",
+      "Smoke comes from fires, not from clouds as water.",
+      "A rock is a hard solid and does not fall from clouds as water."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "Which part of a plant usually takes in water from the soil?",
+    "choices": [
+      "Roots",
+      "Leaves",
+      "Flowers",
+      "Seeds"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Roots soak up water and minerals from the soil to help the plant grow.",
+      "Leaves mostly make food using sunlight, not take in water from the soil.",
+      "Flowers help the plant make seeds, not absorb water.",
+      "Seeds can grow into a new plant, but they do not usually absorb water from the soil like roots do."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "What do we call water that falls from clouds as drops?",
+    "choices": [
+      "Rain",
+      "Wind",
+      "Fog",
+      "Snow"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Rain is liquid water that falls from clouds in drops.",
+      "Wind is moving air, not falling water.",
+      "Fog is a cloud close to the ground, not water falling from the sky.",
+      "Snow is frozen water that falls as flakes, not drops of liquid water."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "Which of these is a solid?",
+    "choices": [
+      "Ice",
+      "Milk",
+      "Air",
+      "Steam"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Ice keeps its shape, so it is a solid.",
+      "Milk can be poured and takes the shape of its container, so it is a liquid.",
+      "Air spreads out and fills any space, so it is a gas.",
+      "Steam is water vapor, which is a gas, not a solid."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "Which animal is most likely to lay eggs?",
+    "choices": [
+      "Chicken",
+      "Dog",
+      "Cat",
+      "Horse"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Chickens are birds, and birds lay eggs.",
+      "Dogs are mammals and usually have live babies, not eggs.",
+      "Cats are mammals and usually have live babies, not eggs.",
+      "Horses are mammals and usually have live babies, not eggs."
+    ],
+    "tags": [
+      "animals"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "Which part of a plant takes in water from the soil?",
+    "choices": [
+      "Roots",
+      "Leaves",
+      "Flowers",
+      "Seeds"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Roots absorb water and minerals from the soil to help the plant grow.",
+      "Leaves mostly make food using sunlight and air, not take in water from the soil.",
+      "Flowers help the plant reproduce by making seeds, not by absorbing water.",
+      "Seeds can grow into new plants, but they do not absorb water from the soil like roots do."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "What causes day and night on Earth?",
+    "choices": [
+      "Earth spinning on its axis",
+      "Earth going around the Sun",
+      "The Moon moving around Earth",
+      "Clouds blocking the Sun"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "As Earth spins, the side facing the Sun has day and the side facing away has night.",
+      "Earth going around the Sun causes seasons and takes about a year, not day and night.",
+      "The Moon orbits Earth, but it does not make day and night happen.",
+      "Clouds can make it darker, but they do not create night; Earth’s spin does."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "Which change is most likely to be reversible?",
+    "choices": [
+      "Ice melting into water",
+      "Paper burning into ash",
+      "An egg being cooked",
+      "A banana rotting"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Melted water can freeze back into ice, so this change can be undone.",
+      "Burning makes new materials like ash and smoke, and you can’t turn them back into paper.",
+      "Cooking changes the egg’s proteins in a new way, and it can’t become raw again.",
+      "Rotting breaks food down and can’t be reversed back into a fresh banana."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "Which is the best example of a solid?",
+    "choices": [
+      "A rock",
+      "Milk",
+      "Steam",
+      "Air"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "A rock keeps its own shape and does not flow, which is what solids do.",
+      "Milk is a liquid, so it takes the shape of its container.",
+      "Steam is a gas, so it spreads out to fill the space.",
+      "Air is a gas, so it does not have a fixed shape or volume."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "Which part of a cell controls the cell’s activities by holding most of its DNA?",
+    "choices": [
+      "Nucleus",
+      "Mitochondria",
+      "Cell membrane",
+      "Ribosome"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "The nucleus stores DNA and helps direct what the cell does.",
+      "Mitochondria mainly release energy from food; they do not hold most DNA.",
+      "The cell membrane controls what enters and leaves the cell, not the cell’s instructions.",
+      "Ribosomes build proteins, but they don’t store DNA or control the whole cell."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "Which process changes liquid water into water vapor?",
+    "choices": [
+      "Evaporation",
+      "Condensation",
+      "Freezing",
+      "Melting"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Evaporation is when liquid water gains energy and becomes a gas.",
+      "Condensation is the opposite change: gas to liquid.",
+      "Freezing changes liquid to solid, not to gas.",
+      "Melting changes solid to liquid, not liquid to gas."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "What is the main gas that plants take in during photosynthesis?",
+    "choices": [
+      "Carbon dioxide",
+      "Oxygen",
+      "Nitrogen",
+      "Helium"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Plants use carbon dioxide to help make sugars during photosynthesis.",
+      "Plants release oxygen as a product; they don’t mainly take it in for photosynthesis.",
+      "Nitrogen is important for plant growth, but it isn’t the main gas used in photosynthesis.",
+      "Helium is not used by plants in photosynthesis."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "Which statement best describes an element?",
+    "choices": [
+      "A pure substance made of only one kind of atom",
+      "A substance made by mixing two liquids together",
+      "A material that can be broken into any smaller substances",
+      "A pure substance made of two or more kinds of atoms bonded"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "An element is defined as a substance made of one type of atom.",
+      "Mixing liquids forms a mixture, not an element.",
+      "Many substances can be broken down into simpler substances, but elements cannot be chemically broken down.",
+      "A substance with two or more kinds of atoms bonded is a compound, not an element."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "What causes Earth’s seasons?",
+    "choices": [
+      "Earth’s tilt as it orbits the Sun",
+      "Earth being closer to the Sun in summer",
+      "The Moon blocking sunlight in winter",
+      "The Sun getting hotter and cooler each year"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Earth’s axis is tilted, so different parts get more direct sunlight at different times of year.",
+      "Distance changes slightly, but it is not the main cause of seasons.",
+      "The Moon can cause eclipses, but it does not create seasons.",
+      "The Sun’s temperature does not cycle enough to cause seasons on Earth."
+    ],
+    "tags": [
+      "space"
+    ]
+  }
+]

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Feather } from "@expo/vector-icons";
@@ -21,12 +21,12 @@ import { useCurrentChildId } from "@/contexts/ChildContext";
 export default function ChoresScreen() {
   const { theme } = useTheme();
   const { childId } = useCurrentChildId();
-  const { data: dashboard, postEvent } = useDashboard();
+  const { data: dashboard, postEvent, refreshDashboard } = useDashboard();
 
   const [chores, setChores] = useState<Chore[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [completed, setCompleted] = useState<string[]>([]);
+  const [pendingCompleted, setPendingCompleted] = useState<Set<string>>(new Set());
   const [extraChores, setExtraChores] = useState<Chore[]>([]);
 
   useEffect(() => {
@@ -57,32 +57,51 @@ export default function ChoresScreen() {
     };
   }, [childId]);
 
+  const completedSet = useMemo(() => {
+    const ids = dashboard?.todayCompletedChoreIds ?? [];
+    const s = new Set<string>(ids);
+    for (const id of pendingCompleted) s.add(id);
+    return s;
+  }, [dashboard?.todayCompletedChoreIds, pendingCompleted]);
+
   const toggleChore = (id: string) => {
-    const wasCompleted = completed.includes(id);
+    // Persisted completion for today: do not allow toggling back or re-posting.
+    const alreadyCompletedToday = (dashboard?.todayCompletedChoreIds ?? []).includes(id);
+    if (alreadyCompletedToday) return;
 
-    if (!wasCompleted) {
-      // First time marking as completed in this toggle
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (childId) {
-        const chore = allChores.find((c) => c.id === id);
-        postEvent({
-          kind: "chore",
-          body: { choreId: id, isExtra: chore?.isExtra ?? false },
-        }).catch(() => {});
-      }
+    if (completedSet.has(id)) return;
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    setPendingCompleted((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+
+    if (childId) {
+      const chore = allChores.find((c) => c.id === id);
+      postEvent({
+        kind: "chore",
+        body: { choreId: id, isExtra: chore?.isExtra ?? false },
+      })
+        .then(() => refreshDashboard({ force: true }))
+        .finally(() => {
+          // Clear optimistic state once we have refreshed (or tried).
+          setPendingCompleted((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        })
+        .catch(() => {});
     }
-
-    setCompleted((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    );
   };
 
   const allChores = [...chores, ...extraChores];
-  const allCompleted =
-    allChores.length > 0 &&
-    allChores.every((chore) => completed.includes(chore.id));
+  const allCompleted = allChores.length > 0 && allChores.every((chore) => completedSet.has(chore.id));
   const choresToday = dashboard?.today?.choresCompleted ?? 0;
-  const choresTotal = dashboard?.totals?.choresCompleted ?? 0;
+  const choresTotal = dashboard?.totalChoresCompleted ?? 0;
 
   const addExtraChore = () => {
     const newChore: Chore = {
@@ -187,7 +206,7 @@ export default function ChoresScreen() {
             <CheckboxItem
               key={chore.id}
               label={chore.label}
-              checked={completed.includes(chore.id)}
+              checked={completedSet.has(chore.id)}
               onToggle={() => toggleChore(chore.id)}
               icon={chore.icon}
             />
@@ -203,7 +222,7 @@ export default function ChoresScreen() {
               <CheckboxItem
                 key={chore.id}
                 label={chore.label}
-                checked={completed.includes(chore.id)}
+                checked={completedSet.has(chore.id)}
                 onToggle={() => toggleChore(chore.id)}
                 icon={chore.icon}
               />

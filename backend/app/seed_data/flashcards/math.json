@@ -1,0 +1,442 @@
+[
+  {
+    "subject": "Math",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "tags": [
+      "space"
+    ],
+    "question": "Count the rocket ships 🚀🚀🚀. How many rocket ships 🚀 are there?",
+    "choices": [
+      "3",
+      "2",
+      "4",
+      "5"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! There are 3 rocket ships 🚀.",
+      "This is too few. Count all the rockets again.",
+      "This is too many. Count carefully—there are only 3.",
+      "This is much too many. There are only 3 rockets."
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "tags": [
+      "dinosaurs"
+    ],
+    "question": "A dinosaur 🦕 ate 9 leaves and then 8 more. How many leaves did it eat in total?",
+    "choices": [
+      "17",
+      "18",
+      "16",
+      "15"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! 9 plus 8 equals 17.",
+      "This adds one extra leaf by mistake.",
+      "This subtracts instead of adding.",
+      "This is too small and misses some leaves."
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "tags": [
+      "sports"
+    ],
+    "question": "In sports statistics, solve for x: x + 7 = 19",
+    "choices": [
+      "12",
+      "26",
+      "7",
+      "10"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! Subtract 7 from both sides to get 12.",
+      "This adds instead of subtracting.",
+      "This is the number being added, not the solution.",
+      "This subtracts the wrong amount."
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "question": "You see 2 trucks🚚 and then 1 more truck🚚. How many trucks are there now?",
+    "choices": [
+      "3",
+      "2",
+      "4",
+      "1"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "2 trucks and 1 more makes 3 trucks.",
+      "This forgets to add the 1 more truck.",
+      "This adds too many trucks; you only added 1.",
+      "This counts only the new truck and ignores the first 2."
+    ],
+    "tags": [
+      "trucks"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "question": "Count the stars⭐: ⭐ ⭐ ⭐ ⭐. How many stars are there?",
+    "choices": [
+      "4",
+      "3",
+      "5",
+      "2"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "There are 4 stars when you count them one by one.",
+      "This is one less than the number of stars shown.",
+      "This is one more than the number of stars shown.",
+      "This skips two stars and does not count them all."
+    ],
+    "tags": [
+      "space"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "question": "Which number is bigger?",
+    "choices": [
+      "5",
+      "4",
+      "3",
+      "2"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "5 is the biggest number in this list.",
+      "4 is big, but 5 is bigger.",
+      "3 is smaller than 4 and 5.",
+      "2 is the smallest number here."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "question": "A dinosaur🦕 has 3 eggs and finds 2 more eggs. How many eggs does it have now?",
+    "choices": [
+      "5",
+      "4",
+      "6",
+      "3"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "3 eggs plus 2 more eggs equals 5 eggs.",
+      "This is 1 less than the total; it misses an egg.",
+      "This adds one extra egg that was not there.",
+      "This counts only the first 3 eggs and ignores the 2 more."
+    ],
+    "tags": [
+      "dinosaurs"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "What is 7 + 5?",
+    "choices": [
+      "12",
+      "13",
+      "2",
+      "15"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Adding 7 and 5 makes 12.",
+      "13 is one too high; 7 + 5 is not 13.",
+      "2 is what you might get if you subtract 5 from 7 instead of adding.",
+      "15 is too high; it’s a counting mistake when adding."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "A truck has 4 wheels. How many wheels do 2 trucks have?",
+    "choices": [
+      "8",
+      "6",
+      "4",
+      "12"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Each truck has 4 wheels, so 2 trucks have 4 + 4 = 8 wheels.",
+      "6 is too low; it forgets some wheels.",
+      "4 is for just 1 truck, not 2 trucks.",
+      "12 is too high; that would be 3 trucks (3 × 4)."
+    ],
+    "tags": [
+      "trucks"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "What is 9 − 3?",
+    "choices": [
+      "6",
+      "7",
+      "12",
+      "5"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Taking 3 away from 9 leaves 6.",
+      "7 is one too high; subtracting 3 from 9 does not give 7.",
+      "12 is what you get if you add 3 to 9 instead of subtracting.",
+      "5 is one too low; it’s a small counting mistake."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "Which number has 3 tens and 2 ones?",
+    "choices": [
+      "32",
+      "23",
+      "302",
+      "35"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "3 tens is 30 and 2 ones is 2, so 30 + 2 = 32.",
+      "23 swaps the tens and ones (2 tens and 3 ones).",
+      "302 has 3 hundreds, not 3 tens.",
+      "35 has 3 tens but 5 ones, not 2 ones."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "A baker packs 6 muffins in each box. If there are 4 boxes, how many muffins are packed?",
+    "choices": [
+      "24",
+      "10",
+      "26",
+      "64"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "There are 4 groups of 6, so 6 × 4 = 24 muffins.",
+      "10 comes from adding 6 + 4, but you need to multiply groups, not add the numbers.",
+      "26 is a near-miss; it’s not the product of 6 and 4.",
+      "64 mixes up the digits; 6 × 4 is not 64."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "What is the value of the digit 7 in the number 3,748?",
+    "choices": [
+      "700",
+      "70",
+      "7",
+      "7,000"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "The 7 is in the hundreds place, so it means 700.",
+      "70 would be correct if the 7 were in the tens place, but it isn’t.",
+      "7 would be correct if the 7 were in the ones place, but it isn’t.",
+      "7,000 would be correct if the 7 were in the thousands place, but it isn’t."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "A rope is 15 meters long. You cut off 7 meters. How many meters are left?",
+    "choices": [
+      "8",
+      "22",
+      "9",
+      "7"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "You subtract what was cut off: 15 − 7 = 8 meters left.",
+      "22 comes from adding 15 + 7, but cutting means you take away, not add.",
+      "9 is a close number, but 15 − 7 equals 8, not 9.",
+      "7 is the amount cut off, not the amount left."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "Which fraction is equivalent to 1/2?",
+    "choices": [
+      "3/6",
+      "2/3",
+      "1/4",
+      "2/5"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "3/6 simplifies by dividing top and bottom by 3, giving 1/2.",
+      "2/3 is larger than 1/2, so it is not equivalent.",
+      "1/4 is smaller than 1/2, so it is not equivalent.",
+      "2/5 is less than 1/2 because 2 is less than half of 5."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "A rectangle has a length of 8 units and a width of 3 units. What is its area?",
+    "choices": [
+      "24",
+      "22",
+      "11",
+      "48"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Area of a rectangle is length × width, so 8 × 3 = 24.",
+      "22 is a near-miss; multiplying 8 and 3 gives 24, not 22.",
+      "11 comes from adding 8 + 3, but area uses multiplication, not addition.",
+      "48 doubles the correct product; 8 × 3 is 24, not 48."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "Solve: 7x + 5 = 26. What is x?",
+    "choices": [
+      "3",
+      "4",
+      "21",
+      "31"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Subtract 5 to get 7x = 21, then divide by 7 to get x = 3.",
+      "If x = 4, then 7x + 5 = 28 + 5 = 33, not 26.",
+      "21 is the value of 7x after subtracting 5, not the value of x.",
+      "31 is what you get if you add 5 instead of subtracting it first."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "Compute: 15% of 80 equals what?",
+    "choices": [
+      "12",
+      "8",
+      "68",
+      "120"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "10% of 80 is 8 and 5% is 4, so 15% is 8 + 4 = 12.",
+      "8 is only 10% of 80, not 15%.",
+      "68 is 80 minus 12, which is subtracting instead of finding the part.",
+      "120 is larger than 80, but 15% of 80 must be smaller than 80."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "What is the slope of the line that passes through the points (2, 3) and (6, 11)?",
+    "choices": [
+      "2",
+      "4",
+      "1/2",
+      "-2"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Slope = (11 - 3) / (6 - 2) = 8 / 4 = 2.",
+      "4 comes from using only the change in x (6 - 2) and forgetting to divide change in y by change in x.",
+      "1/2 is the reciprocal; that happens if you divide (6 - 2) by (11 - 3) instead.",
+      "-2 would mean the line goes down as x increases, but these points go up."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "Simplify: (3^2)(3^4) equals what?",
+    "choices": [
+      "3^6",
+      "3^8",
+      "9^16",
+      "6^6"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "When multiplying powers with the same base, add the exponents: 2 + 4 = 6.",
+      "3^8 is what you get if you multiply the exponents (2 × 4) instead of adding them.",
+      "9^16 mixes bases and exponents; you do not square 3 to 9 and then combine exponents that way.",
+      "6^6 wrongly adds the bases (3 + 3) instead of keeping the base 3."
+    ],
+    "tags": [
+      "auto"
+    ]
+  }
+]

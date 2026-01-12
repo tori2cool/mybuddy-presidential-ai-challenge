@@ -1,0 +1,6 @@
+[
+  { "name": "Math", "icon": "grid", "color": "#8B5CF6" },
+  { "name": "Science", "icon": "zap", "color": "#10B981" },
+  { "name": "Reading", "icon": "book-open", "color": "#FB923C" },
+  { "name": "History", "icon": "globe", "color": "#3B82F6" }
+]

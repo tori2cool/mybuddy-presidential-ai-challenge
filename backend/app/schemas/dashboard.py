@@ -117,6 +117,10 @@ class DashboardOut(APIModel):
     totalOutdoorActivities: int
     totalAffirmationsViewed: int
 
+    # Daily completion state (UTC day), for persisted checkboxes/buttons
+    todayCompletedChoreIds: List[UUID] = Field(default_factory=list)
+    todayCompletedOutdoorActivityIds: List[UUID] = Field(default_factory=list)
+
     # Derived from achievements + child_achievements join
     achievementsUnlocked: List[AchievementOut]
     achievementsLocked: List[AchievementOut]

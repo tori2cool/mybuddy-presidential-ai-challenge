@@ -1,0 +1,354 @@
+[
+  {
+    "subject": "Reading",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "tags": [
+      "space"
+    ],
+    "question": "Which word names something you can see in space: star or eat? 🌟",
+    "choices": [
+      "Star",
+      "Eat",
+      "Jump",
+      "Sleep"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! A star 🌟 is something you can see in space.",
+      "Eat is an action, not something you see in space.",
+      "Jump is an action, not something you see in space.",
+      "Sleep is something you do, not something you see in space."
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "tags": [
+      "trucks"
+    ],
+    "question": "You are making a monster truck poster 🚚 and want to describe it as very big. Which word means almost the same as 'big'?",
+    "choices": [
+      "Large",
+      "Tiny",
+      "Quiet",
+      "Slow"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! Large means big.",
+      "Tiny means very small, the opposite of big.",
+      "Quiet is about sound, not size.",
+      "Slow is about speed, not size."
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "tags": [
+      "sports"
+    ],
+    "question": "A sports article copies sentences from another writer without naming them. What is this called?",
+    "choices": [
+      "Plagiarism",
+      "Paraphrasing",
+      "Summarizing",
+      "Proofreading"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Correct! Plagiarism is using someone’s words or ideas without giving credit.",
+      "Paraphrasing is rewriting in your own words (with credit if it’s someone else’s idea).",
+      "Summarizing is giving a shorter version of the main points.",
+      "Proofreading is checking for mistakes in writing."
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "Which word is the opposite of \"hot\"?",
+    "choices": [
+      "cold",
+      "warm",
+      "heat",
+      "steam"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "\"Cold\" means not hot, so it is the opposite.",
+      "\"Warm\" is close to hot, not the opposite.",
+      "\"Heat\" is something that makes things hot, not an opposite word.",
+      "\"Steam\" is something you might see from hot water, not an opposite word."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "What does the word \"tiny\" mean?",
+    "choices": [
+      "very small",
+      "very loud",
+      "very fast",
+      "very heavy"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "\"Tiny\" means very small.",
+      "\"Very loud\" is about sound, not size.",
+      "\"Very fast\" is about speed, not size.",
+      "\"Very heavy\" is about weight, not size."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "Read the sentence: \"Liam put on his boots because it was raining.\" Why did Liam put on his boots?",
+    "choices": [
+      "It was raining.",
+      "He wanted to go swimming.",
+      "He took off his shoes.",
+      "He was eating lunch."
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "The sentence says he put on boots because it was raining.",
+      "Swimming is not mentioned, and boots are not for swimming.",
+      "Taking off shoes is a different action and does not answer why he put on boots.",
+      "Eating lunch has nothing to do with boots or rain in the sentence."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Early Elementary",
+    "difficulty": "easy",
+    "question": "Which sentence is a question?",
+    "choices": [
+      "Where is my pencil?",
+      "My pencil is yellow.",
+      "I sharpened my pencil.",
+      "Please bring my pencil."
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "It asks something and ends with a question mark.",
+      "This tells a fact and ends with a period.",
+      "This tells what happened and ends with a period.",
+      "This is a request (a command) and ends with a period."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "Read the sentence: \"Maya tiptoed into the library so she wouldn't disturb anyone.\" What does \"disturb\" mean here?",
+    "choices": [
+      "bother or interrupt",
+      "decorate or improve",
+      "teach a new skill",
+      "borrow a book"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "\"Disturb\" means to bother or interrupt, so Maya is being quiet.",
+      "\"Decorate\" means to make something look nicer, which doesn't fit being quiet in a library.",
+      "\"Teach\" is about helping someone learn, not about making noise.",
+      "\"Borrow\" means to take something to use and return later, which isn't what the sentence is describing."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "Read the sentence: \"After the storm, the sidewalk was slick.\" What does \"slick\" most likely mean?",
+    "choices": [
+      "slippery",
+      "colorful",
+      "noisy",
+      "warm"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "\"Slick\" means slippery, which can happen when things are wet after a storm.",
+      "\"Colorful\" describes how something looks, not how it feels to walk on.",
+      "\"Noisy\" describes sound, but a sidewalk isn't described that way here.",
+      "\"Warm\" describes temperature, not the surface after rain."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "Read the sentence: \"Lena glanced at the clock and grabbed her backpack.\" What can you infer Lena is about to do?",
+    "choices": [
+      "leave soon",
+      "take a nap",
+      "paint a picture",
+      "start cooking dinner"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Checking the clock and grabbing a backpack are clues that she is about to leave.",
+      "A nap would fit clues like yawning or lying down, not grabbing a backpack.",
+      "Painting would involve art supplies, not a clock and backpack as the main clues.",
+      "Cooking dinner would involve food or the kitchen, which the sentence doesn't mention."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "Read the sentence: \"The tiny kitten squeezed through the narrow gap.\" What does \"narrow\" mean?",
+    "choices": [
+      "not wide",
+      "very bright",
+      "very soft",
+      "very heavy"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "\"Narrow\" means not wide, so the gap is small from side to side.",
+      "\"Bright\" describes light, not the size of a gap.",
+      "\"Soft\" describes texture, but a gap isn't usually described that way.",
+      "\"Heavy\" describes weight, which doesn't fit a gap."
+    ],
+    "tags": [
+      "animals"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Late Elementary",
+    "difficulty": "easy",
+    "question": "Read the sentence: \"Jordan was disappointed because the picnic was canceled.\" Why was Jordan disappointed?",
+    "choices": [
+      "The picnic was canceled.",
+      "Jordan forgot to bring a blanket.",
+      "The picnic had too many games.",
+      "Jordan already ate lunch."
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "The sentence directly says Jordan was disappointed because the picnic was canceled.",
+      "Forgetting a blanket is a possible problem, but the sentence does not say that happened.",
+      "Having many games would usually make a picnic more fun, and the sentence doesn't mention games.",
+      "Eating lunch doesn't explain disappointment about a canceled picnic, and the sentence doesn't mention lunch."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "Read the sentence: \"Maya was reluctant to speak up during the meeting.\" What does \"reluctant\" most nearly mean?",
+    "choices": [
+      "unwilling",
+      "excited",
+      "prepared",
+      "loud"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "\"Reluctant\" means not wanting to do something, so she didn't want to speak up.",
+      "\"Excited\" means eager or thrilled, which is the opposite of hesitant.",
+      "\"Prepared\" means ready, but the sentence is about willingness, not readiness.",
+      "\"Loud\" describes volume, not a person's willingness to act."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "Read the sentence: \"Because the roads were icy, the school closed early.\" What is the cause of the school closing early?",
+    "choices": [
+      "The roads were icy.",
+      "The school closed early.",
+      "Students finished their homework.",
+      "The weather was warm."
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "Icy roads are the reason (cause) given for the early closing.",
+      "This is the effect (what happened), not the cause (why it happened).",
+      "Homework is not mentioned as the reason for closing.",
+      "Warm weather would not explain icy roads or an early closure."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "Read the sentence: \"Jordan scanned the article to find the date of the event.\" What does \"scanned\" mean here?",
+    "choices": [
+      "looked quickly for specific information",
+      "read every word slowly",
+      "copied the article by hand",
+      "argued with the writer"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "To \"scan\" is to glance through text to locate a detail, like a date.",
+      "Reading every word slowly is closer to \"studied\" or \"read carefully,\" not \"scanned.\"",
+      "Copying by hand is a different task and not what \"scanned\" means in reading.",
+      "Arguing with the writer is not a reading strategy and doesn't fit the sentence."
+    ],
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Teen",
+    "difficulty": "easy",
+    "question": "Read the sentence: \"The museum was crowded; however, we still enjoyed the exhibit.\" What does \"however\" signal?",
+    "choices": [
+      "a contrast between two ideas",
+      "an example that supports the first idea",
+      "a time order of events",
+      "a definition of a word"
+    ],
+    "correct_index": 0,
+    "explanations": [
+      "\"However\" shows that the second idea goes against what you might expect from the first.",
+      "An example would add evidence, but \"however\" introduces an opposing point instead.",
+      "Time order uses words like \"first\" or \"later,\" not \"however.\"",
+      "Definitions explain meanings, but this sentence is comparing two ideas."
+    ],
+    "tags": [
+      "auto"
+    ]
+  }
+]

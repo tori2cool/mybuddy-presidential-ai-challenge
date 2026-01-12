@@ -1,0 +1,10 @@
+[
+  { "name": "animals", "label": "Animals", "icon": "🐾" },
+  { "name": "trucks", "label": "Monster Trucks", "icon": "🚚" },
+  { "name": "ponies", "label": "Ponies", "icon": "🐴" },
+  { "name": "dinosaurs", "label": "Dinosaurs", "icon": "🦕" },
+  { "name": "sports", "label": "Sports", "icon": "⚽" },
+  { "name": "horseback", "label": "Horseback Riding", "icon": "🏇" },
+  { "name": "space", "label": "Space", "icon": "🚀" },
+  { "name": "art", "label": "Art", "icon": "🎨" }
+]

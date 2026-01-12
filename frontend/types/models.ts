@@ -69,8 +69,9 @@ export interface Flashcard {
   id: UUID;
   subjectId: UUID;
   question: string;
-  answer: string;
-  acceptableAnswers: string[] | null;
+  choices: string[];
+  correctIndex: number;
+  explanations: string[];
   difficultyCode: DifficultyCode;
   tags: string[] | null;
   ageRangeId: UUID | null;
@@ -237,6 +238,10 @@ export type DashboardOut = {
   totalChoresCompleted: number;
   totalOutdoorActivities: number;
   totalAffirmationsViewed: number;
+
+  // Daily completion state (UTC day), for persisted checkboxes/buttons
+  todayCompletedChoreIds: UUID[];
+  todayCompletedOutdoorActivityIds: UUID[];
 
   achievementsUnlocked: AchievementOut[];
   achievementsLocked: AchievementOut[];
