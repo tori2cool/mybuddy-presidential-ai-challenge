@@ -1,10 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
   Pressable,
   Modal,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -47,7 +46,7 @@ function FlashcardPracticeModal({
   const { postEvent, refreshDashboard } = useDashboard();
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [userAnswer, setUserAnswer] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [hasChecked, setHasChecked] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
@@ -55,7 +54,6 @@ function FlashcardPracticeModal({
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const inputRef = useRef<TextInput>(null);
   const cardScale = useSharedValue(1);
   const feedbackScale = useSharedValue(0);
 
@@ -95,17 +93,12 @@ function FlashcardPracticeModal({
     }
   }, [visible, subject, difficultyCode, childId]);
 
-  useEffect(() => {
-    if (!visible || hasChecked || isLoading || cards.length === 0) return;
-
-    const t = setTimeout(() => inputRef.current?.focus(), 500);
-    return () => clearTimeout(t);
-  }, [visible, currentIndex, hasChecked, isLoading, cards.length]);
+  // No keyboard focus needed for MCQ UI
 
   const resetState = () => {
     setCards([]);
     setCurrentIndex(0);
-    setUserAnswer("");
+    setSelectedIndex(null);
     setHasChecked(false);
     setIsCorrect(false);
     setCorrectCount(0);
@@ -133,7 +126,7 @@ function FlashcardPracticeModal({
     if (currentIndex < cards.length - 1) {
       // Next card - no refresh needed
       setCurrentIndex((prev) => prev + 1);
-      setUserAnswer("");
+      setSelectedIndex(null);
       setHasChecked(false);
       setIsCorrect(false);
       feedbackScale.value = 0;
@@ -172,12 +165,9 @@ function FlashcardPracticeModal({
 
   const checkAnswer = () => {
     try {
-      if (!userAnswer.trim() || !currentCard || !subject) return;
+      if (selectedIndex === null || !currentCard || !subject) return;
 
-      const normalizedUserAnswer = userAnswer.trim().toLowerCase();
-      const correct = currentCard.acceptableAnswers.some(
-        (acceptable) => acceptable.toLowerCase() === normalizedUserAnswer
-      );
+      const correct = selectedIndex === currentCard.correctIndex;
 
       setIsCorrect(correct);
       setHasChecked(true);
@@ -187,7 +177,7 @@ function FlashcardPracticeModal({
         body: {
           correct,
           flashcardId: currentCard.id,
-          answer: userAnswer.trim(),
+          answer: currentCard.choices[selectedIndex] ?? null,
         },
       };
 
@@ -221,16 +211,30 @@ function FlashcardPracticeModal({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
-        style={styles.modalContainer}
+        style={[styles.modalContainer, { backgroundColor: theme.backgroundRoot }]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          style={styles.modalContainer}
-          contentContainerStyle={styles.modalContent}
+          style={[styles.modalContainer, { backgroundColor: theme.backgroundRoot }]}
+          contentContainerStyle={[
+            styles.modalContent,
+            { backgroundColor: theme.backgroundRoot },
+          ]}
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
-          <View style={styles.modalHeader}>
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: theme.backgroundRoot,
+                borderBottomColor:
+                  theme.border ??
+                  theme.backgroundTertiary ??
+                  (theme.textSecondary + "33"),
+              },
+            ]}
+          >
             <Pressable style={styles.closeButton} onPress={handleClose}>
               <Feather name="x" size={24} color={theme.text} />
             </Pressable>
@@ -292,7 +296,7 @@ function FlashcardPracticeModal({
                     onPress={handleClose}
                   >
                     <Feather name="home" size={20} color="white" />
-                    <ThemedText style={styles.resultButtonText}>Done</ThemedText>
+                    <ThemedText style={[styles.resultButtonText, styles.resultButtonLabel]}>Done</ThemedText>
                   </Pressable>
                 </View>
               </View>
@@ -317,34 +321,67 @@ function FlashcardPracticeModal({
 
               <View style={styles.answerSection}>
                 <ThemedText style={[styles.answerLabel, { color: theme.textSecondary }]}>
-                  Your Answer
+                  Choose an Answer
                 </ThemedText>
-                <TextInput
-                  ref={inputRef}
-                  style={[
-                    styles.answerInput,
-                    {
-                      backgroundColor: theme.backgroundDefault,
-                      borderColor: isCorrect
+
+                <View style={styles.choicesContainer}>
+                  {(currentCard.choices || []).slice(0, 4).map((choice, idx) => {
+                    const selected = selectedIndex === idx;
+                    const borderColor = hasChecked
+                      ? idx === currentCard.correctIndex
                         ? theme.success
-                        : hasChecked
+                        : selected
                           ? theme.error
-                          : theme.border,
-                      color: theme.text,
-                    },
-                  ]}
-                  value={userAnswer}
-                  onChangeText={setUserAnswer}
-                  placeholder="Type your answer here..."
-                  placeholderTextColor={theme.textSecondary}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!hasChecked}
-                  onSubmitEditing={!hasChecked ? checkAnswer : undefined}
-                />
+                          : theme.border
+                      : selected
+                        ? theme.primary
+                        : theme.border;
+
+                    const backgroundColor = hasChecked
+                      ? idx === currentCard.correctIndex
+                        ? theme.success + "15"
+                        : selected
+                          ? theme.error + "10"
+                          : theme.backgroundDefault
+                      : selected
+                        ? theme.primary + "10"
+                        : theme.backgroundDefault;
+
+                    return (
+                      <Pressable
+                        key={`${currentCard.id}:${idx}`}
+                        style={[
+                          styles.choiceButton,
+                          {
+                            backgroundColor,
+                            borderColor,
+                          },
+                        ]}
+                        onPress={() => {
+                          if (hasChecked) return;
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setSelectedIndex(idx);
+                        }}
+                      >
+                        <View style={styles.choiceRow}>
+                          <ThemedText style={{ color: theme.text, flex: 1 }}>{choice}</ThemedText>
+                          {selected && !hasChecked && (
+                            <Feather name="check" size={16} color={theme.primary} />
+                          )}
+                          {hasChecked && idx === currentCard.correctIndex && (
+                            <Feather name="check-circle" size={16} color={theme.success} />
+                          )}
+                          {hasChecked && selected && idx !== currentCard.correctIndex && (
+                            <Feather name="x-circle" size={16} color={theme.error} />
+                          )}
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
 
                 {/* Feedback Section */}
-                {hasChecked && (
+                {hasChecked && selectedIndex !== null && (
                   <View style={styles.feedbackContainer}>
                     <Animated.View style={feedbackAnimatedStyle}>
                       <View
@@ -370,11 +407,63 @@ function FlashcardPracticeModal({
                       </View>
                     </Animated.View>
 
+                    <View
+                      style={[
+                        styles.explanationBox,
+                        {
+                          backgroundColor: theme.backgroundDefault,
+                          borderColor: theme.border,
+                        },
+                      ]}
+                    >
+                      <ThemedText
+                        style={[styles.explanationLabel, { color: theme.textSecondary }]}
+                      >
+                        Explanation
+                      </ThemedText>
+                      <ThemedText style={[styles.explanationText, { color: theme.text }]}
+                      >
+                        {currentCard.explanations?.[selectedIndex] || ""}
+                      </ThemedText>
+                    </View>
+
                     {!isCorrect && (
-                      <View style={[styles.correctAnswerBox, { backgroundColor: "#FEF3C7" }]}>
-                        <ThemedText style={styles.correctAnswerLabel}>Correct Answer:</ThemedText>
-                        <ThemedText style={styles.correctAnswerText}>
-                          {currentCard.acceptableAnswers[0]}
+                      <View
+                        style={[
+                          styles.correctAnswerBox,
+                          {
+                            backgroundColor:
+                              theme.backgroundSecondary ?? theme.backgroundDefault,
+                            borderWidth: 1,
+                            borderColor:
+                              theme.border ??
+                              theme.backgroundTertiary ??
+                              (theme.textSecondary + "33"),
+                            borderLeftWidth: 4,
+                            borderLeftColor: theme.secondary ?? theme.primary,
+                          },
+                        ]}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.correctAnswerLabel,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
+                          Correct Answer:
+                        </ThemedText>
+                        <ThemedText
+                          style={[styles.correctAnswerText, { color: theme.text }]}
+                        >
+                          {currentCard.choices[currentCard.correctIndex]}
+                        </ThemedText>
+                        <ThemedText
+                          style={[
+                            styles.correctAnswerExplanation,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
+                          {currentCard.explanations?.[currentCard.correctIndex] || ""}
                         </ThemedText>
                       </View>
                     )}
@@ -384,8 +473,15 @@ function FlashcardPracticeModal({
                 {/* Action Buttons */}
                 {!hasChecked ? (
                   <Pressable
-                    style={[styles.checkButton, { backgroundColor: theme.primary }]}
+                    style={[
+                      styles.checkButton,
+                      {
+                        backgroundColor: theme.primary,
+                        opacity: selectedIndex === null ? 0.6 : 1,
+                      },
+                    ]}
                     onPress={checkAnswer}
+                    disabled={selectedIndex === null}
                   >
                     <Feather name="check" size={20} color="white" />
                     <ThemedText style={[styles.checkButtonText, { color: "white" }]}>
@@ -432,7 +528,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.1)",
   },
   closeButton: {
     padding: Spacing.sm,
@@ -498,12 +593,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-  answerInput: {
-    height: 56,
+  choicesContainer: {
+    gap: Spacing.md,
+  },
+  choiceButton: {
     borderRadius: BorderRadius.md,
     borderWidth: 2,
     paddingHorizontal: Spacing.lg,
-    fontSize: 18,
+    paddingVertical: Spacing.md,
+  },
+  choiceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
   },
   feedbackContainer: {
     gap: Spacing.md,
@@ -526,13 +628,29 @@ const styles = StyleSheet.create({
   },
   correctAnswerLabel: {
     fontSize: 12,
-    color: "#92400E",
     marginBottom: 4,
   },
   correctAnswerText: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#92400E",
+  },
+  correctAnswerExplanation: {
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  explanationBox: {
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  explanationLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  explanationText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   nextButton: {
     height: 52,
@@ -597,21 +715,28 @@ const styles = StyleSheet.create({
   },
   resultsButtons: {
     flexDirection: "row",
-    gap: Spacing.md,
     marginTop: Spacing.lg,
+    alignSelf: "stretch",
+    width: "100%",
+    alignItems: "stretch",
   },
   resultButton: {
-    flex: 1,
-    height: 48,
+    // Results screen primary action button
+    height: 52,
+    paddingHorizontal: Spacing.xl,
     borderRadius: BorderRadius.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: Spacing.sm,
+    alignSelf: "stretch",
+    width: "100%",
   },
   resultButtonText: {
     color: "white",
     fontSize: 16,
     fontWeight: "600",
+  },
+  resultButtonLabel: {
+    marginLeft: Spacing.sm,
   },
 });

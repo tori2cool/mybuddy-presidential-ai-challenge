@@ -1,0 +1,5 @@
+[
+  { "code": "easy", "name": "Beginner", "threshold": 0, "label": "Beginner", "icon": "smile", "color": "#10B981" },
+  { "code": "medium", "name": "Intermediate", "threshold": 20, "label": "Intermediate", "icon": "zap", "color": "#F59E0B" },
+  { "code": "hard", "name": "Advanced", "threshold": 40, "label": "Advanced", "icon": "award", "color": "#EF4444" }
+]

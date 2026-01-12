@@ -1,0 +1,23 @@
+[
+  { "label": "Make my bed", "icon": "home", "is_extra": false, "tags": ["space"], "age_range": "Preschool" },
+  { "label": "Put away clothes", "icon": "user", "is_extra": false, "tags": ["organization"], "age_range": "Preschool" },
+  { "label": "Clean my room", "icon": "trash-2", "is_extra": false, "tags": ["responsibility"], "age_range": "Preschool" },
+
+  { "label": "Organize my backpack", "icon": "package", "is_extra": false, "tags": ["organization"], "age_range": "Early Elementary" },
+  { "label": "Feed the pets", "icon": "heart", "is_extra": false, "tags": ["responsibility"], "age_range": "Early Elementary" },
+  { "label": "Set the table", "icon": "coffee", "is_extra": false, "tags": ["helping"], "age_range": "Early Elementary" },
+  { "label": "Water the plants", "icon": "droplet", "is_extra": false, "tags": ["nature"], "age_range": "Early Elementary" },
+  { "label": "Empty small trash cans", "icon": "trash-2", "is_extra": false, "tags": ["responsibility"], "age_range": "Early Elementary" },
+
+  { "label": "Do the dishes", "icon": "coffee", "is_extra": false, "tags": ["responsibility"], "age_range": "Late Elementary" },
+  { "label": "Walk the dog", "icon": "activity", "is_extra": false, "tags": ["pets"], "age_range": "Late Elementary" },
+  { "label": "Vacuum living room", "icon": "wind", "is_extra": false, "tags": ["responsibility"], "age_range": "Late Elementary" },
+  { "label": "Fold laundry", "icon": "list", "is_extra": false, "tags": ["responsibility"], "age_range": "Late Elementary" },
+  { "label": "Clean bathroom sink", "icon": "droplets", "is_extra": false, "tags": ["cleaning"], "age_range": "Late Elementary" },
+
+  { "label": "Mow the lawn", "icon": "scissors", "is_extra": false, "tags": ["responsibility"], "age_range": "Teen" },
+  { "label": "Wash the car", "icon": "truck", "is_extra": false, "tags": ["responsibility"], "age_range": "Teen" },
+  { "label": "Cook a meal", "icon": "clock", "is_extra": false, "tags": ["responsibility"], "age_range": "Teen" },
+  { "label": "Clean the garage", "icon": "tool", "is_extra": false, "tags": ["responsibility"], "age_range": "Teen" },
+  { "label": "Do laundry", "icon": "rotate-ccw", "is_extra": false, "tags": ["responsibility"], "age_range": "Teen" }
+]

@@ -1,0 +1,37 @@
+[
+  { "text": "I can try again.", "image": null, "gradient_0": "#8B5CF6", "gradient_1": "#3B82F6", "tags": ["auto"], "age_range": "Preschool" },
+  { "text": "I am brave.", "image": null, "gradient_0": "#10B981", "gradient_1": "#3B82F6", "tags": ["auto"], "age_range": "Preschool" },
+  { "text": "I can learn new things.", "image": null, "gradient_0": "#FB923C", "gradient_1": "#F59E0B", "tags": ["auto"], "age_range": "Preschool" },
+  { "text": "I can use kind words.", "image": null, "gradient_0": "#22C55E", "gradient_1": "#06B6D4", "tags": ["auto"], "age_range": "Preschool" },
+  { "text": "I can take deep breaths.", "image": null, "gradient_0": "#6366F1", "gradient_1": "#8B5CF6", "tags": ["auto"], "age_range": "Preschool" },
+  { "text": "I can share and wait my turn.", "image": null, "gradient_0": "#14B8A6", "gradient_1": "#3B82F6", "tags": ["auto"], "age_range": "Preschool" },
+  { "text": "I am loved.", "image": null, "gradient_0": "#F97316", "gradient_1": "#EF4444", "tags": ["auto"], "age_range": "Preschool" },
+  { "text": "I can help.", "image": null, "gradient_0": "#A855F7", "gradient_1": "#EC4899", "tags": ["auto"], "age_range": "Preschool" },
+
+  { "text": "Challenges help me grow.", "image": null, "gradient_0": "#8B5CF6", "gradient_1": "#3B82F6", "tags": ["auto"], "age_range": "Early Elementary" },
+  { "text": "I keep trying even when it's hard.", "image": null, "gradient_0": "#10B981", "gradient_1": "#3B82F6", "tags": ["auto"], "age_range": "Early Elementary" },
+  { "text": "Every mistake teaches me something.", "image": null, "gradient_0": "#FB923C", "gradient_1": "#F59E0B", "tags": ["auto"], "age_range": "Early Elementary" },
+  { "text": "I believe in my ability to learn.", "image": null, "gradient_0": "#22C55E", "gradient_1": "#06B6D4", "tags": ["auto"], "age_range": "Early Elementary" },
+  { "text": "I can handle setbacks.", "image": null, "gradient_0": "#6366F1", "gradient_1": "#8B5CF6", "tags": ["auto"], "age_range": "Early Elementary" },
+  { "text": "My brain gets stronger when I practice.", "image": null, "gradient_0": "#14B8A6", "gradient_1": "#3B82F6", "tags": ["auto"], "age_range": "Early Elementary" },
+  { "text": "I can learn new things.", "image": null, "gradient_0": "#F97316", "gradient_1": "#EF4444", "tags": ["auto"], "age_range": "Early Elementary" },
+  { "text": "Effort is more important than being perfect.", "image": null, "gradient_0": "#A855F7", "gradient_1": "#EC4899", "tags": ["auto"], "age_range": "Early Elementary" },
+
+  { "text": "I embrace challenges as opportunities.", "image": null, "gradient_0": "#0EA5E9", "gradient_1": "#22C55E", "tags": ["auto"], "age_range": "Late Elementary" },
+  { "text": "I stay focused on my goals.", "image": null, "gradient_0": "#F59E0B", "gradient_1": "#FB923C", "tags": ["auto"], "age_range": "Late Elementary" },
+  { "text": "My mistakes help me find better solutions.", "image": null, "gradient_0": "#3B82F6", "gradient_1": "#6366F1", "tags": ["auto"], "age_range": "Late Elementary" },
+  { "text": "I trust myself to figure things out.", "image": null, "gradient_0": "#10B981", "gradient_1": "#14B8A6", "tags": ["auto"], "age_range": "Late Elementary" },
+  { "text": "I bounce back from disappointment.", "image": null, "gradient_0": "#EC4899", "gradient_1": "#A855F7", "tags": ["auto"], "age_range": "Late Elementary" },
+  { "text": "I improve every single day.", "image": null, "gradient_0": "#14B8A6", "gradient_1": "#3B82F6", "tags": ["auto"], "age_range": "Late Elementary" },
+  { "text": "I'm becoming stronger through effort.", "image": null, "gradient_0": "#0EA5E9", "gradient_1": "#22C55E", "tags": ["auto"], "age_range": "Late Elementary" },
+  { "text": "I can overcome obstacles.", "image": null, "gradient_0": "#F59E0B", "gradient_1": "#FB923C", "tags": ["auto"], "age_range": "Late Elementary" },
+
+  { "text": "I choose to see challenges as growth opportunities.", "image": null, "gradient_0": "#3B82F6", "gradient_1": "#6366F1", "tags": ["auto"], "age_range": "Teen" },
+  { "text": "I stay committed to my goals.", "image": null, "gradient_0": "#10B981", "gradient_1": "#14B8A6", "tags": ["auto"], "age_range": "Teen" },
+  { "text": "I learn from every experience.", "image": null, "gradient_0": "#EC4899", "gradient_1": "#A855F7", "tags": ["auto"], "age_range": "Teen" },
+  { "text": "I have confidence in my abilities.", "image": null, "gradient_0": "#8B5CF6", "gradient_1": "#3B82F6", "tags": ["auto"], "age_range": "Teen" },
+  { "text": "I handle failure with grace.", "image": null, "gradient_0": "#22C55E", "gradient_1": "#06B6D4", "tags": ["auto"], "age_range": "Teen" },
+  { "text": "I embrace the process of learning.", "image": null, "gradient_0": "#F97316", "gradient_1": "#EF4444", "tags": ["auto"], "age_range": "Teen" },
+  { "text": "My effort today builds my tomorrow.", "image": null, "gradient_0": "#A855F7", "gradient_1": "#EC4899", "tags": ["auto"], "age_range": "Teen" },
+  { "text": "I adapt and keep moving forward.", "image": null, "gradient_0": "#14B8A6", "gradient_1": "#3B82F6", "tags": ["auto"], "age_range": "Teen" }
+]

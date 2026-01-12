@@ -3,11 +3,13 @@ from __future__ import annotations
 import httpx
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-
+from sqlalchemy import text
 from .logging_config import setup_logging
 from .db import init_db
 from .seed import seed
 from .middleware import logging_middleware
+from .utils.enable_pgcrypto import pgcrypto_enabled, verify_uuid_support
+from .flashcard_seed import generate_all_easy_flashcards, insert_flashcards_from_seed_json
 
 # Configure logging early (before FastAPI app is created)
 setup_logging()
@@ -20,8 +22,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
-    await seed()
+    if await pgcrypto_enabled() == True:
+        await verify_uuid_support()
+        await init_db()
+        await seed()
+        await generate_all_easy_flashcards(per_pair=5)
+        await insert_flashcards_from_seed_json()
+    else:
+        await verify_uuid_support()
     yield
 
 app = FastAPI(title="MyBuddy Backend", lifespan=lifespan)

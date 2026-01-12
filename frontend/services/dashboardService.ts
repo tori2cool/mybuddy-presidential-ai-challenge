@@ -130,6 +130,11 @@ function coerceDashboardOut(payload: unknown): DashboardOut {
     };
   }
 
+  const todayCompletedChoreIdsRaw = Array.isArray(p.todayCompletedChoreIds) ? p.todayCompletedChoreIds : [];
+  const todayCompletedOutdoorActivityIdsRaw = Array.isArray(p.todayCompletedOutdoorActivityIds)
+    ? p.todayCompletedOutdoorActivityIds
+    : [];
+
   return {
     totalPoints: requireNumber(p.totalPoints, "dashboard.totalPoints: expected number"),
     currentStreak: requireNumber(p.currentStreak, "dashboard.currentStreak: expected number"),
@@ -184,6 +189,13 @@ function coerceDashboardOut(payload: unknown): DashboardOut {
     totalAffirmationsViewed: requireNumber(
       p.totalAffirmationsViewed,
       "dashboard.totalAffirmationsViewed: expected number"
+    ),
+
+    todayCompletedChoreIds: todayCompletedChoreIdsRaw.map((v, i) =>
+      requireString(v, `dashboard.todayCompletedChoreIds[${i}]: expected string`)
+    ),
+    todayCompletedOutdoorActivityIds: todayCompletedOutdoorActivityIdsRaw.map((v, i) =>
+      requireString(v, `dashboard.todayCompletedOutdoorActivityIds[${i}]: expected string`)
     ),
 
     achievementsUnlocked: achievementsUnlockedRaw.map((a, i) =>

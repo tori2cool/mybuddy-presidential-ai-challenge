@@ -19,11 +19,10 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { getSubjects } from "@/services/subjectsService";
 import { getDifficulties } from "@/services/difficultiesService";
 
-import type { Subject, UUID, DifficultyCode, DifficultyThreshold, SubjectProgress } from "@/types/models";
+import type { Subject, DifficultyCode, DifficultyThreshold, SubjectProgress, DashboardOut, SubjectProgressOut, SubjectStatsOut } from "@/types/models";
 
 import FlashcardPracticeModal from "@/components/FlashcardPracticeModal";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 function difficultyLabelOf(d: DifficultyThreshold): string {
   // Backend has label; fallback to name/code
@@ -104,13 +103,13 @@ export default function FlashcardsScreen() {
     return [...difficulties].sort((a, b) => a.threshold - b.threshold);
   }, [difficulties]);
 
-  // Dashboard shapes (coming from your dashboard service)
-  const dashboard = dashboardData as any;
-  const balancedProgress = dashboard?.balanced as any | undefined;
-  const flashcardsBySubject = dashboard?.flashcardsBySubject as Record<string, any> | undefined;
+  // Dashboard (backend-aligned)
+  const dashboard = (dashboardData ?? null) as DashboardOut | null;
+  const balancedProgress = dashboard?.balanced;
+  const flashcardsBySubject = dashboard?.flashcardsBySubject;
 
   const getSubjectProgress = (subjectCode: string): SubjectProgress => {
-    const stats = flashcardsBySubject?.[subjectCode];
+    const stats = (flashcardsBySubject as Record<string, SubjectStatsOut> | undefined)?.[subjectCode];
 
     const difficultyCode =
       typeof stats?.difficultyCode === "string" && stats.difficultyCode.trim().length > 0
@@ -143,7 +142,7 @@ export default function FlashcardsScreen() {
   const handlePractice = (subject: Subject) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const stats = flashcardsBySubject?.[subject.code];
+    const stats = (flashcardsBySubject as Record<string, SubjectStatsOut> | undefined)?.[subject.code];
     const difficultyCode =
       typeof stats?.difficultyCode === "string" && stats.difficultyCode.trim().length > 0
         ? (stats.difficultyCode as DifficultyCode)
@@ -186,26 +185,23 @@ export default function FlashcardsScreen() {
           </View>
 
           <ThemedText style={[styles.balanceMessage, { color: theme.textSecondary }]}>
-            {typeof balancedProgress?.message === "string" ? balancedProgress.message : ""}
+            {balancedProgress?.message ?? ""}
           </ThemedText>
 
           <View style={styles.subjectProgressContainer}>
             {balancedProgress
-              ? subjects.map((subject) => {
-                  const subjectProg = balancedProgress?.subjectProgress?.[subject.code];
-                  if (!subjectProg) return null;
+              ? subjects.length > 0
+                ? subjects.map((subject) => {
+                  const subjectProg = (balancedProgress.subjectProgress as Record<string, SubjectProgressOut> | undefined)?.[
+                    subject.code
+                  ];
 
-                  const current = typeof subjectProg.current === "number" ? subjectProg.current : 0;
-                  const required =
-                    typeof subjectProg.required === "number"
-                      ? subjectProg.required
-                      : typeof balancedProgress?.requiredPerSubject === "number"
-                        ? balancedProgress.requiredPerSubject
-                        : 0;
+                  const required = subjectProg?.required ?? balancedProgress.requiredPerSubject ?? 0;
+                  const current = subjectProg?.correct ?? 0;
+                  const met = subjectProg?.meetsRequirement ?? false;
 
-                  const met = !!subjectProg.met;
-
-                  const progressPercent = required > 0 ? Math.min((current / required) * 100, 100) : 100;
+                  const progressPercent =
+                    required > 0 ? Math.min((current / required) * 100, 100) : 100;
 
                   return (
                     <View key={subject.id} style={styles.subjectProgressItem}>
@@ -234,6 +230,7 @@ export default function FlashcardsScreen() {
                     </View>
                   );
                 })
+                : null
               : null}
           </View>
         </View>

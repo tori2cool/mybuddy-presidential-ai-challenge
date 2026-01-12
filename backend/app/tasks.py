@@ -56,7 +56,7 @@ def process_content_expansion_request(request_id: str) -> dict:
 
         from sqlalchemy import case, func, select, text
 
-        from .models import AgeRange, Child, ContentExpansionRequest, Flashcard, Subject
+        from .models import AgeRange, Child, ContentExpansionRequest, Flashcard, Interest, Subject
         from .services.ai_flashcard_generator import FlashcardGenerator
         from .services.content_expansion import check_auto_flashcard_limit
 
@@ -112,7 +112,25 @@ def process_content_expansion_request(request_id: str) -> dict:
                 }
 
             child = (await session.execute(select(Child).where(Child.id == req.child_id))).scalar_one_or_none()
-            interests = child.interests if (child and child.interests) else []
+
+            interests_ids: list[str] = child.interests if (child and child.interests) else []
+            interests_names: list[str] = []
+            if interests_ids:
+                # Child.interests are stored as UUID strings; Flashcard tags + AI generator expect Interest.name strings.
+                interest_uuid_list: list[UUID] = []
+                for x in interests_ids:
+                    try:
+                        interest_uuid_list.append(UUID(str(x)))
+                    except Exception:
+                        # Ignore malformed values; child interests can be user-provided / legacy.
+                        continue
+
+                if interest_uuid_list:
+                    interests_names = (
+                        await session.execute(
+                            select(Interest.name).where(Interest.id.in_(interest_uuid_list))
+                        )
+                    ).scalars().all()
 
             subj = (await session.execute(select(Subject).where(Subject.id == req.subject_id))).scalar_one_or_none()
             subject_name = subj.name if subj else str(req.subject_id)
@@ -126,60 +144,106 @@ def process_content_expansion_request(request_id: str) -> dict:
 
             generator = FlashcardGenerator()
 
-            # Fetch 5 example flashcards to help the model match our existing style.
-            examples_stmt = select(
-                Flashcard.question,
-                Flashcard.answer,
-                Flashcard.acceptable_answers,
-                Flashcard.tags,
-            ).where(
-                Flashcard.subject_id == req.subject_id,
-                Flashcard.difficulty_code == req.difficulty_code,
-            )
+            # Fetch up to 5 example flashcards to help the model match our existing style.
+            # Fallback rule: if no examples exist for the requested difficulty, fall back to easier difficulties
+            # (hard -> medium -> easy, medium -> easy). Subject + age range constraints remain the same.
+            examples: list[dict] = []
+            examples_difficulty_used: str | None = None
 
-            # Age range rule: if request has an age_range_id, match it; otherwise do not filter.
-            if req.age_range_id is not None:
-                examples_stmt = examples_stmt.where(Flashcard.age_range_id == req.age_range_id)
+            requested_difficulty = req.difficulty_code
+            difficulty_candidates: list[str] = [requested_difficulty]
+            if requested_difficulty == "hard":
+                difficulty_candidates = ["hard", "medium", "easy"]
+            elif requested_difficulty == "medium":
+                difficulty_candidates = ["medium", "easy"]
 
-            # Prefer flashcards whose tags match child interests (JSONB '?' operator)
+            # Prefer flashcards whose tags match child interests (Flashcard.tags stores Interest.name strings)
             interest_order = None
-            if interests:
+            if interests_names:
                 when_clauses = []
-                for interest in interests:
+                for interest_name in interests_names:
                     when_clauses.append(
-                        (func.coalesce(Flashcard.tags, text("'[]'::jsonb")).op("?")(str(interest)), 0)
+                        (func.coalesce(Flashcard.tags, text("'[]'::jsonb")).op("?")(str(interest_name)), 0)
                     )
                 when_clauses.append((True, 1))
                 interest_order = case(*when_clauses)
 
-            if interest_order is not None:
-                examples_stmt = examples_stmt.order_by(interest_order, func.random())
-            else:
-                examples_stmt = examples_stmt.order_by(func.random())
+            for candidate_difficulty in difficulty_candidates:
+                examples_stmt = (
+                    select(
+                        Flashcard.question,
+                        Flashcard.choices,
+                        Flashcard.correct_index,
+                        Flashcard.explanations,
+                        Flashcard.tags,
+                    )
+                    .where(
+                        Flashcard.subject_id == req.subject_id,
+                        Flashcard.difficulty_code == candidate_difficulty,
+                    )
+                )
 
-            examples_rows = (await session.execute(examples_stmt.limit(5))).all()
-            examples = [
-                {
-                    "question": q,
-                    "answer": a,
-                    "acceptable_answers": list(acc or []),
-                    "tags": list(tags or []),
-                }
-                for (q, a, acc, tags) in examples_rows
-            ]
+                # Age range rule: if request has an age_range_id, match it; otherwise do not filter.
+                if req.age_range_id is not None:
+                    examples_stmt = examples_stmt.where(Flashcard.age_range_id == req.age_range_id)
+
+                if interest_order is not None:
+                    examples_stmt = examples_stmt.order_by(interest_order, func.random())
+                else:
+                    examples_stmt = examples_stmt.order_by(func.random())
+
+                examples_rows = (await session.execute(examples_stmt.limit(5))).all()
+                if examples_rows:
+                    examples_difficulty_used = candidate_difficulty
+                    examples = [
+                        {
+                            "question": q,
+                            "choices": list(choices or []),
+                            "correct_index": correct_index,
+                            "explanations": list(explanations or []),
+                            "tags": list(tags or []),
+                        }
+                        for (q, choices, correct_index, explanations, tags) in examples_rows
+                    ]
+                    break
+
             logger.info(
-                "process_content_expansion_request: using examples count=%s request_id=%s",
-                len(examples),
+                "process_content_expansion_request: using examples request_id=%s requested_difficulty=%s examples_count=%s examples_difficulty_used=%s",
                 request_id,
+                requested_difficulty,
+                len(examples),
+                examples_difficulty_used,
+            )
+
+            # INFO logging to verify inputs passed to the AI generator (no prompt / secrets).
+            example_tags: list[str] = []
+            for ex in examples:
+                for t in ex.get("tags") or []:
+                    if t not in example_tags:
+                        example_tags.append(t)
+
+            logger.info(
+                "process_content_expansion_request: AI input request_id=%s child_id=%s subject=%s difficulty=%s age_range=%s interests_names=%s interests_ids=%s examples_count=%s example_tags=%s",
+                request_id,
+                str(req.child_id),
+                subject_name,
+                req.difficulty_code,
+                age_name,
+                interests_names,
+                interests_ids,
+                len(examples),
+                example_tags,
             )
 
             flashcard_data = await generator.generate_flashcards(
                 subject=subject_name,
                 age_range=age_name,
                 difficulty=req.difficulty_code,
-                interests=interests,
+                interests=interests_names,
                 count=5,
                 examples=examples,
+                examples_difficulty_used=examples_difficulty_used,
+                requested_difficulty=requested_difficulty,
             )
 
             inserted = 0
@@ -194,8 +258,9 @@ def process_content_expansion_request(request_id: str) -> dict:
                         {
                             "subject_id": req.subject_id,
                             "question": card["question"],
-                            "answer": card["answer"],
-                            "acceptable_answers": card.get("acceptable_answers"),
+                            "choices": card["choices"],
+                            "correct_index": card["correct_index"],
+                            "explanations": card["explanations"],
                             "difficulty_code": req.difficulty_code,
                             "age_range_id": req.age_range_id,
                             "tags": (

@@ -68,6 +68,8 @@ def get_engine() -> AsyncEngine:
             settings.database_url,
             echo=False,
             future=True,
+            pool_pre_ping=True,
+            pool_recycle=300,
         )
         _ENGINE_PID = pid
         _ENGINE_LOOP_ID = loop_id

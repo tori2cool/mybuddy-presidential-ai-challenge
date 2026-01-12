@@ -5,7 +5,7 @@ from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Index, UniqueConstraint, func, text
+from sqlalchemy import Column, DateTime, Index, Integer, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.sql import literal_column
 from sqlmodel import Field, SQLModel
@@ -341,9 +341,19 @@ class Flashcard(SQLModel, table=True):
     subject_id: UUID = Field(foreign_key="subjects.id", nullable=False, index=True)
 
     question: str = Field(nullable=False)
-    answer: str = Field(nullable=False)
 
-    acceptable_answers: Optional[list[str]] = Field(default=None, sa_column=Column(JSONB))
+    # MCQ-only schema (aligned with seed.py + ai_flashcard_generator.py contract)
+    # NOTE: SQLModel disallows Field(nullable=...) when sa_column is provided.
+    # Put nullability + server defaults on the SQLAlchemy Column instead.
+    choices: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
+    )
+    explanations: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
+    )
+    correct_index: int = Field(default=0, sa_column=Column(Integer, nullable=False))
 
     difficulty_code: str = Field(nullable=False, max_length=20, index=True)
 
@@ -388,6 +398,23 @@ class OutdoorActivity(SQLModel, table=True):
 # ---------------------------------------------------------------------------
 # STATS / PERFORMANCE TABLES
 # ---------------------------------------------------------------------------
+
+class ChildSubjectDifficulty(SQLModel, table=True):
+    __tablename__ = "child_subject_difficulty"
+
+    child_id: UUID = Field(foreign_key="children.id", primary_key=True, nullable=False)
+    subject_id: UUID = Field(foreign_key="subjects.id", primary_key=True, nullable=False)
+
+    # Persisted tier code (easy/medium/hard...). This is the source of truth for the
+    # current difficulty tier shown to the client.
+    difficulty_code: str = Field(default="easy", nullable=False, max_length=20, index=True)
+
+    # Nullable: we only update when the tier changes (or when we ensure the row exists).
+    last_updated: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+
 
 class ChildSubjectStreak(SQLModel, table=True):
     __tablename__ = "child_subject_streaks"

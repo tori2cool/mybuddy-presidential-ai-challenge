@@ -1,0 +1,7 @@
+[
+  { "code": "flashcard_correct", "name": "Flashcard Correct", "points": 10 },
+  { "code": "flashcard_wrong", "name": "Flashcard Wrong", "points": 2 },
+  { "code": "chore_completed", "name": "Chore Completed", "points": 15 },
+  { "code": "outdoor_completed", "name": "Outdoor Completed", "points": 20 },
+  { "code": "affirmation_viewed", "name": "Affirmation Viewed", "points": 5 }
+]

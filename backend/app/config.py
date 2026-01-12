@@ -52,7 +52,7 @@ class Settings(BaseModel):
     )
 
     # If we generate images from backend, this is the base URL for them
-    backend_img_url: str = os.getenv("BACKEND_IMG_URL", "http://localhost:3000")
+    backend_img_url: str = os.getenv("BACKEND_IMG_URL")
 
     # ---- Content Expansion ----
     # Maximum auto-generated flashcards per subject/age/difficulty combination
@@ -78,7 +78,7 @@ class Settings(BaseModel):
     # OpenAI API base URL
     flashcard_api_base: str = os.getenv(
         "FLASHCARD_API_BASE",
-        os.getenv("FLASHCARD_API_BASE", "https://api.openai.com/v1"),
+        os.getenv("FLASHCARD_API_BASE", None),
     )
     # Model to use for flashcard generation
     flashcard_model: str = os.getenv(
