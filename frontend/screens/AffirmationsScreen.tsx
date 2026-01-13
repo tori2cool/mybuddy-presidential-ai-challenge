@@ -161,7 +161,7 @@ export default function AffirmationsScreen() {
 
   const handleScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const offsetY = e.nativeEvent.contentOffset.y;
+      const offsetY = e?.nativeEvent?.contentOffset?.y ?? 0;
       const index = Math.round(offsetY / SCREEN_HEIGHT);
       const item = affirmationsRef.current[index];
 
@@ -207,25 +207,23 @@ export default function AffirmationsScreen() {
   );
 
   const onScrollRafThrottledRef = useRef<
-    RafThrottleFn<(e: NativeSyntheticEvent<NativeScrollEvent>) => void> | undefined
+    RafThrottleFn<(offsetY: number) => void> | undefined
   >(undefined);
 
   if (!onScrollRafThrottledRef.current) {
-    onScrollRafThrottledRef.current = rafThrottle(
-      (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const offsetY = e.nativeEvent.contentOffset.y;
-        const index = Math.round(offsetY / SCREEN_HEIGHT);
-        handleScrollIndexChanged(index, "onScroll", offsetY);
-      },
-    );
+    onScrollRafThrottledRef.current = rafThrottle((offsetY: number) => {
+      if (!Number.isFinite(offsetY) || SCREEN_HEIGHT <= 0) return;
+      const index = Math.round(offsetY / SCREEN_HEIGHT);
+      handleScrollIndexChanged(index, "onScroll", offsetY);
+    });
   }
 
-  const handleScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      onScrollRafThrottledRef.current?.(e);
-    },
-    [],
-  );
+  const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    // Extract primitive synchronously to avoid RN synthetic event pooling issues.
+    const offsetY = e?.nativeEvent?.contentOffset?.y;
+    if (typeof offsetY !== "number") return;
+    onScrollRafThrottledRef.current?.(offsetY);
+  }, []);
 
   useEffect(() => {
     affirmationsRef.current = affirmations;

@@ -355,16 +355,6 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <ThemedText
-            style={[
-              styles.balanceMessage,
-              {
-                color: balancedProgress?.canLevelUp ? theme.success : theme.textSecondary,
-              },
-            ]}
-          >
-            {balancedProgress?.message ?? ""}
-          </ThemedText>
 
           {balancedProgress?.nextLevel ? (
             <View style={styles.subjectProgressSection}>
