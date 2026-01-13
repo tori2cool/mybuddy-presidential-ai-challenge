@@ -27,7 +27,7 @@ function asStringOrNull(v: unknown): string | null {
 }
 
 function requireString(v: unknown, msg: string): string {
-  if (typeof v !== "string" || v.length === 0) throw new Error(msg);
+  if (typeof v !== "string") throw new Error(msg);
   return v;
 }
 
@@ -215,7 +215,6 @@ function coerceDashboardOut(payload: unknown): DashboardOut {
       ),
       subjectProgress,
       lowestSubject: asStringOrNull(balancedRaw.lowestSubject) as SubjectCode | null,
-      message: requireString(balancedRaw.message, "dashboard.balanced.message: expected string"),
     },
 
     reward: {

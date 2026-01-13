@@ -24,6 +24,11 @@ from ..models import (
     Interest,
     DifficultyThreshold,
     AgeRange,
+    ChildProgress,
+    ChildBalancedProgressCounter,
+    LevelThreshold,
+    ChildSubjectDifficulty,
+    ChildSubjectStreak,
 )
 from ..security import get_current_user
 from ..deps import get_child_owned_query, get_child_owned_path
@@ -31,6 +36,11 @@ from ..schemas.children import ChildCreateIn, ChildUpdateIn, ChildOut
 from ..schemas.difficulty import DifficultyOut
 from ..tasks import redis_client, seed_content
 from ..utils.age_utils import get_age_range_for_child
+from ..services.progress_queries import (
+    list_subject_codes,
+    list_subject_uuids,
+    get_difficulty_thresholds,
+)
 
 logger = logging.getLogger("mybuddy.api")
 
@@ -107,6 +117,107 @@ async def create_child(
         avatar_id=payload.avatarId,
     )
     session.add(child)
+    await session.flush()
+    await session.refresh(child)
+
+    # Initialize per-child progress row (level + non-null subject_counts)
+    first_level = (
+        await session.execute(
+            select(LevelThreshold)
+            .where(LevelThreshold.is_active == True)  # noqa: E712
+            .order_by(LevelThreshold.threshold.asc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    initial_level = first_level.name if first_level is not None else "New Kid"
+
+    progress_row = (
+        await session.execute(select(ChildProgress).where(ChildProgress.child_id == child.id))
+    ).scalar_one_or_none()
+    if progress_row is None:
+        progress_row = ChildProgress(child_id=child.id, current_level=initial_level, subject_counts={})
+        session.add(progress_row)
+    else:
+        # Be defensive for legacy rows
+        progress_row.current_level = progress_row.current_level or initial_level
+        if progress_row.subject_counts is None:
+            progress_row.subject_counts = {}
+
+    # Initialize balanced progress counters for subjects visible to the child
+    subject_codes = await list_subject_codes(session, child_id=child.id)
+    if subject_codes:
+        existing = (
+            await session.execute(
+                select(ChildBalancedProgressCounter).where(
+                    ChildBalancedProgressCounter.child_id == child.id,
+                    ChildBalancedProgressCounter.subject_code.in_(subject_codes),
+                )
+            )
+        ).scalars().all()
+        existing_codes = {r.subject_code for r in existing}
+
+        for code in subject_codes:
+            if code not in existing_codes:
+                session.add(
+                    ChildBalancedProgressCounter(child_id=child.id, subject_code=code, correct_count=0)
+                )
+
+    # Initialize per-subject difficulty + streak rows
+    subject_ids = await list_subject_uuids(session, child_id=child.id)
+
+    thresholds = await get_difficulty_thresholds(session)
+    default_diff = min(thresholds.items(), key=lambda kv: kv[1])[0] if thresholds else "easy"
+
+    # Use a Python-side timestamp here (not a SQL expression) because the column is a
+    # plain DateTime field, not a server-default computed column.
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+
+    if subject_ids:
+        existing_diff_rows = (
+            await session.execute(
+                select(ChildSubjectDifficulty.subject_id).where(
+                    ChildSubjectDifficulty.child_id == child.id,
+                    ChildSubjectDifficulty.subject_id.in_(subject_ids),
+                )
+            )
+        ).all()
+        existing_diff_ids = {r[0] for r in existing_diff_rows}
+
+        for sid in subject_ids:
+            if sid not in existing_diff_ids:
+                session.add(
+                    ChildSubjectDifficulty(
+                        child_id=child.id,
+                        subject_id=sid,
+                        difficulty_code=default_diff,
+                        last_updated=now,
+                    )
+                )
+
+        existing_streak_rows = (
+            await session.execute(
+                select(ChildSubjectStreak.subject_id).where(
+                    ChildSubjectStreak.child_id == child.id,
+                    ChildSubjectStreak.subject_id.in_(subject_ids),
+                )
+            )
+        ).all()
+        existing_streak_ids = {r[0] for r in existing_streak_rows}
+
+        for sid in subject_ids:
+            if sid not in existing_streak_ids:
+                session.add(
+                    ChildSubjectStreak(
+                        child_id=child.id,
+                        subject_id=sid,
+                        current_streak=0,
+                        longest_streak=0,
+                    )
+                )
+
     await session.commit()
     await session.refresh(child)
 
@@ -140,7 +251,7 @@ async def update_child(
         child.avatar_id = payload.avatarId
 
     session.add(child)
-    await session.commit()
+    await session.flush()
     await session.refresh(child)
 
     return _child_to_out(child)

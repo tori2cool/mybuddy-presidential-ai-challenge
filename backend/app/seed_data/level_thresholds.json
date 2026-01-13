@@ -1,8 +1,8 @@
 [
   { "name": "New Kid", "threshold": 0, "icon": "user", "color": "#9CA3AF" },
-  { "name": "Good Kid", "threshold": 50, "icon": "smile", "color": "#FB923C" },
-  { "name": "Great Kid", "threshold": 200, "icon": "thumbs-up", "color": "#10B981" },
-  { "name": "Awesome Kid", "threshold": 500, "icon": "sun", "color": "#3B82F6" },
-  { "name": "Amazing Kid", "threshold": 1000, "icon": "award", "color": "#8B5CF6" },
-  { "name": "Super Star Kid", "threshold": 2000, "icon": "star", "color": "#F59E0B" }
+  { "name": "Good Kid", "threshold": 25, "icon": "smile", "color": "#FB923C" },
+  { "name": "Great Kid", "threshold": 50, "icon": "thumbs-up", "color": "#10B981" },
+  { "name": "Awesome Kid", "threshold": 100, "icon": "sun", "color": "#3B82F6" },
+  { "name": "Amazing Kid", "threshold": 200, "icon": "award", "color": "#8B5CF6" },
+  { "name": "Super Star Kid", "threshold": 500, "icon": "star", "color": "#F59E0B" }
 ]

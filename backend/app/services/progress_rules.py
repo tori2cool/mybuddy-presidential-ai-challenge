@@ -58,7 +58,6 @@ def difficulty_tier_progress(
     return (current_code, next_code, current_threshold, required)
 
 
-
 def _cache(db: AsyncSession) -> dict:
     c = getattr(db, "_mybuddy_cache", None)
     if c is None:
@@ -167,18 +166,29 @@ def compute_balanced_progress(
     subject_correct: Dict[str, int],
     subjects: List[str],
     level_thresholds: Dict[str, int],
+    *,
+    current_level: str | None = None,
 ) -> dict:
+    """Compute balanced progress toward NEXT level.
+
+    Used by the dashboard builder.
+
+    IMPORTANT:
+    - `subject_correct` is expected to be per-level counters (not lifetime totals).
+    - `current_level` is the persisted child level (source of truth).
+    - requiredPerSubject is computed from the NEXT level's threshold.
+    """
+
     n_subjects = len(subjects)
 
     if n_subjects == 0:
         return {
             "canLevelUp": False,
-            "currentLevel": "New Kid",
+            "currentLevel": current_level or "New Kid",
             "nextLevel": None,
             "requiredPerSubject": 0,
             "subjectProgress": {},
             "lowestSubject": None,
-            "message": "Keep practicing!",
         }
 
     if not level_thresholds:
@@ -192,60 +202,62 @@ def compute_balanced_progress(
         }
         return {
             "canLevelUp": False,
-            "currentLevel": "New Kid",
+            "currentLevel": current_level or "New Kid",
             "nextLevel": None,
             "requiredPerSubject": 0,
             "subjectProgress": sp,
             "lowestSubject": min(subject_correct, key=lambda k: subject_correct.get(k, 0)) if subjects else None,
-            "message": "Keep practicing!",
         }
 
-    min_correct = min(subject_correct.get(s, 0) for s in subjects)
-    lowest_subject = min(subjects, key=lambda s: subject_correct.get(s, 0))
-
-    levels_desc = sorted(level_thresholds.items(), key=lambda kv: kv[1], reverse=True)
-
-    for level_name, threshold in levels_desc:
-        if threshold == 0:
-            continue
-
-        required_per_subject = (threshold + n_subjects - 1) // n_subjects
-        if min_correct >= required_per_subject:
-            levels_asc = sorted(level_thresholds.items(), key=lambda kv: kv[1])
-            next_level = None
-            for i, (ln, _) in enumerate(levels_asc):
-                if ln == level_name and i < len(levels_asc) - 1:
-                    next_level = levels_asc[i + 1][0]
-                    break
-
-            sp = {
-                s: {
-                    "correct": subject_correct.get(s, 0),
-                    "required": required_per_subject,
-                    "meetsRequirement": subject_correct.get(s, 0) >= required_per_subject,
-                }
-                for s in subjects
-            }
-
-            return {
-                "canLevelUp": True,
-                "currentLevel": level_name,
-                "nextLevel": next_level,
-                "requiredPerSubject": required_per_subject,
-                "subjectProgress": sp,
-                "lowestSubject": lowest_subject,
-                "message": f"Ready for {level_name}!",
-            }
-
-    # still New Kid; compute “next target”
     levels_asc = sorted(level_thresholds.items(), key=lambda kv: kv[1])
-    levels_asc_filtered = [(name, thresh) for name, thresh in levels_asc if thresh > 0]
-    if levels_asc_filtered:
-        next_level = levels_asc_filtered[0][0]
-        required_per_subject = (levels_asc_filtered[0][1] + n_subjects - 1) // n_subjects
-    else:
-        next_level = None
-        required_per_subject = 0
+    level_names = [name for name, _ in levels_asc]
+
+    resolved_current = current_level if (current_level in level_thresholds) else None
+
+    if resolved_current is None:
+        # Fallback (legacy): infer from current counters using min across subjects.
+        min_correct = min(subject_correct.get(s, 0) for s in subjects)
+        levels_desc = sorted(level_thresholds.items(), key=lambda kv: kv[1], reverse=True)
+        for level_name, threshold in levels_desc:
+            if threshold == 0:
+                continue
+            required_per_subject = int(threshold)
+            if min_correct >= required_per_subject:
+                resolved_current = level_name
+                break
+        if resolved_current is None:
+            resolved_current = "New Kid"
+
+    next_level: str | None = None
+    for i, ln in enumerate(level_names):
+        if ln == resolved_current and i < len(level_names) - 1:
+            next_level = level_names[i + 1]
+            break
+
+    if next_level is None:
+        sp = {
+            s: {
+                "correct": subject_correct.get(s, 0),
+                "required": 0,
+                "meetsRequirement": True,
+            }
+            for s in subjects
+        }
+        return {
+            "canLevelUp": False,
+            "currentLevel": resolved_current,
+            "nextLevel": None,
+            "requiredPerSubject": 0,
+            "subjectProgress": sp,
+            "lowestSubject": min(subjects, key=lambda s: subject_correct.get(s, 0)) if subjects else None,
+        }
+
+    next_threshold = int(level_thresholds.get(next_level, 0))
+    # New semantics: required per subject is the full next level threshold (no division).
+    required_per_subject = next_threshold
+
+    min_counter = min(subject_correct.get(s, 0) for s in subjects)
+    lowest_subject = min(subjects, key=lambda s: subject_correct.get(s, 0))
 
     sp = {
         s: {
@@ -257,15 +269,13 @@ def compute_balanced_progress(
     }
 
     return {
-        "canLevelUp": False,
-        "currentLevel": "New Kid",
+        "canLevelUp": min_counter >= required_per_subject,
+        "currentLevel": resolved_current,
         "nextLevel": next_level,
         "requiredPerSubject": required_per_subject,
         "subjectProgress": sp,
         "lowestSubject": lowest_subject,
-        "message": "Keep practicing!",
     }
-
 
 
 def reward_for_level(
@@ -309,19 +319,22 @@ def reward_for_level(
         }
 
     min_correct = min(subject_correct.get(s, 0) for s in subjects)
-    effective_progress = min_correct * len(subjects)
+
+    # New semantics: thresholds are per-subject, and progress is tracked by the
+    # minimum per-subject counter (balanced progression).
+    effective_progress = min_correct
 
     # Current threshold; if unknown current_level, treat as 0.
-    current_threshold = level_thresholds.get(current_level, 0)
+    current_threshold = int(level_thresholds.get(current_level, 0))
 
     sorted_levels = sorted(level_thresholds.items(), key=lambda kv: kv[1])
 
-    # Find next level's threshold
-    next_at = None
+    # Find next level's threshold (per-subject)
+    next_at: int | None = None
     for i, (level_name, threshold) in enumerate(sorted_levels):
         if level_name == current_level:
             if i < len(sorted_levels) - 1:
-                next_at = sorted_levels[i + 1][1]
+                next_at = int(sorted_levels[i + 1][1])
             break
 
     if next_at is None:

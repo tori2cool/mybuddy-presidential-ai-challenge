@@ -171,6 +171,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           await writeCache({ dashboard });
         } catch (err: any) {
           const message = err?.message ? String(err.message) : "Failed to refresh dashboard";
+          console.warn("[DashboardContext] refreshDashboard failed:", message);
           setState((s) => ({
             ...s,
             status: "error",

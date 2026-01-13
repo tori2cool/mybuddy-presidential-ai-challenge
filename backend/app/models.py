@@ -207,7 +207,8 @@ class ChildProgress(SQLModel, table=True):
 
     current_level: str = Field(default="New Kid", max_length=50, nullable=False)
 
-    subject_counts: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+    # JSONB map for per-subject counters; keep non-null to simplify callers.
+    subject_counts: dict = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False, server_default=text("'{}'::jsonb")))
 
 
 # ---------------------------------------------------------------------------
@@ -399,6 +400,34 @@ class OutdoorActivity(SQLModel, table=True):
 # STATS / PERFORMANCE TABLES
 # ---------------------------------------------------------------------------
 
+class ChildBalancedProgressCounter(SQLModel, table=True):
+    __tablename__ = "child_balanced_progress_counters"
+
+    id: UUID = Field(sa_column=uuid_pk())
+
+    child_id: UUID = Field(foreign_key="children.id", index=True, nullable=False)
+
+    # Store Subject.code directly (stable identifier; ok per product decision)
+    subject_code: str = Field(nullable=False, max_length=50, index=True)
+
+    correct_count: int = Field(default=0, nullable=False)
+
+    updated_at: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            index=True,
+            server_default=UTC_NOW_SQL,
+            onupdate=func.timezone("utc", func.now()),
+        )
+    )
+
+    __table_args__ = (
+        UniqueConstraint("child_id", "subject_code", name="uq_child_balanced_progress_child_subject"),
+        Index("ix_cbpc_child_subject", "child_id", "subject_code"),
+    )
+
+
 class ChildSubjectDifficulty(SQLModel, table=True):
     __tablename__ = "child_subject_difficulty"
 
@@ -407,6 +436,8 @@ class ChildSubjectDifficulty(SQLModel, table=True):
 
     # Persisted tier code (easy/medium/hard...). This is the source of truth for the
     # current difficulty tier shown to the client.
+    # NOTE: schema keeps a default of "easy" for backward compatibility, but
+    # runtime behavior should set the first active tier (min threshold) on insert.
     difficulty_code: str = Field(default="easy", nullable=False, max_length=20, index=True)
 
     # Nullable: we only update when the tier changes (or when we ensure the row exists).
