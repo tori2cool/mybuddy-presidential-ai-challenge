@@ -1,0 +1,133 @@
+# backend/docker-compose.yml
+services:
+  # ---------------------------
+  # Postgres (DB)
+  # ---------------------------
+  db:
+    image: postgres:16
+    container_name: app-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASS}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"  # DEV ONLY – do not expose Postgres directly in production
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # ---------------------------
+  # Redis (broker + pub/sub)
+  # ---------------------------
+  redis:
+    image: redis:7
+    container_name: app-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"  # DEV ONLY – do not expose Redis directly in production
+    volumes:
+      - redisdata:/data
+
+  # ---------------------------
+  # FastAPI backend (includes WebSocket + security.py)
+  # ---------------------------
+  backend-local:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: backend-local
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+        - action: rebuild
+          path: ./requirements.txt
+    depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE}
+      KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL}
+
+      ENVIRONMENT: docker
+    ports:
+      - "8080:8000"
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8080
+
+  # ---------------------------
+  # Celery worker (run as non-root)
+  # ---------------------------
+  worker:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: app-worker
+    restart: unless-stopped
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    depends_on:
+      - backend-local
+      - redis
+      - db
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE}
+      KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL}
+
+      ENVIRONMENT: docker
+    command: >
+      celery -A app.celery_app.celery_app worker
+      --loglevel=INFO
+
+  # ---------------------------
+  # Celery beat (optional) (run as non-root)
+  # ---------------------------
+  beat:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: app-beat
+    restart: unless-stopped
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    depends_on:
+      - worker
+      - redis
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE}
+      KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL}
+
+      ENVIRONMENT: docker
+    command: >
+      celery -A app.celery_app.celery_app beat
+      --loglevel=INFO
+      --schedule=/tmp/celerybeat-schedule
+
+# ---------------------------
+# Volumes
+# ---------------------------
+volumes:
+  pgdata:
+    name: mybuddy_pgdata
+  redisdata:
+    name: mybuddy_redisdata

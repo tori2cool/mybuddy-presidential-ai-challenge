@@ -1,7 +1,8 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, ParamListBase } from "@react-navigation/native";
 import { useNavigationState } from "@react-navigation/native";
+import { NavigationRoute } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -19,25 +20,7 @@ import { BuddyChatSheet } from "./components/BuddyChatSheet";
 import { useBuddy } from "@/contexts/BuddyContext"; 
 import { BuddyCustomizer } from "./components/BuddyCustomizer";
 import { useCurrentChild } from "@/contexts/ChildContext";
-
-export function BuddyOverlays() {
-  const { isChatOpen, isCustomizerOpen } = useBuddy();
-  const { childId, isSessionActive } = useCurrentChild();
-
-  const shouldShowBuddy = !!childId && isSessionActive;
-
-  if (!shouldShowBuddy) {
-    return null;
-  }
-
-  return (
-    <>
-      <FloatingBuddy />
-      {isChatOpen && <BuddyChatSheet />}
-      {isCustomizerOpen && <BuddyCustomizer />}
-    </>
-  );
-}
+import { MainAppOverlays } from "./components/MainAppOverlays";
 
 function AppInner() {
   const { loading } = useAuth();
@@ -52,7 +35,6 @@ function AppInner() {
         <DashboardProvider>
           <NavigationContainer>
             <RootNavigator />
-            <BuddyOverlays />
           </NavigationContainer>         
         </DashboardProvider>
       </BuddyProvider>
