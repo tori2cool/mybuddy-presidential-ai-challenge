@@ -84,7 +84,6 @@ class BalancedProgressOut(APIModel):
     subjectProgress: Dict[SubjectCode, SubjectProgressOut]
 
     lowestSubject: Optional[SubjectCode] = None
-    message: str
 
 
 class RewardOut(APIModel):

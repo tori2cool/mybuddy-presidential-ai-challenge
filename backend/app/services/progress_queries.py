@@ -456,13 +456,17 @@ async def compute_flashcards_by_subject(
     if subject_codes is None:
         subject_codes = await list_subject_codes(session, child_id=child_id)
 
+    # Default difficulty should be the first active tier by ascending threshold
+    # (typically threshold==0).
+    thresholds = await get_difficulty_thresholds(session)
+    default_diff = min(thresholds.items(), key=lambda kv: kv[1])[0] if thresholds else "easy"
+
     by_subject: Dict[str, dict] = {
-        c: {"completed": 0, "correct": 0, "correctStreak": 0, "longestStreak": 0, "difficultyCode": "easy"}
+        c: {"completed": 0, "correct": 0, "correctStreak": 0, "longestStreak": 0, "difficultyCode": default_diff}
         for c in subject_codes
     }
 
-    # ✅ reuse the helper (single source of truth)
-    thresholds = await get_difficulty_thresholds(session)
+    logger.info("difficulty_thresholds: child_id=%s thresholds=%s", str(child_id), thresholds)
 
     # Aggregate events (typed subject_id join)
     stmt = (
@@ -486,7 +490,7 @@ async def compute_flashcards_by_subject(
 
     for code, completed, correct_sum in rows:
         if code not in by_subject:
-            by_subject[code] = {"completed": 0, "correct": 0, "correctStreak": 0, "longestStreak": 0, "difficultyCode": "easy"}
+            by_subject[code] = {"completed": 0, "correct": 0, "correctStreak": 0, "longestStreak": 0, "difficultyCode": default_diff}
         by_subject[code]["completed"] = int(completed or 0)
         by_subject[code]["correct"] = int(correct_sum or 0)
 
@@ -520,13 +524,19 @@ async def compute_flashcards_by_subject(
     ).all()
     diff_map: dict[str, str] = {code: diff for code, diff in difficulty_rows}
 
+    logger.info("subject_difficulty_map: child_id=%s diff_map=%s", str(child_id), diff_map)
+
+    # Precompute tier ordering once for anomaly checks
+    tiers_asc = sorted(thresholds.items(), key=lambda kv: kv[1])
+    tier_codes_asc = [c for c, _t in tiers_asc]
+
     for code in list(by_subject.keys()):
-        # Persisted difficulty (default easy if missing)
-        current_diff = diff_map.get(code, "easy")
+        # Persisted difficulty (default to first active tier if missing)
+        current_diff = diff_map.get(code, default_diff)
         by_subject[code]["difficultyCode"] = current_diff
 
-        # correctStreak is now tier-streak, so the current tier always starts at 0.
-        by_subject[code]["currentTierStartAtStreak"] = 0
+        # Start streak for the current tier is its threshold (default 0).
+        by_subject[code]["currentTierStartAtStreak"] = int(thresholds.get(current_diff, 0))
 
         # Next difficulty requires the NEXT tier's absolute threshold.
         _cur, _next, _cur_threshold, required = difficulty_tier_progress(
@@ -534,6 +544,32 @@ async def compute_flashcards_by_subject(
             current_code=current_diff,
         )
         by_subject[code]["nextDifficultyAtStreak"] = required
+
+        # Targeted anomaly logging (INFO, concise)
+        correct_streak = int(by_subject[code].get("correctStreak") or 0)
+        next_at = by_subject[code].get("nextDifficultyAtStreak")
+        current_start = by_subject[code].get("currentTierStartAtStreak")
+
+        has_higher_tier = False
+        if current_diff in tier_codes_asc:
+            idx = tier_codes_asc.index(current_diff)
+            has_higher_tier = idx < (len(tier_codes_asc) - 1)
+        else:
+            # Unknown tier code is itself an anomaly; best effort: if any tiers exist, consider there may be a higher tier.
+            has_higher_tier = len(tier_codes_asc) > 1
+
+        is_anomaly = (current_diff not in thresholds) or (next_at is None and has_higher_tier)
+        if is_anomaly:
+            logger.info(
+                "subject_difficulty_anomaly: child_id=%s subject_code=%s difficultyCode=%s correctStreak=%s nextDifficultyAtStreak=%s currentTierStartAtStreak=%s thresholds=%s",
+                str(child_id),
+                code,
+                current_diff,
+                correct_streak,
+                next_at,
+                current_start,
+                thresholds,
+            )
 
     return by_subject
 

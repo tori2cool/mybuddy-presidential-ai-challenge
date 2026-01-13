@@ -1,6 +1,6 @@
 // frontend/screens/FlashcardsScreen.tsx
 import { useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, Pressable, Dimensions } from "react-native";
+import { View, StyleSheet, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
@@ -19,10 +19,17 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { getSubjects } from "@/services/subjectsService";
 import { getDifficulties } from "@/services/difficultiesService";
 
-import type { Subject, DifficultyCode, DifficultyThreshold, SubjectProgress, DashboardOut, SubjectProgressOut, SubjectStatsOut } from "@/types/models";
+import type {
+  Subject,
+  DifficultyCode,
+  DifficultyThreshold,
+  SubjectProgress,
+  DashboardOut,
+  SubjectProgressOut,
+  SubjectStatsOut,
+} from "@/types/models";
 
 import FlashcardPracticeModal from "@/components/FlashcardPracticeModal";
-
 
 function difficultyLabelOf(d: DifficultyThreshold): string {
   // Backend has label; fallback to name/code
@@ -185,7 +192,7 @@ export default function FlashcardsScreen() {
           </View>
 
           {balancedProgress ? (
-            <ThemedText style={[styles.balanceMessage, { color: theme.textSecondary }]}>
+            <View style={styles.balanceMessageRow}>
               {(() => {
                 const current = balancedProgress.currentLevel;
                 const next = balancedProgress.nextLevel;
@@ -194,54 +201,86 @@ export default function FlashcardsScreen() {
                   typeof current === "string" && current.trim().length > 0 ? current : null;
                 const nextText = typeof next === "string" && next.trim().length > 0 ? next : null;
 
-                if (currentText && nextText) return `${currentText} → ${nextText}`;
-                return currentText ?? nextText ?? "";
+                if (!currentText && !nextText) return null;
+
+                if (currentText && nextText) {
+                  return (
+                    <ThemedText style={styles.balanceMessage} type="body">
+                      <ThemedText
+                        style={[styles.currentLevel, { color: theme.textSecondary }]}
+                      >
+                        {currentText}
+                      </ThemedText>
+
+                      <ThemedText style={[styles.arrow, { color: theme.textSecondary }]}>
+                        {" "}→{" "}
+                      </ThemedText>
+
+                      <ThemedText
+                        type="caption"
+                        style={[styles.nextLevel, { color: theme.textSecondary }]}
+                      >
+                        {nextText}
+                      </ThemedText>
+                    </ThemedText>
+                  );
+                }
+
+                return (
+                  <ThemedText style={styles.balanceMessage} type="body">
+                    <ThemedText
+                      type="headline"
+                      style={[styles.currentLevel, { color: theme.primary }]}
+                    >
+                      {currentText ?? nextText}
+                    </ThemedText>
+                  </ThemedText>
+                );
               })()}
-            </ThemedText>
+            </View>
           ) : null}
 
           <View style={styles.subjectProgressContainer}>
             {balancedProgress
               ? subjects.length > 0
                 ? subjects.map((subject) => {
-                  const subjectProg = (balancedProgress.subjectProgress as Record<string, SubjectProgressOut> | undefined)?.[
-                    subject.code
-                  ];
+                    const subjectProg = (
+                      balancedProgress.subjectProgress as Record<string, SubjectProgressOut> | undefined
+                    )?.[subject.code];
 
-                  const required = subjectProg?.required ?? balancedProgress.requiredPerSubject ?? 0;
-                  const current = subjectProg?.correct ?? 0;
-                  const met = subjectProg?.meetsRequirement ?? false;
+                    const required = subjectProg?.required ?? balancedProgress.requiredPerSubject ?? 0;
+                    const current = subjectProg?.correct ?? 0;
+                    const met = subjectProg?.meetsRequirement ?? false;
 
-                  const progressPercent =
-                    required > 0 ? Math.min((current / required) * 100, 100) : 100;
+                    const progressPercent = required > 0 ? Math.min((current / required) * 100, 100) : 100;
 
-                  return (
-                    <View key={subject.id} style={styles.subjectProgressItem}>
-                      <View style={styles.subjectProgressLabel}>
-                        <Feather name={subject.icon as any} size={14} color={subject.color} />
-                        <ThemedText style={[styles.subjectProgressName, { color: theme.text }]}>
-                          {subject.name}
-                        </ThemedText>
-                        <ThemedText style={[styles.subjectProgressCount, { color: theme.textSecondary }]}>
-                          {current}/{required}
-                        </ThemedText>
-                        {met ? <Feather name="check-circle" size={14} color="#10B981" /> : null}
+                    return (
+                      <View key={subject.id} style={styles.subjectProgressItem}>
+                        <View style={styles.subjectProgressLabel}>
+                          <Feather name={subject.icon as any} size={14} color={subject.color} />
+                          <ThemedText style={[styles.subjectProgressName, { color: theme.text }]}>
+                            {subject.name}
+                          </ThemedText>
+                          <ThemedText style={[styles.subjectProgressCount, { color: theme.textSecondary }]}>
+                            {current}/{required}
+                          </ThemedText>
+                          {met ? <Feather name="check-circle" size={14} color="#10B981" /> : null}
+                        </View>
+
+                        <View style={[styles.miniProgressBar, { backgroundColor: theme.backgroundDefault }]}>
+                          <View
+                            style={[
+                              styles.miniProgressFill,
+                              {
+                                width: `${progressPercent}%`,
+                                backgroundColor: met ? "#10B981" : subject.color,
+                              },
+                            ]}
+                          />
+                        </View>
                       </View>
-
-                      <View style={[styles.miniProgressBar, { backgroundColor: theme.backgroundDefault }]}>
-                        <View
-                          style={[
-                            styles.miniProgressFill,
-                            {
-                              width: `${progressPercent}%`,
-                              backgroundColor: met ? "#10B981" : subject.color,
-                            },
-                          ]}
-                        />
-                      </View>
-                    </View>
-                  );
-                })
+                    );
+                  })
                 : null
               : null}
           </View>
@@ -252,37 +291,35 @@ export default function FlashcardsScreen() {
             <AsyncStatus loading={true} loadingMessage="Loading subjects..." />
           </View>
         ) : (
-        subjects.map((subject) => {
-          const subjectProgress = getSubjectProgress(subject.code);
+          subjects.map((subject) => {
+            const subjectProgress = getSubjectProgress(subject.code);
 
-          const difficultyInfo =
-            subjectProgress.difficultyCode !== null
-              ? difficultyByCode.get(subjectProgress.difficultyCode)
-              : undefined;
+            const difficultyInfo =
+              subjectProgress.difficultyCode !== null
+                ? difficultyByCode.get(subjectProgress.difficultyCode)
+                : undefined;
 
-          const chipLabel = difficultyInfo
-            ? difficultyLabelOf(difficultyInfo)
-            : (subjectProgress.difficultyCode ?? "—");
+            const chipLabel = difficultyInfo ? difficultyLabelOf(difficultyInfo) : (subjectProgress.difficultyCode ?? "—");
 
-          const chipColor = difficultyInfo?.color ?? theme.primary;
-          const chipIcon = (difficultyInfo?.icon ?? "help-circle") as any;
+            const chipColor = difficultyInfo?.color ?? theme.primary;
+            const chipIcon = (difficultyInfo?.icon ?? "help-circle") as any;
 
-          const nextAt = subjectProgress.nextDifficultyAtStreak;
-          const currentStart = subjectProgress.currentTierStartAtStreak;
+            const nextAt = subjectProgress.nextDifficultyAtStreak;
+            const currentStart = subjectProgress.currentTierStartAtStreak;
 
-          let progressToNext = 1;
-          if (nextAt !== null) {
-            const tierSize = nextAt - currentStart;
-            if (tierSize > 0) {
-              progressToNext = (subjectProgress.correctStreak - currentStart) / tierSize;
-              progressToNext = Math.max(0, Math.min(progressToNext, 1));
+            let progressToNext = 1;
+            if (nextAt !== null) {
+              const tierSize = nextAt - currentStart;
+              if (tierSize > 0) {
+                progressToNext = (subjectProgress.correctStreak - currentStart) / tierSize;
+                progressToNext = Math.max(0, Math.min(progressToNext, 1));
+              }
             }
-          }
 
-          const nextLabel =
-            subjectProgress.difficultyCode !== null
-              ? nextDifficultyLabelFor(subjectProgress.difficultyCode)
-              : "—";
+            const nextLabel =
+              subjectProgress.difficultyCode !== null
+                ? nextDifficultyLabelFor(subjectProgress.difficultyCode)
+                : "—";
 
             return (
               <Pressable key={subject.id} style={[styles.card, { backgroundColor: theme.backgroundDefault }]}>
@@ -377,10 +414,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  balanceMessage: {
-    fontSize: 14,
+
+  // UPDATED: wrapper handles spacing, not the text node
+  balanceMessageRow: {
     marginBottom: Spacing.md,
   },
+  balanceMessage: {
+    fontSize: 14,
+  },
+  currentLevel: {
+    letterSpacing: 0.2,
+  },
+  arrow: {
+    opacity: 0.8,
+  },
+  nextLevel: {
+    opacity: 0.95,
+  },
+
   subjectProgressContainer: {
     gap: Spacing.sm,
   },

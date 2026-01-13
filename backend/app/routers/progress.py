@@ -12,7 +12,9 @@ from ..deps import get_child_owned_path
 from ..models import (
     AchievementDefinition,
     Child,
+    ChildBalancedProgressCounter,
     ChildFlashcardPerformance,
+    ChildProgress,
     ChildSubjectStreak,
     ChildSubjectDifficulty,
     Flashcard,
@@ -78,10 +80,14 @@ async def _apply_subject_streak_and_tier_progression(
     ).scalar_one_or_none()
 
     if difficulty_row is None:
+        # Default difficulty should be the first active tier by ascending threshold
+        # (typically the tier with threshold==0).
+        default_code = min(thresholds.items(), key=lambda kv: kv[1])[0] if thresholds else "easy"
+
         difficulty_row = ChildSubjectDifficulty(
             child_id=child_id,
             subject_id=subject_id,
-            difficulty_code="easy",
+            difficulty_code=default_code,
             last_updated=datetime.now(timezone.utc),
         )
         session.add(difficulty_row)
@@ -172,6 +178,18 @@ async def _build_dashboard(session: AsyncSession, child: Child) -> DashboardOut:
     core_subjects = await list_subject_codes(session, child_id=child.id)
     by_subject = await compute_flashcards_by_subject(session, child_id=child.id, subject_codes=core_subjects)
 
+    # Compact log for difficulty progression fields driving FlashcardsScreen
+    by_subject_compact = {
+        code: {
+            "difficultyCode": (data or {}).get("difficultyCode"),
+            "nextDifficultyAtStreak": (data or {}).get("nextDifficultyAtStreak"),
+            "correctStreak": (data or {}).get("correctStreak"),
+            "longestStreak": (data or {}).get("longestStreak"),
+        }
+        for code, data in (by_subject or {}).items()
+    }
+    logger.info("dashboard_flashcards_by_subject: child_id=%s by_subject=%s", str(child.id), by_subject_compact)
+
     streaks = await compute_streaks(session, child_id=child.id)
     level_thresholds, level_metadata = await rules.fetch_levels(session)
 
@@ -183,12 +201,30 @@ async def _build_dashboard(session: AsyncSession, child: Child) -> DashboardOut:
         totals.get("totalPoints"),
     )
 
-    subject_correct = {s: by_subject.get(s, {}).get("correct", 0) for s in core_subjects}
+    # Balanced progress is now computed from per-level counters (not lifetime totals).
+    # Balanced progress is computed from per-level counters (not lifetime totals).
+    # Important: a brand-new child may have *no* counter rows yet; treat missing as 0.
+    counter_rows = (
+        await session.execute(
+            select(ChildBalancedProgressCounter).where(ChildBalancedProgressCounter.child_id == child.id)
+        )
+    ).scalars().all()
+
+    subject_correct: dict[str, int] = {s: 0 for s in (core_subjects or [])}
+    for r in counter_rows:
+        # Only overlay known core subjects; ignore stray/legacy subject_code rows.
+        if r.subject_code in subject_correct:
+            subject_correct[r.subject_code] = int(r.correct_count or 0)
+
+    progress_row = (
+        await session.execute(select(ChildProgress).where(ChildProgress.child_id == child.id))
+    ).scalar_one_or_none()
 
     balanced = rules.compute_balanced_progress(
         subject_correct=subject_correct,
         subjects=core_subjects,
         level_thresholds=level_thresholds,
+        current_level=(progress_row.current_level if progress_row is not None else None),
     )
     reward = rules.reward_for_level(
         current_level=balanced["currentLevel"],
@@ -270,8 +306,20 @@ async def _unlock_from_current_state(
 
     if core_subjects is None:
         core_subjects = await list_subject_codes(session, child_id=child.id)
-
     by_subject = await compute_flashcards_by_subject(session, child_id=child.id, subject_codes=core_subjects)
+
+    # Compact log for difficulty progression fields driving FlashcardsScreen
+    by_subject_compact = {
+        code: {
+            "difficultyCode": (data or {}).get("difficultyCode"),
+            "nextDifficultyAtStreak": (data or {}).get("nextDifficultyAtStreak"),
+            "correctStreak": (data or {}).get("correctStreak"),
+            "longestStreak": (data or {}).get("longestStreak"),
+        }
+        for code, data in (by_subject or {}).items()
+    }
+    logger.info("dashboard_flashcards_by_subject: child_id=%s by_subject=%s", str(child.id), by_subject_compact)
+
     streaks = await compute_streaks(session, child_id=child.id)
 
     subject_correct = {s: by_subject.get(s, {}).get("correct", 0) for s in core_subjects}
@@ -339,6 +387,32 @@ async def get_dashboard(
     return await _build_dashboard(session, child)
 
 
+async def _balanced_level_required_per_subject(
+    session: AsyncSession,
+    *,
+    child_id: UUID,
+    next_level: str,
+    core_subjects: list[str],
+) -> int:
+    level_thresholds, _level_meta = await rules.fetch_levels(session)
+    threshold = int(level_thresholds.get(next_level, 0))
+    # New semantics: threshold is per-subject (no division by number of subjects).
+    return threshold
+
+
+async def _balanced_next_level(
+    session: AsyncSession,
+    *,
+    current_level: str,
+) -> str | None:
+    level_thresholds, _level_meta = await rules.fetch_levels(session)
+    levels_asc = sorted(level_thresholds.items(), key=lambda kv: kv[1])
+    for i, (name, _t) in enumerate(levels_asc):
+        if name == current_level and i < len(levels_asc) - 1:
+            return levels_asc[i + 1][0]
+    return None
+
+
 @router.post("/children/{child_id}/events/flashcard", response_model=EventAckOut)
 async def flashcard_answered(
     payload: FlashcardAnsweredIn,
@@ -382,6 +456,19 @@ async def flashcard_answered(
 
         subject_id_str = str(subject_id)
 
+        # Derive Subject.code (stable) for balanced counter updates
+        subject = (
+            await session.execute(select(Subject).where(Subject.id == subject_id))
+        ).scalar_one_or_none()
+        if subject is None:
+            logger.warning(
+                "event_flashcard: missing subject row subject_id=%s child_id=%s",
+                subject_id_str,
+                child_id_str,
+            )
+            raise HTTPException(status_code=400, detail="Invalid subject.")
+        subject_code = subject.code
+
         # Insert append-only event (idempotent per day+dedupeKey)
         insert_res = await insert_event(
             session,
@@ -416,6 +503,28 @@ async def flashcard_answered(
                 thresholds=thresholds,
                 age_range_id=flashcard.age_range_id,
             )
+
+            # Balanced progress counters: repeats (deduped events) still count toward per-level progress.
+            if payload.correct:
+                counter = (
+                    await session.execute(
+                        select(ChildBalancedProgressCounter).where(
+                            ChildBalancedProgressCounter.child_id == child.id,
+                            ChildBalancedProgressCounter.subject_code == subject_code,
+                        )
+                    )
+                ).scalar_one_or_none()
+                if counter is None:
+                    counter = ChildBalancedProgressCounter(
+                        child_id=child.id,
+                        subject_code=subject_code,
+                        correct_count=1,
+                        updated_at=datetime.now(timezone.utc),
+                    )
+                    session.add(counter)
+                else:
+                    counter.correct_count = int(counter.correct_count or 0) + 1
+                    counter.updated_at = datetime.now(timezone.utc)
 
             # Update performance tracking (same behavior as non-deduped)
             perf = (
@@ -471,6 +580,52 @@ async def flashcard_answered(
                 trigger="dedupe_repeat",
             )
 
+            # Evaluate balanced level-up (same transaction)
+            core_subjects = await list_subject_codes(session, child_id=child.id)
+            progress_row = (
+                await session.execute(select(ChildProgress).where(ChildProgress.child_id == child.id))
+            ).scalar_one_or_none()
+            if progress_row is None:
+                progress_row = ChildProgress(child_id=child.id)
+                session.add(progress_row)
+
+            next_level = await _balanced_next_level(session, current_level=progress_row.current_level)
+            if next_level is not None and core_subjects:
+                required_per_subject = await _balanced_level_required_per_subject(
+                    session,
+                    child_id=child.id,
+                    next_level=next_level,
+                    core_subjects=core_subjects,
+                )
+
+                rows = (
+                    await session.execute(
+                        select(ChildBalancedProgressCounter).where(
+                            ChildBalancedProgressCounter.child_id == child.id,
+                            ChildBalancedProgressCounter.subject_code.in_(core_subjects),
+                        )
+                    )
+                ).scalars().all()
+                counter_map = {r.subject_code: int(r.correct_count or 0) for r in rows}
+
+                if all(counter_map.get(code, 0) >= required_per_subject for code in core_subjects):
+                    progress_row.current_level = next_level
+                    # Reset counters for core subjects
+                    for code in core_subjects:
+                        row = next((r for r in rows if r.subject_code == code), None)
+                        if row is None:
+                            session.add(
+                                ChildBalancedProgressCounter(
+                                    child_id=child.id,
+                                    subject_code=code,
+                                    correct_count=0,
+                                    updated_at=datetime.now(timezone.utc),
+                                )
+                            )
+                        else:
+                            row.correct_count = 0
+                            row.updated_at = datetime.now(timezone.utc)
+
             await session.commit()
 
             if create_res.created:
@@ -491,6 +646,28 @@ async def flashcard_answered(
             thresholds=thresholds,
             age_range_id=flashcard.age_range_id,
         )
+
+        # Balanced progress counters: increment per-level counter for this subject on correct
+        if payload.correct:
+            counter = (
+                await session.execute(
+                    select(ChildBalancedProgressCounter).where(
+                        ChildBalancedProgressCounter.child_id == child.id,
+                        ChildBalancedProgressCounter.subject_code == subject_code,
+                    )
+                )
+            ).scalar_one_or_none()
+            if counter is None:
+                counter = ChildBalancedProgressCounter(
+                    child_id=child.id,
+                    subject_code=subject_code,
+                    correct_count=1,
+                    updated_at=datetime.now(timezone.utc),
+                )
+                session.add(counter)
+            else:
+                counter.correct_count = int(counter.correct_count or 0) + 1
+                counter.updated_at = datetime.now(timezone.utc)
 
         # Update performance tracking (FKs are UUID)
         perf = (
@@ -537,6 +714,52 @@ async def flashcard_answered(
                 perf.incorrect_count,
             )
         core_subjects = await list_subject_codes(session, child_id=child.id)
+
+        # Evaluate balanced level-up (same transaction)
+        progress_row = (
+            await session.execute(select(ChildProgress).where(ChildProgress.child_id == child.id))
+        ).scalar_one_or_none()
+        if progress_row is None:
+            progress_row = ChildProgress(child_id=child.id)
+            session.add(progress_row)
+
+        next_level = await _balanced_next_level(session, current_level=progress_row.current_level)
+        if next_level is not None and core_subjects:
+            required_per_subject = await _balanced_level_required_per_subject(
+                session,
+                child_id=child.id,
+                next_level=next_level,
+                core_subjects=core_subjects,
+            )
+
+            rows = (
+                await session.execute(
+                    select(ChildBalancedProgressCounter).where(
+                        ChildBalancedProgressCounter.child_id == child.id,
+                        ChildBalancedProgressCounter.subject_code.in_(core_subjects),
+                    )
+                )
+            ).scalars().all()
+            counter_map = {r.subject_code: int(r.correct_count or 0) for r in rows}
+
+            if all(counter_map.get(code, 0) >= required_per_subject for code in core_subjects):
+                progress_row.current_level = next_level
+                # Reset counters for core subjects
+                for code in core_subjects:
+                    row = next((r for r in rows if r.subject_code == code), None)
+                    if row is None:
+                        session.add(
+                            ChildBalancedProgressCounter(
+                                child_id=child.id,
+                                subject_code=code,
+                                correct_count=0,
+                                updated_at=datetime.now(timezone.utc),
+                            )
+                        )
+                    else:
+                        row.correct_count = 0
+                        row.updated_at = datetime.now(timezone.utc)
+
         new_codes = await _unlock_from_current_state(session, child, core_subjects=core_subjects)
 
         logger.info(
@@ -597,6 +820,52 @@ async def chore_completed(
             return EventAckOut(pointsAwarded=0, newAchievementCodes=[])
 
         core_subjects = await list_subject_codes(session, child_id=child.id)
+
+        # Evaluate balanced level-up (same transaction)
+        progress_row = (
+            await session.execute(select(ChildProgress).where(ChildProgress.child_id == child.id))
+        ).scalar_one_or_none()
+        if progress_row is None:
+            progress_row = ChildProgress(child_id=child.id)
+            session.add(progress_row)
+
+        next_level = await _balanced_next_level(session, current_level=progress_row.current_level)
+        if next_level is not None and core_subjects:
+            required_per_subject = await _balanced_level_required_per_subject(
+                session,
+                child_id=child.id,
+                next_level=next_level,
+                core_subjects=core_subjects,
+            )
+
+            rows = (
+                await session.execute(
+                    select(ChildBalancedProgressCounter).where(
+                        ChildBalancedProgressCounter.child_id == child.id,
+                        ChildBalancedProgressCounter.subject_code.in_(core_subjects),
+                    )
+                )
+            ).scalars().all()
+            counter_map = {r.subject_code: int(r.correct_count or 0) for r in rows}
+
+            if all(counter_map.get(code, 0) >= required_per_subject for code in core_subjects):
+                progress_row.current_level = next_level
+                # Reset counters for core subjects
+                for code in core_subjects:
+                    row = next((r for r in rows if r.subject_code == code), None)
+                    if row is None:
+                        session.add(
+                            ChildBalancedProgressCounter(
+                                child_id=child.id,
+                                subject_code=code,
+                                correct_count=0,
+                                updated_at=datetime.now(timezone.utc),
+                            )
+                        )
+                    else:
+                        row.correct_count = 0
+                        row.updated_at = datetime.now(timezone.utc)
+
         new_codes = await _unlock_from_current_state(session, child, core_subjects=core_subjects)
         logger.info("event_chore: commit child_id=%s points=%s newAchievementCodes=%s", child_id_str, points, new_codes)
 
@@ -643,6 +912,52 @@ async def outdoor_completed(
             return EventAckOut(pointsAwarded=0, newAchievementCodes=[])
 
         core_subjects = await list_subject_codes(session, child_id=child.id)
+
+        # Evaluate balanced level-up (same transaction)
+        progress_row = (
+            await session.execute(select(ChildProgress).where(ChildProgress.child_id == child.id))
+        ).scalar_one_or_none()
+        if progress_row is None:
+            progress_row = ChildProgress(child_id=child.id)
+            session.add(progress_row)
+
+        next_level = await _balanced_next_level(session, current_level=progress_row.current_level)
+        if next_level is not None and core_subjects:
+            required_per_subject = await _balanced_level_required_per_subject(
+                session,
+                child_id=child.id,
+                next_level=next_level,
+                core_subjects=core_subjects,
+            )
+
+            rows = (
+                await session.execute(
+                    select(ChildBalancedProgressCounter).where(
+                        ChildBalancedProgressCounter.child_id == child.id,
+                        ChildBalancedProgressCounter.subject_code.in_(core_subjects),
+                    )
+                )
+            ).scalars().all()
+            counter_map = {r.subject_code: int(r.correct_count or 0) for r in rows}
+
+            if all(counter_map.get(code, 0) >= required_per_subject for code in core_subjects):
+                progress_row.current_level = next_level
+                # Reset counters for core subjects
+                for code in core_subjects:
+                    row = next((r for r in rows if r.subject_code == code), None)
+                    if row is None:
+                        session.add(
+                            ChildBalancedProgressCounter(
+                                child_id=child.id,
+                                subject_code=code,
+                                correct_count=0,
+                                updated_at=datetime.now(timezone.utc),
+                            )
+                        )
+                    else:
+                        row.correct_count = 0
+                        row.updated_at = datetime.now(timezone.utc)
+
         new_codes = await _unlock_from_current_state(session, child, core_subjects=core_subjects)
         logger.info("event_outdoor: commit child_id=%s points=%s newAchievementCodes=%s", child_id_str, points, new_codes)
 
@@ -687,6 +1002,52 @@ async def affirmation_viewed(
             return EventAckOut(pointsAwarded=0, newAchievementCodes=[])
 
         core_subjects = await list_subject_codes(session, child_id=child.id)
+
+        # Evaluate balanced level-up (same transaction)
+        progress_row = (
+            await session.execute(select(ChildProgress).where(ChildProgress.child_id == child.id))
+        ).scalar_one_or_none()
+        if progress_row is None:
+            progress_row = ChildProgress(child_id=child.id)
+            session.add(progress_row)
+
+        next_level = await _balanced_next_level(session, current_level=progress_row.current_level)
+        if next_level is not None and core_subjects:
+            required_per_subject = await _balanced_level_required_per_subject(
+                session,
+                child_id=child.id,
+                next_level=next_level,
+                core_subjects=core_subjects,
+            )
+
+            rows = (
+                await session.execute(
+                    select(ChildBalancedProgressCounter).where(
+                        ChildBalancedProgressCounter.child_id == child.id,
+                        ChildBalancedProgressCounter.subject_code.in_(core_subjects),
+                    )
+                )
+            ).scalars().all()
+            counter_map = {r.subject_code: int(r.correct_count or 0) for r in rows}
+
+            if all(counter_map.get(code, 0) >= required_per_subject for code in core_subjects):
+                progress_row.current_level = next_level
+                # Reset counters for core subjects
+                for code in core_subjects:
+                    row = next((r for r in rows if r.subject_code == code), None)
+                    if row is None:
+                        session.add(
+                            ChildBalancedProgressCounter(
+                                child_id=child.id,
+                                subject_code=code,
+                                correct_count=0,
+                                updated_at=datetime.now(timezone.utc),
+                            )
+                        )
+                    else:
+                        row.correct_count = 0
+                        row.updated_at = datetime.now(timezone.utc)
+
         new_codes = await _unlock_from_current_state(session, child, core_subjects=core_subjects)
         logger.info(
             "event_affirmation: commit child_id=%s points=%s newAchievementCodes=%s",

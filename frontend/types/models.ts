@@ -212,7 +212,6 @@ export type BalancedProgressOut = {
   requiredPerSubject: number;
   subjectProgress: Record<SubjectCode, SubjectProgressOut>;
   lowestSubject: SubjectCode | null;
-  message: string;
 };
 
 export type RewardOut = {

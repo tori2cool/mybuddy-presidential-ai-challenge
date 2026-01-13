@@ -9,12 +9,6 @@ import {
   ScrollView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSequence,
-  withSpring,
-} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
 import { AsyncStatus } from "@/components/AsyncStatus";
@@ -54,8 +48,6 @@ function FlashcardPracticeModal({
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const cardScale = useSharedValue(1);
-  const feedbackScale = useSharedValue(0);
 
   const resolvedDifficultyInfo: { label: string; icon: string; color: string } =
     difficultyInfo
@@ -103,8 +95,6 @@ function FlashcardPracticeModal({
     setIsCorrect(false);
     setCorrectCount(0);
     setShowResults(false);
-    cardScale.value = 1;
-    feedbackScale.value = 0;
   };
 
   const handleClose = async () => {
@@ -129,21 +119,12 @@ function FlashcardPracticeModal({
       setSelectedIndex(null);
       setHasChecked(false);
       setIsCorrect(false);
-      feedbackScale.value = 0;
     } else {
       // Quiz complete (last card)
       setShowResults(true);
     }
   };
 
-  const cardAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: cardScale.value }],
-  }));
-
-  const feedbackAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: feedbackScale.value }],
-    opacity: feedbackScale.value,
-  }));
 
   const getResultMessage = () => {
     if (cards.length === 0) return "";
@@ -192,16 +173,8 @@ function FlashcardPracticeModal({
       if (correct) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setCorrectCount((prev) => prev + 1);
-        feedbackScale.value = withSequence(
-          withSpring(1.2, { damping: 8 }),
-          withSpring(1, { damping: 10 })
-        );
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        cardScale.value = withSequence(
-          withSpring(0.95, { damping: 8 }),
-          withSpring(1, { damping: 10 })
-        );
       }
     } catch (err) {
       console.error("[FlashcardPracticeModal] checkAnswer failed:", err);
@@ -306,18 +279,16 @@ function FlashcardPracticeModal({
           {/* Question Screen */}
           {!showResults && !isLoading && currentCard && (
             <View style={styles.questionContainer}>
-              <Animated.View style={[cardAnimatedStyle]}>
-                <View style={[styles.questionCard, { backgroundColor: theme.backgroundDefault }]}>
-                  <View style={[styles.cardLabel, { backgroundColor: subject?.color + "20" }]}>
-                    <ThemedText style={[styles.cardLabelText, { color: subject?.color }]}>
-                      Question {currentIndex + 1}
-                    </ThemedText>
-                  </View>
-                  <ThemedText type="title" style={styles.questionText}>
-                    {currentCard.question}
+              <View style={[styles.questionCard, { backgroundColor: theme.backgroundDefault }]}>
+                <View style={[styles.cardLabel, { backgroundColor: subject?.color + "20" }]}>
+                  <ThemedText style={[styles.cardLabelText, { color: subject?.color }]}>
+                    Question {currentIndex + 1}
                   </ThemedText>
                 </View>
-              </Animated.View>
+                <ThemedText type="title" style={styles.questionText}>
+                  {currentCard.question}
+                </ThemedText>
+              </View>
 
               <View style={styles.answerSection}>
                 <ThemedText style={[styles.answerLabel, { color: theme.textSecondary }]}>
@@ -383,30 +354,6 @@ function FlashcardPracticeModal({
                 {/* Feedback Section */}
                 {hasChecked && selectedIndex !== null && (
                   <View style={styles.feedbackContainer}>
-                    <Animated.View style={feedbackAnimatedStyle}>
-                      <View
-                        style={[
-                          styles.feedbackBadge,
-                          {
-                            backgroundColor: isCorrect
-                              ? theme.success + "20"
-                              : theme.error + "20",
-                          },
-                        ]}
-                      >
-                        <Feather
-                          name={isCorrect ? "check-circle" : "x-circle"}
-                          size={20}
-                          color={isCorrect ? theme.success : theme.error}
-                        />
-                        <ThemedText
-                          style={[styles.feedbackText, { color: isCorrect ? theme.success : theme.error }]}
-                        >
-                          {isCorrect ? "Correct!" : "Not quite!"}
-                        </ThemedText>
-                      </View>
-                    </Animated.View>
-
                     <View
                       style={[
                         styles.explanationBox,
@@ -610,17 +557,6 @@ const styles = StyleSheet.create({
   feedbackContainer: {
     gap: Spacing.md,
     marginTop: Spacing.sm,
-  },
-  feedbackBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  feedbackText: {
-    fontSize: 16,
-    fontWeight: "600",
   },
   correctAnswerBox: {
     padding: Spacing.md,
