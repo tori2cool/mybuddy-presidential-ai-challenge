@@ -184,9 +184,21 @@ export default function FlashcardsScreen() {
             </ThemedText>
           </View>
 
-          <ThemedText style={[styles.balanceMessage, { color: theme.textSecondary }]}>
-            {balancedProgress?.message ?? ""}
-          </ThemedText>
+          {balancedProgress ? (
+            <ThemedText style={[styles.balanceMessage, { color: theme.textSecondary }]}>
+              {(() => {
+                const current = balancedProgress.currentLevel;
+                const next = balancedProgress.nextLevel;
+
+                const currentText =
+                  typeof current === "string" && current.trim().length > 0 ? current : null;
+                const nextText = typeof next === "string" && next.trim().length > 0 ? next : null;
+
+                if (currentText && nextText) return `${currentText} → ${nextText}`;
+                return currentText ?? nextText ?? "";
+              })()}
+            </ThemedText>
+          ) : null}
 
           <View style={styles.subjectProgressContainer}>
             {balancedProgress
