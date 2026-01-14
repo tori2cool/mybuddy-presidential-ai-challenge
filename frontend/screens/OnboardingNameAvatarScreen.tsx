@@ -17,7 +17,7 @@ import { OnboardingParamList } from "@/navigation/OnboardingNavigator";
 import { Spacing, Typography, BorderRadius } from "@/constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/hooks/useTheme";
-import { DatePicker } from "@/components/index";
+import { DatePicker } from "@/components/DatePicker/index";
 import { getAvatars } from "@/services/avatarsService";
 import { getInterests } from "@/services/interestsService";
 
@@ -34,7 +34,7 @@ export default function OnboardingNameAvatarScreen({ route, onComplete }: Props)
 
   // Assumption based on your previous code: route params contains a list of interest IDs.
   // If it's actually "keys" (like "sports"), then fix that at the source and pass UUIDs instead.
-const { interests } = route.params as Readonly<{ interests: number[] }>;
+const { interests } = route.params as Readonly<{ interests: string[] }>;
 
 const interestIds: UUID[] | null =
   interests && interests.length > 0 ? interests.map((id) => String(id)) : null;

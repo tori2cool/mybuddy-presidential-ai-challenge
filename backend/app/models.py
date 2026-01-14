@@ -172,13 +172,21 @@ class ChildActivityEvent(SQLModel, table=True):
     meta: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
 
     __table_args__ = (
-        # Keep your existing dedupe behavior exactly:
-        # unique per child+kind+UTC-date+dedupeKey (when dedupeKey exists & non-empty)
+        # Keep your existing dedupe behavior exactly, but with a TEMPORARY
+        # global day boundary (US/Eastern).
+        #
+        # TODO(timezone): This is global America/New_York until per-account
+        # timezones are supported. Daily rollups/streaks MUST bucket days
+        # using the same timezone to match dedupe semantics.
+        #
+        # Future approach: store account timezone (IANA name) and compute a
+        # dedicated local_day/dedupe_day column at insert time (or generated
+        # column) and index/roll up on that value.
         Index(
             "uq_child_kind_dedupe_per_day",
             "child_id",
             "kind",
-            literal_column("((created_at AT TIME ZONE 'UTC')::date)"),
+            literal_column("((created_at AT TIME ZONE 'America/New_York')::date)"),
             literal_column("(coalesce(meta->>'dedupeKey',''))"),
             unique=True,
             postgresql_where=text("(meta ? 'dedupeKey') AND (meta->>'dedupeKey' <> '')"),
