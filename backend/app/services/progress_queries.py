@@ -36,20 +36,31 @@ K_AFFIRMATION = "affirmation"
 EventKind = Literal["flashcard", "chore", "outdoor", "affirmation"] 
 
 # ---------------------------------------------------------------------------
-# Time helpers (UTC-only)
+# Time helpers (TEMPORARY global America/New_York day boundaries)
 # ---------------------------------------------------------------------------
+#
+# TODO(timezone): This service currently defines "today" and day-bucketing
+# using a global US/Eastern boundary (America/New_York) so that daily rollups
+# match the ChildActivityEvent per-day dedupe unique index.
+#
+# Future approach: store per-account timezone (IANA name) and compute a
+# local_day/dedupe_day at write time (or via generated column) so both dedupe
+# and rollups can key off a persisted day value.
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _today_utc_date() -> date_type:
-    return _utc_now().date()
+def _today_eastern_date() -> date_type:
+    # Deterministic across DST by using IANA tz name.
+    from zoneinfo import ZoneInfo
+
+    return datetime.now(ZoneInfo("America/New_York")).date()
 
 
-def _week_start_utc(d: date_type) -> date_type:
+def _week_start_eastern(d: date_type) -> date_type:
     """
-    Sunday-start week, in UTC dates.
+    Sunday-start week, in local (America/New_York) dates.
     Matches JS getWeekStart() where Sunday=0.
     Python weekday(): Monday=0..Sunday=6
     Shift back by (weekday+1) % 7 to reach Sunday.
@@ -67,11 +78,17 @@ def _uuid_or_none(value: Any) -> Optional[UUID]:
     except Exception:
         return None
 
-# SQL snippets we reuse to ensure DB-side "day" math is UTC-consistent.
-# IMPORTANT: Keep these aligned with your unique index definition in models.py:
-#   ((created_at AT TIME ZONE 'UTC')::date)
-UTC_DAY_CREATED_AT_SQL = "((child_activity_events.created_at AT TIME ZONE 'UTC')::date)"
-UTC_TODAY_SQL = "((now() AT TIME ZONE 'UTC')::date)"
+# SQL snippets we reuse to ensure DB-side "day" math is consistent with the
+# ChildActivityEvent per-day dedupe unique index.
+#
+# IMPORTANT: Keep these aligned with the index in models.py:
+#   ((created_at AT TIME ZONE 'America/New_York')::date)
+#
+# TODO(timezone): TEMPORARY global America/New_York bucketing. When per-account
+# timezones are supported, do NOT sprinkle AT TIME ZONE all over queries;
+# instead persist a local_day/dedupe_day and query/index on that column.
+EASTERN_DAY_CREATED_AT_SQL = "((child_activity_events.created_at AT TIME ZONE 'America/New_York')::date)"
+EASTERN_TODAY_SQL = "((now() AT TIME ZONE 'America/New_York')::date)"
 
 
 # ---------------------------------------------------------------------------
@@ -326,9 +343,16 @@ async def compute_totals(session: AsyncSession, *, child_id: UUID) -> dict:
 
 
 async def compute_today_stats(session: AsyncSession, *, child_id: UUID) -> dict:
-    today = _today_utc_date()
-    start = datetime(today.year, today.month, today.day, tzinfo=timezone.utc)
-    end = start + timedelta(days=1)
+    today = _today_eastern_date()
+    # Day boundary is America/New_York, but DB timestamps are stored in UTC.
+    # Compute the UTC range corresponding to the local day.
+    from zoneinfo import ZoneInfo
+
+    tz = ZoneInfo("America/New_York")
+    start_local = datetime(today.year, today.month, today.day, tzinfo=tz)
+    end_local = start_local + timedelta(days=1)
+    start = start_local.astimezone(timezone.utc)
+    end = end_local.astimezone(timezone.utc)
 
     stmt = (
         select(ChildActivityEvent.kind, func.count(ChildActivityEvent.id))
@@ -383,10 +407,17 @@ async def compute_today_stats(session: AsyncSession, *, child_id: UUID) -> dict:
 
 
 async def compute_week_stats(session: AsyncSession, *, child_id: UUID) -> dict:
-    today = _today_utc_date()
-    week_start = _week_start_utc(today)
-    start = datetime(week_start.year, week_start.month, week_start.day, tzinfo=timezone.utc)
-    end = start + timedelta(days=7)
+    today = _today_eastern_date()
+    week_start = _week_start_eastern(today)
+    # Week boundaries are based on America/New_York local dates (Sunday-start),
+    # then converted to UTC instants for filtering.
+    from zoneinfo import ZoneInfo
+
+    tz = ZoneInfo("America/New_York")
+    start_local = datetime(week_start.year, week_start.month, week_start.day, tzinfo=tz)
+    end_local = start_local + timedelta(days=7)
+    start = start_local.astimezone(timezone.utc)
+    end = end_local.astimezone(timezone.utc)
 
     pts_stmt = select(func.coalesce(func.sum(ChildActivityEvent.points), 0)).where(
         ChildActivityEvent.child_id == child_id,
@@ -395,7 +426,7 @@ async def compute_week_stats(session: AsyncSession, *, child_id: UUID) -> dict:
     )
     total_points = int((await session.execute(pts_stmt)).scalar_one())
 
-    days_stmt = select(func.count(distinct(literal_column(UTC_DAY_CREATED_AT_SQL)))).where(
+    days_stmt = select(func.count(distinct(literal_column(EASTERN_DAY_CREATED_AT_SQL)))).where(
         ChildActivityEvent.child_id == child_id,
         ChildActivityEvent.created_at >= start,
         ChildActivityEvent.created_at < end,
@@ -575,7 +606,7 @@ async def compute_flashcards_by_subject(
 
 
 async def compute_today_completed_ids(session: AsyncSession, *, child_id: UUID) -> dict:
-    """Return distinct IDs completed today (UTC day) for chore/outdoor events.
+    """Return distinct IDs completed today (America/New_York day) for chore/outdoor events.
 
     - chore: distinct ChildActivityEvent.chore_id where kind==K_CHORE
     - outdoor: distinct ChildActivityEvent.outdoor_activity_id where kind==K_OUTDOOR
@@ -586,9 +617,14 @@ async def compute_today_completed_ids(session: AsyncSession, *, child_id: UUID) 
       - todayCompletedOutdoorActivityIds: list[UUID]
     """
 
-    today = _today_utc_date()
-    start = datetime(today.year, today.month, today.day, tzinfo=timezone.utc)
-    end = start + timedelta(days=1)
+    today = _today_eastern_date()
+    from zoneinfo import ZoneInfo
+
+    tz = ZoneInfo("America/New_York")
+    start_local = datetime(today.year, today.month, today.day, tzinfo=tz)
+    end_local = start_local + timedelta(days=1)
+    start = start_local.astimezone(timezone.utc)
+    end = end_local.astimezone(timezone.utc)
 
     chores_stmt = (
         select(distinct(ChildActivityEvent.chore_id))
@@ -623,10 +659,14 @@ async def compute_today_completed_ids(session: AsyncSession, *, child_id: UUID) 
 
 
 async def compute_streaks(session: AsyncSession, *, child_id: UUID) -> dict:
-    today = _today_utc_date()
-    start_dt = datetime(today.year, today.month, today.day, tzinfo=timezone.utc) - timedelta(days=180)
+    today = _today_eastern_date()
+    from zoneinfo import ZoneInfo
 
-    date_expr = literal_column(UTC_DAY_CREATED_AT_SQL).label("d")
+    tz = ZoneInfo("America/New_York")
+    start_local = datetime(today.year, today.month, today.day, tzinfo=tz) - timedelta(days=180)
+    start_dt = start_local.astimezone(timezone.utc)
+
+    date_expr = literal_column(EASTERN_DAY_CREATED_AT_SQL).label("d")
 
     stmt = (
         select(date_expr)

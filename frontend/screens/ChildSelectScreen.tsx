@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Image, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { ThemedText } from "@/components/ThemedText";
@@ -142,6 +142,11 @@ export default function ChildSelectScreen({ navigation }: Props) {
     [navigation, setChildId],
   );
 
+  const handleAddNewKid = useCallback(() => {
+    // Navigate (do not reset) so the user can come back to this list.
+    navigation.navigate("Onboarding");
+  }, [navigation]);
+
   const formatInterests = useCallback(
     (ids: string[] | null | undefined) => {
       if (!ids?.length) return null;
@@ -192,6 +197,7 @@ export default function ChildSelectScreen({ navigation }: Props) {
       ) : (
         <View style={styles.list}>
           {catalogsBanner}
+
           {children.map((c) => {
             const interestsText = formatInterests(c.interests);
             const avatar = c.avatarId ? avatarsById?.get(c.avatarId) : null;
@@ -233,6 +239,21 @@ export default function ChildSelectScreen({ navigation }: Props) {
               </Pressable>
             );
           })}
+
+          <View style={styles.addKidButtonWrap}>
+            <Button
+              onPress={handleAddNewKid}
+              style={[
+                styles.addKidButton,
+                {
+                  borderColor: theme.backgroundSecondary,
+                  backgroundColor: "transparent",
+                },
+              ]}
+            >
+              Add new kid
+            </Button>
+          </View>
         </View>
       )}
     </ThemedView>
@@ -262,5 +283,13 @@ const styles = StyleSheet.create({
   },
   cardText: {
     flex: 1,
+  },
+  addKidButtonWrap: {
+    marginTop: Spacing.lg,
+  },
+  addKidButton: {
+    // Secondary-like style using theme border/background while keeping existing Button component.
+    backgroundColor: "transparent",
+    borderWidth: 2,
   },
 });
