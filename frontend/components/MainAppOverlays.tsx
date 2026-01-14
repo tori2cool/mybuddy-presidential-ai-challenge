@@ -4,7 +4,6 @@ import { View, StyleSheet } from 'react-native';
 import { BuddyOverlays } from './BuddyOverlays';
 
 export function MainAppOverlays() {
-    console.log('MainAppOverlays mounted')
   return (
     <View style={styles.overlayContainer}>
       <BuddyOverlays />

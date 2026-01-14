@@ -170,6 +170,7 @@ export type AchievementOut = {
 };
 
 export type TodayStatsOut = {
+  currentStreak: number;
   date: string;
   flashcardsCompleted: number;
   flashcardsCorrect: number;
@@ -206,8 +207,9 @@ export type SubjectProgressOut = {
 };
 
 export type BalancedProgressOut = {
+  currentGrade: string;
   canLevelUp: boolean;
-  currentLevel: string;
+  currentLevel: number;
   nextLevel: string | null;
   requiredPerSubject: number;
   subjectProgress: Record<SubjectCode, SubjectProgressOut>;

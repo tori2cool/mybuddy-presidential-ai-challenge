@@ -26,6 +26,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { getBuddyResponse, extractLearningsFromMessage } from '@/services/aiService';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useDashboard } from '@/contexts/DashboardContext';
+import { DashboardOut } from '@/types/models';
 
 const QUICK_ACTIONS = [
   { id: 'flashcards', label: 'Help with flashcards', icon: 'book' },
@@ -124,15 +125,21 @@ export function BuddyChatSheet() {
     setIsLoading(true);
 
     try {
-      const dashboardData = dashboard.data ?? {};
+      const dashboardData = (dashboard.data ?? {
+        today: {},
+        balanced: {},
+      }) as DashboardOut;
       const progressInfo = {
         flashcardsCompleted: dashboardData?.today?.flashcardsCompleted ?? 0,
         choresCompleted: dashboardData?.today?.choresCompleted ?? 0,
         outdoorActivitiesCompleted: dashboardData?.today?.outdoorActivities ?? 0,
         affirmationsViewed: dashboardData?.today?.affirmationsViewed ?? 0,
-        currentLevel: dashboardData?.balanced?.currentLevel ?? '1',
+        currentLevel: dashboardData?.balanced?.currentLevel ?? 1,
         xpToNextLevel: dashboardData?.reward?.nextAt ?? 100,
         currentXP: dashboardData?.reward?.progress ?? 0,
+        outdoorActivities: dashboardData?.today?.outdoorActivities ?? 0,
+        currentStreak: dashboardData?.today?.currentStreak ?? 0, 
+        currentGrade: dashboardData?.balanced?.currentGrade ?? 'A',
       };
 
       const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
@@ -354,6 +361,13 @@ export function BuddyChatSheet() {
                     onChangeText={setInputText}
                     multiline
                     maxLength={500}
+                    onKeyPress={({ nativeEvent }) => {
+                      if (nativeEvent.key === 'Enter') {
+                          handleSend();
+                          return true;
+                      }
+                    }}
+                    returnKeyType="send"
                   />
                   <Pressable
                     style={[

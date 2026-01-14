@@ -12,13 +12,6 @@ export function BuddyOverlays() {
 
   const shouldShowBuddy = !!childId && isSessionActive;
 
-  console.log(
-    'BuddyOverlays check →',
-    'childId:', childId,
-    'isSessionActive:', isSessionActive,
-    '→ shouldShowBuddy:', shouldShowBuddy
-  );
-
   if (!shouldShowBuddy) {
     return null;
   }

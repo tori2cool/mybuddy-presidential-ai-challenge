@@ -1,8 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { NavigationContainer, ParamListBase } from "@react-navigation/native";
-import { useNavigationState } from "@react-navigation/native";
-import { NavigationRoute } from "@react-navigation/native";
+import { NavigationContainer } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -14,19 +12,17 @@ import { BuddyProvider } from "@/contexts/BuddyContext";
 import { ChildProvider } from "@/contexts/ChildContext";
 import { DashboardProvider } from "@/contexts/DashboardContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { ThemedText } from "./components/ThemedText";
 import { FloatingBuddy } from "./components/FloatingBuddy";
 import { BuddyChatSheet } from "./components/BuddyChatSheet";
-import { useBuddy } from "@/contexts/BuddyContext"; 
 import { BuddyCustomizer } from "./components/BuddyCustomizer";
-import { useCurrentChild } from "@/contexts/ChildContext";
 import { MainAppOverlays } from "./components/MainAppOverlays";
+import { FirstTimeTermsModal } from "@/components/FirstTimeTermsModal";
 
 function AppInner() {
-  const { loading } = useAuth();
+  const { loading, isAuthenticated, showTermsModal, setShowTermsModal, logout } = useAuth();
 
   if (loading) {
-    return null;
+    return null;  // or <LoadingScreen /> if you have one
   }
 
   return (
@@ -35,9 +31,23 @@ function AppInner() {
         <DashboardProvider>
           <NavigationContainer>
             <RootNavigator />
-          </NavigationContainer>         
+          </NavigationContainer>
         </DashboardProvider>
       </BuddyProvider>
+
+      {/* First-time terms modal – appears on top when needed */}
+      <FirstTimeTermsModal
+        visible={isAuthenticated && showTermsModal}
+        onAccept={() => {
+          setShowTermsModal(false);
+          // No need for force re-read here – modal already saved to storage
+          // The sync effect in AuthContext will handle closing / state update
+        }}
+        onDecline={() => {
+          logout();
+          setShowTermsModal(false);
+        }}
+      />
 
       <StatusBar style="auto" />
     </>

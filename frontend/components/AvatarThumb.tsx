@@ -53,8 +53,6 @@ export function AvatarThumb({
 
   const resolvedBorderRadius = borderRadius ?? Math.max(0, Math.round(size / 6));
 
-  console.log('Full thumbnail URL being requested:', normalizedUri);
-
   return (
     <View
       style={[
