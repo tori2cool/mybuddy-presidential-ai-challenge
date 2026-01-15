@@ -7,12 +7,15 @@ import MainTabNavigator from "@/navigation/MainTabNavigator";
 import OnboardingNavigator from "@/navigation/OnboardingNavigator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrentChildId } from "@/contexts/ChildContext";
+import { MainAppOverlays } from "@/components/MainAppOverlays";
+import { View } from "react-native";
 
 export type RootStackParamList = {
   Login: undefined;
   ChildSelect: undefined;
   Onboarding: undefined;
   Main: undefined;
+  __Overlays__: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -53,20 +56,26 @@ export default function RootNavigator() {
             return <OnboardingNavigator onComplete={handleComplete} />;
           }}
         </Stack.Screen>
-        <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
+        <Stack.Screen name="Main" options={{ headerShown: false }}>
+          {() => (
+            <View style={{ flex: 1 }}>
+              <MainTabNavigator />
+              <MainAppOverlays />
+            </View>
+          )}
+        </Stack.Screen>
       </>
     );
   }, [setChildId]);
 
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!isAuthenticated ? (
-        <Stack.Screen name="Login" component={LoginScreen} />
-      ) : (
-        <>
-          {renderAuthed}
-        </>
-      )}
-    </Stack.Navigator>
-  );
-}
+return (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    {!isAuthenticated ? (
+      <Stack.Screen name="Login" component={LoginScreen} />
+    ) : (
+      <>
+        {renderAuthed}
+      </>
+    )}
+  </Stack.Navigator>
+)};

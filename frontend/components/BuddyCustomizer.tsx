@@ -11,27 +11,28 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { BuddyPreview } from '@/components/BuddyPreview';
+import { BuddySVGCustomization } from './BuddySVGCustomization';
 import { useBuddy } from '@/contexts/BuddyContext';
 import { useTheme } from '@/hooks/useTheme';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import {
-  CHARACTER_TYPES,
-  BASE_SHAPES,
+  // CHARACTER_TYPES,
+  // BASE_SHAPES,
   SKIN_COLORS,
-  EYE_SHAPES,
-  EYE_COLORS,
-  MOUTH_STYLES,
+  EXPRESSIONS,
+  // EYE_COLORS,
   HAIR_STYLES,
-  HAIR_COLORS,
+  // HAIR_COLORS,
   OUTFITS,
-  OUTFIT_COLORS,
+  // OUTFIT_COLORS,
   ACCESSORIES,
-  SPECIAL_FEATURES,
+  // SPECIAL_FEATURES,
   CUSTOMIZATION_CATEGORIES,
   BuddyAppearance,
 } from '@/constants/buddyCustomization';
 
-type CategoryId = 'type' | 'skin' | 'face' | 'hair' | 'outfit' | 'accessory' | 'special';
+type CategoryId = 'type' | 'skin' | 'face' | 'hair' | 'outfit' | 'accessory';
+// | 'special';
 
 export function BuddyCustomizer() {
   const { theme } = useTheme();
@@ -143,19 +144,19 @@ export function BuddyCustomizer() {
               maxLength={20}
             />
 
-            <ThemedText style={styles.sectionTitle}>Character Type</ThemedText>
+            {/* <ThemedText style={styles.sectionTitle}>Character Type</ThemedText>
             {renderOptionPicker(
               CHARACTER_TYPES.map(t => ({ id: t.id, label: t.label })),
               tempAppearance.characterType,
               (id) => updateTempAppearance('characterType', id)
-            )}
+            )} */}
 
-            <ThemedText style={styles.sectionTitle}>Base Shape</ThemedText>
+            {/* <ThemedText style={styles.sectionTitle}>Base Shape</ThemedText>
             {renderOptionPicker(
               BASE_SHAPES,
               tempAppearance.baseShape,
               (id) => updateTempAppearance('baseShape', id)
-            )}
+            )} */}
           </View>
         );
 
@@ -174,26 +175,19 @@ export function BuddyCustomizer() {
       case 'face':
         return (
           <View style={styles.categoryContent}>
-            <ThemedText style={styles.sectionTitle}>Eye Shape</ThemedText>
+            <ThemedText style={styles.sectionTitle}>Facial Expression</ThemedText>
             {renderOptionPicker(
-              EYE_SHAPES,
-              tempAppearance.eyeShape,
-              (id) => updateTempAppearance('eyeShape', id)
+              EXPRESSIONS,
+              tempAppearance.facialExpression,
+              (id) => updateTempAppearance('facialExpression', id)
             )}
 
-            <ThemedText style={styles.sectionTitle}>Eye Color</ThemedText>
+            {/* <ThemedText style={styles.sectionTitle}>Eye Color</ThemedText>
             {renderColorPicker(
               EYE_COLORS,
               tempAppearance.eyeColor,
               (color) => updateTempAppearance('eyeColor', color)
-            )}
-
-            <ThemedText style={styles.sectionTitle}>Mouth Style</ThemedText>
-            {renderOptionPicker(
-              MOUTH_STYLES,
-              tempAppearance.mouthStyle,
-              (id) => updateTempAppearance('mouthStyle', id)
-            )}
+            )} */}
           </View>
         );
 
@@ -207,12 +201,12 @@ export function BuddyCustomizer() {
               (id) => updateTempAppearance('hairStyle', id)
             )}
 
-            <ThemedText style={styles.sectionTitle}>Hair Color</ThemedText>
+            {/* <ThemedText style={styles.sectionTitle}>Hair Color</ThemedText>
             {renderColorPicker(
               HAIR_COLORS,
               tempAppearance.hairColor,
               (color) => updateTempAppearance('hairColor', color)
-            )}
+            )} */}
           </View>
         );
 
@@ -222,16 +216,16 @@ export function BuddyCustomizer() {
             <ThemedText style={styles.sectionTitle}>Outfit</ThemedText>
             {renderOptionPicker(
               OUTFITS,
-              tempAppearance.outfit,
-              (id) => updateTempAppearance('outfit', id)
+              tempAppearance.outfitStyle,
+              (id) => updateTempAppearance('outfitStyle', id)
             )}
 
-            <ThemedText style={styles.sectionTitle}>Outfit Color</ThemedText>
+            {/* <ThemedText style={styles.sectionTitle}>Outfit Color</ThemedText>
             {renderColorPicker(
               OUTFIT_COLORS,
               tempAppearance.outfitColor,
               (color) => updateTempAppearance('outfitColor', color)
-            )}
+            )} */}
           </View>
         );
 
@@ -245,35 +239,35 @@ export function BuddyCustomizer() {
               (id) => updateTempAppearance('accessory', id)
             )}
 
-            <ThemedText style={styles.sectionTitle}>Accessory Color</ThemedText>
+            {/* <ThemedText style={styles.sectionTitle}>Accessory Color</ThemedText>
             {renderColorPicker(
               OUTFIT_COLORS,
               tempAppearance.accessoryColor,
               (color) => updateTempAppearance('accessoryColor', color)
-            )}
+            )} */}
           </View>
         );
 
-      case 'special':
-        return (
-          <View style={styles.categoryContent}>
-            <ThemedText style={styles.sectionTitle}>Special Features</ThemedText>
-            {renderOptionPicker(
-              SPECIAL_FEATURES,
-              tempAppearance.specialFeature,
-              (id) => updateTempAppearance('specialFeature', id)
-            )}
+      // case 'special':
+      //   return (
+      //     <View style={styles.categoryContent}>
+      //       <ThemedText style={styles.sectionTitle}>Special Features</ThemedText>
+      //       {renderOptionPicker(
+      //         SPECIAL_FEATURES,
+      //         tempAppearance.specialFeature,
+      //         (id) => updateTempAppearance('specialFeature', id)
+      //       )}
 
-            <ThemedText style={styles.sectionTitle}>Feature Color</ThemedText>
-            {renderColorPicker(
-              [...SKIN_COLORS, ...OUTFIT_COLORS].filter((c, i, arr) => 
-                arr.findIndex(x => x.color === c.color) === i
-              ),
-              tempAppearance.specialFeatureColor,
-              (color) => updateTempAppearance('specialFeatureColor', color)
-            )}
-          </View>
-        );
+      //       <ThemedText style={styles.sectionTitle}>Feature Color</ThemedText>
+      //       {renderColorPicker(
+      //         [...SKIN_COLORS, ...OUTFIT_COLORS].filter((c, i, arr) => 
+      //           arr.findIndex(x => x.color === c.color) === i
+      //         ),
+      //         tempAppearance.specialFeatureColor,
+      //         (color) => updateTempAppearance('specialFeatureColor', color)
+      //       )}
+      //     </View>
+        // );
 
       default:
         return null;
@@ -301,7 +295,7 @@ export function BuddyCustomizer() {
         </View>
 
         <View style={[styles.previewContainer, { backgroundColor: theme.backgroundSecondary }]}>
-          <BuddyPreview appearance={tempAppearance} size={120} />
+          <BuddySVGCustomization appearance={tempAppearance as any} size={420} />
           <ThemedText type="title" style={styles.buddyName}>{tempName}</ThemedText>
         </View>
 

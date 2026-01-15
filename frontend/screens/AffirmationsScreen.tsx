@@ -8,6 +8,10 @@ import {
   ViewToken,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
 } from "react-native";
 
 type RafThrottleFn<T extends (...args: any[]) => void> = {
@@ -44,10 +48,13 @@ import { ThemedText } from "@/components/ThemedText";
 import { IconButton } from "@/components/IconButton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboard } from "@/contexts/DashboardContext";
-import { Spacing, Typography } from "@/constants/theme";
+import { BorderRadius, Spacing, Typography } from "@/constants/theme";
 import { getAffirmations } from "@/services/affirmationsService";
 import { Affirmation } from "@/types/models";
 import { useCurrentChildId } from "@/contexts/ChildContext";
+import { ShareMenu } from "@/components/ShareMenu"; // Assuming you created this file as per previous instructions
+import { useTheme } from "@react-navigation/native";
+import { CreateAffirmationModal } from "@/components/CreateAffirmationModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -61,6 +68,10 @@ export default function AffirmationsScreen() {
   const affirmationsRef = useRef<Affirmation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const flatListRef = useRef<FlatList>(null);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [selectedAffirmationText, setSelectedAffirmationText] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [customAffirmationText, setCustomAffirmationText] = useState('');
 
   const debugApiEnabled =
     typeof process !== "undefined" &&
@@ -226,60 +237,50 @@ export default function AffirmationsScreen() {
   }, []);
 
   useEffect(() => {
-    affirmationsRef.current = affirmations;
-    debug("affirmations updated", {
-      childId,
-      affirmations_len: affirmations.length,
-      first_id: affirmations[0]?.id,
-    });
-  }, [affirmations, debug, childId]);
+    const throttled = rafThrottle(handleScroll);
+    onScrollRafThrottledRef.current = throttled;
+    return () => throttled.cancel();
+  }, [currentIndex]);
+
+  const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = event.nativeEvent.contentOffset.y;
+    const index = Math.round(y / SCREEN_HEIGHT);
+    setCurrentIndex(index);
+  };
 
   useEffect(() => {
-    debug("childId", { childId });
-  }, [childId, debug]);
+    if (!childId) return;
+    let cancelled = false;
 
-  // Reset per-session dedupe state when switching children so views are counted
-  // once per session per child.
-  useEffect(() => {
-    postedViewedIdsRef.current.clear();
-    lastViewedIndexRef.current = -1;
-    debug("reset view dedupe state", { childId });
-  }, [childId, debug]);
-
-  useEffect(() => {
-    if (!childId) {
-      // No child yet (dev auto-create will set one soon). Avoid calling API.
-      return;
-    }
-
-    const loadAffirmations = async () => {
+    (async () => {
       setIsLoading(true);
       try {
-        const data = await getAffirmations(childId); // <-- pass childId
-        setAffirmations(data || []); // safeguard against undefined
-        // Rely on FlatList viewability to mark items as viewed (avoids double-posting the first item).
-      } catch (error) {
-        console.error("Failed to load affirmations:", error);
-        setAffirmations([]); // avoid undefined.length
+        const data = await getAffirmations(childId);
+        affirmationsRef.current = data;
+        if (cancelled) return;
+        setAffirmations(data);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
-    };
+    })();
 
-    loadAffirmations();
-  }, [childId]); 
+    return () => {
+      cancelled = true;
+    };
+  }, [childId]);
 
   const renderItem = ({ item }: { item: Affirmation }) => {
     const isFavorite = favorites.includes(item.id);
+    const gradient = item.gradient || ["#8B5CF6", "#6366F1"]; // Primary purple
+
+    const handleSharePress = () => {
+      setSelectedAffirmationText(item.text);
+      setShowShareMenu(true);
+    };
 
     return (
       <View style={styles.itemContainer}>
-        <LinearGradient
-          colors={[...item.gradient] as any}
-          style={styles.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-        >
+        <LinearGradient colors={gradient} style={styles.gradient}>
           <View style={styles.content}>
             <ThemedText
               style={[
@@ -323,10 +324,15 @@ export default function AffirmationsScreen() {
                   fill={isFavorite ? "#EC4899" : "none"}
                 />
               </Pressable>
-              <Pressable style={styles.actionButton}>
+              <Pressable style={styles.actionButton} onPress={handleSharePress}>
                 <Feather name="share-2" size={28} color="white" />
               </Pressable>
-              <Pressable style={styles.actionButton}>
+              <Pressable style={styles.actionButton}
+                onPress={() => {
+                  setCustomAffirmationText('');
+                  setShowCreateModal(true);
+                }}
+              >
                 <Feather name="edit" size={28} color="white" />
               </Pressable>
             </View>
@@ -367,9 +373,43 @@ export default function AffirmationsScreen() {
         scrollEventThrottle={16}
         onMomentumScrollEnd={handleScrollEnd}
         onScrollEndDrag={handleScrollEnd}
-        onViewableItemsChanged={onViewableItemsChanged}
+        onViewableItemsChanged={onViewableItemsChanged.current}
         viewabilityConfig={{
           itemVisiblePercentThreshold: 50,
+        }}
+      />
+
+      <ShareMenu
+        visible={showShareMenu}
+        onClose={() => setShowShareMenu(false)}
+        affirmationText={selectedAffirmationText}
+      />
+
+      <CreateAffirmationModal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        text={customAffirmationText}
+        onTextChange={setCustomAffirmationText}
+        onSave={() => {
+          if (!customAffirmationText.trim()) return;
+
+          // TODO: Call your backend API here to save the custom affirmation
+          console.log('Saving custom affirmation:', customAffirmationText);
+
+          // Temporary local add
+          const newCustom: Affirmation = {
+            id: `custom-${Date.now()}`,
+            text: customAffirmationText,
+            image: null,
+            gradient: ["#4ADE80", "#22C55E"], // green for custom
+            tags: ["custom"],
+            ageRangeId: null,
+          };
+
+          setAffirmations((prev) => [newCustom, ...prev]); // add at top
+          setShowCreateModal(false);
+          setCustomAffirmationText('');
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }}
       />
     </View>

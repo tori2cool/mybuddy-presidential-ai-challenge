@@ -9,6 +9,7 @@ import {
   Platform,
   FlatList,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +27,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { getBuddyResponse, extractLearningsFromMessage } from '@/services/aiService';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useDashboard } from '@/contexts/DashboardContext';
+import { DashboardOut } from '@/types/models';
 
 const QUICK_ACTIONS = [
   { id: 'flashcards', label: 'Help with flashcards', icon: 'book' },
@@ -79,6 +81,26 @@ export function BuddyChatSheet() {
   const [showOptionsPanel, setShowOptionsPanel] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 150);  // small delay to let layout settle
+    });
+
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const translateY = useSharedValue(0);
 
   useEffect(() => {
@@ -124,15 +146,21 @@ export function BuddyChatSheet() {
     setIsLoading(true);
 
     try {
-      const dashboardData = dashboard.data ?? {};
+      const dashboardData = (dashboard.data ?? {
+        today: {},
+        balanced: {},
+      }) as DashboardOut;
       const progressInfo = {
         flashcardsCompleted: dashboardData?.today?.flashcardsCompleted ?? 0,
         choresCompleted: dashboardData?.today?.choresCompleted ?? 0,
         outdoorActivitiesCompleted: dashboardData?.today?.outdoorActivities ?? 0,
         affirmationsViewed: dashboardData?.today?.affirmationsViewed ?? 0,
-        currentLevel: dashboardData?.balanced?.currentLevel ?? '1',
+        currentLevel: dashboardData?.balanced?.currentLevel ?? 1,
         xpToNextLevel: dashboardData?.reward?.nextAt ?? 100,
         currentXP: dashboardData?.reward?.progress ?? 0,
+        outdoorActivities: dashboardData?.today?.outdoorActivities ?? 0,
+        currentStreak: dashboardData?.today?.currentStreak ?? 0, 
+        currentGrade: dashboardData?.balanced?.currentGrade ?? 'A',
       };
 
       const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
@@ -206,6 +234,8 @@ export function BuddyChatSheet() {
               { 
                 backgroundColor: theme.backgroundRoot,
                 paddingBottom: insets.bottom,
+                height: keyboardHeight > 0 ? '95%' : undefined,  // or '95%' if you want a tiny top gap
+                maxHeight: keyboardHeight > 0 ? '100%' : '90%',   // override maxHeight
               },
               sheetStyle
             ]}
@@ -323,11 +353,12 @@ export function BuddyChatSheet() {
               </View>
             ) : null}
 
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={0}
-            >
-              <View style={[styles.inputContainer, { borderTopColor: theme.textSecondary + '20' }]}>
+              <View style={[styles.inputContainer, 
+                { 
+                  borderTopColor: theme.textSecondary + '20', 
+                  paddingBottom: keyboardHeight > 0 ? keyboardHeight : Spacing.sm,  // ← this lifts just the input above keyboard
+                }
+              ]}>
                 {isDiaryMode ? (
                   <View style={[styles.diaryModeIndicator, { backgroundColor: theme.secondary + '20' }]}>
                     <Feather name="edit-3" size={14} color={theme.secondary} />
@@ -339,6 +370,7 @@ export function BuddyChatSheet() {
                     </Pressable>
                   </View>
                 ) : null}
+
                 <View style={styles.inputRow}>
                   <TextInput
                     style={[
@@ -354,6 +386,13 @@ export function BuddyChatSheet() {
                     onChangeText={setInputText}
                     multiline
                     maxLength={500}
+                    onKeyPress={({ nativeEvent }) => {
+                      if (nativeEvent.key === 'Enter') {
+                          handleSend();
+                          return true;
+                      }
+                    }}
+                    returnKeyType="send"
                   />
                   <Pressable
                     style={[
@@ -370,14 +409,13 @@ export function BuddyChatSheet() {
                     />
                   </Pressable>
                 </View>
-              </View>
-            </KeyboardAvoidingView>
-          </Animated.View>
-        </GestureDetector>
-      </View>
-    </Modal>
-  );
-}
+              </View>  
+            </Animated.View>
+          </GestureDetector>
+        </View>
+      </Modal>
+    );
+  }
 
 const styles = StyleSheet.create({
   overlay: {

@@ -18,6 +18,7 @@ import { useDashboard } from "@/contexts/DashboardContext";
 import type { ProgressEvent } from "@/services/eventsService";
 import { Spacing, BorderRadius } from "@/constants/theme";
 import { getFlashcards } from "@/services/flashcardsService";
+import Constants from 'expo-constants';
 
 interface FlashcardPracticeModalProps {
   visible: boolean;
@@ -64,6 +65,18 @@ function FlashcardPracticeModal({
 
   useEffect(() => {
     if (visible && subject && childId) {
+      console.log('[FlashcardModal Debug] Modal opened - visible:', visible);
+      console.log('[FlashcardModal Debug] Subject:', subject.code, 'Name:', subject.name);
+      console.log('[FlashcardModal Debug] Difficulty:', difficultyCode);
+      console.log('[FlashcardModal Debug] Child ID:', childId);
+
+      const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY || 
+                    Constants.expoConfig?.extra?.EXPO_PUBLIC_OPENAI_API_KEY;
+
+      console.log('[FlashcardModal Debug] API Key status:', 
+        apiKey ? `Loaded (starts with ${apiKey.slice(0, 7)}... ends with ...${apiKey.slice(-4)})` : 'MISSING');
+
+      console.log('[FlashcardModal Debug] Expo extra contents:', Constants.expoConfig?.extra || 'No extra found');
       setIsLoading(true);
       resetState();
       let cancelled = false;

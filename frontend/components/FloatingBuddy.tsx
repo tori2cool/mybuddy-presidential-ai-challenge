@@ -20,33 +20,13 @@ import { useTheme } from '@/hooks/useTheme';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { BuddyAppearance } from '@/constants/buddyCustomization';
 import { BuddyPreview } from '@/components/BuddyPreview';
+import { BuddySVGCustomization } from './BuddySVGCustomization'; 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BUDDY_SIZE = 64;
 const TAB_WIDTH = 32;
 const TAB_HEIGHT = 80;
 const HIDE_THRESHOLD = 80;
-
-function BuddyFace({ appearance, size }: { appearance: BuddyAppearance; size: number }) {
-  const eyeSize = size * 0.2;
-  const pupilSize = eyeSize * 0.5;
-  const mouthWidth = size * 0.3;
-  const mouthHeight = size * 0.12;
-
-  return (
-    <View style={faceStyles.container}>
-      <View style={faceStyles.eyesContainer}>
-        <View style={[faceStyles.eye, { width: eyeSize, height: eyeSize, borderRadius: eyeSize / 2 }]}>
-          <View style={[faceStyles.pupil, { width: pupilSize, height: pupilSize, borderRadius: pupilSize / 2, backgroundColor: appearance.eyeColor }]} />
-        </View>
-        <View style={[faceStyles.eye, { width: eyeSize, height: eyeSize, borderRadius: eyeSize / 2 }]}>
-          <View style={[faceStyles.pupil, { width: pupilSize, height: pupilSize, borderRadius: pupilSize / 2, backgroundColor: appearance.eyeColor }]} />
-        </View>
-      </View>
-      <View style={[faceStyles.mouth, { width: mouthWidth, height: mouthHeight, borderBottomLeftRadius: mouthHeight, borderBottomRightRadius: mouthHeight }]} />
-    </View>
-  );
-}
 
 const faceStyles = StyleSheet.create({
   container: {
@@ -252,7 +232,7 @@ export function FloatingBuddy() {
           runOnJS(handleOpenChat)();
         }}>
           <View style={[styles.buddyBubble, { backgroundColor: appearance.skinColor || theme.primary }]}>
-            <BuddyFace appearance={appearance as any} size={BUDDY_SIZE * 0.8} />
+            <BuddySVGCustomization appearance={appearance} size={BUDDY_SIZE * 0.77} showFullBody={false} />
           </View>
         </Pressable>
         <View style={[styles.statusIndicator, { backgroundColor: theme.success }]} />
