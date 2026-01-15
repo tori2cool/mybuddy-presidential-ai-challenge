@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import hashlib
+import random
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -140,6 +142,98 @@ def _is_valid_mcq_row(row: Any) -> bool:
     return True
 
 
+def _stable_shuffle_seed(*parts: Any) -> int:
+    """
+    Deterministic seed based on stable text inputs.
+    Keeps shuffles stable across runs given the same card content.
+    """
+    joined = "||".join(p.strip() for p in parts if p is not None)
+    digest = hashlib.sha256(joined.encode("utf-8")).digest()
+    # use first 8 bytes as int seed
+    return int.from_bytes(digest[:8], "big", signed=False)
+
+
+def _shuffle_mcq_in_place(row: dict[str, Any], *, deterministic: bool = True) -> dict[str, Any]:
+    """
+    Shuffle choices+explanations together and update correct_index accordingly.
+
+    Assumes:
+      - choices is list[str] length 4
+      - explanations is list[str] length 4
+      - correct_index in 0..3
+
+    If deterministic=True, shuffle order is stable based on question+subject+age_range+difficulty.
+    """
+    if not _is_valid_mcq_row(row):
+        return row
+
+    choices: list[str] = row["choices"]
+    explanations: list[str] = row["explanations"]
+    correct_index: int = row["correct_index"]
+
+    correct_choice = choices[correct_index]
+    correct_expl = explanations[correct_index]
+
+    paired = list(zip(choices, explanations))
+
+    rng = random.Random()
+    if deterministic:
+        rng.seed(
+            _stable_shuffle_seed(
+                str(row.get("subject", "")),
+                str(row.get("age_range", "")),
+                str(row.get("difficulty", "")),
+                str(row.get("question", "")),
+            )
+        )
+    else:
+        rng.seed()
+
+    # Shuffle until the correct answer is not always first (if possible)
+    # This avoids the "always index 0" pattern even when deterministic.
+    for _ in range(6):
+        rng.shuffle(paired)
+        new_choices = [c for (c, _e) in paired]
+        if new_choices[0] != correct_choice:
+            break
+
+    new_choices, new_explanations = zip(*paired)
+    new_choices = list(new_choices)
+    new_explanations = list(new_explanations)
+
+    # Recompute correct_index
+    new_correct_index = new_choices.index(correct_choice)
+
+    # Sanity: correct explanation should still match the correct choice
+    if new_explanations[new_correct_index] != correct_expl:
+        # This should never happen with paired shuffle, but keep it safe.
+        # Realign by value if needed.
+        try:
+            idx = [(c, e) for (c, e) in zip(new_choices, new_explanations)].index((correct_choice, correct_expl))
+            new_correct_index = idx
+        except ValueError:
+            # Fall back: keep computed index
+            pass
+
+    row["choices"] = new_choices
+    row["explanations"] = new_explanations
+    row["correct_index"] = new_correct_index
+    return row
+
+
+def _normalize_seed_rows(rows: list[Any]) -> list[Any]:
+    """
+    Apply MCQ shuffling normalization to any valid MCQ rows.
+    """
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        if isinstance(r, dict) and _is_valid_mcq_row(r):
+            out.append(_shuffle_mcq_in_place(r, deterministic=True))
+        else:
+            out.append(r)
+    return out
+
+
 def _count_valid_matching_rows(
     rows: Iterable[dict[str, Any]],
     *,
@@ -201,6 +295,7 @@ async def insert_flashcards_from_seed_json() -> int:
         age_range_name_to_id = {name: aid for (name, aid) in age_ranges}
 
         seed_cards = _load_flashcards_from_folder(FLASHCARDS_DIR)
+        seed_cards = _normalize_seed_rows(seed_cards)
 
         rows: list[dict[str, Any]] = []
         for fc in seed_cards:
@@ -291,18 +386,21 @@ async def _generate_one(
             # Convert model output to seed row format (what your seed script expects)
             seed_rows: list[dict[str, Any]] = []
             for c in cards:
-                seed_rows.append(
-                    {
-                        "subject": spec.subject_name,
-                        "age_range": spec.age_range_name,
-                        "difficulty": spec.difficulty,
-                        "question": c["question"],
-                        "choices": c["choices"],
-                        "correct_index": c["correct_index"],
-                        "explanations": c["explanations"],
-                        "tags": c.get("tags") or ["auto"],
-                    }
-                )
+                row = {
+                    "subject": spec.subject_name,
+                    "age_range": spec.age_range_name,
+                    "difficulty": spec.difficulty,
+                    "question": c["question"],
+                    "choices": c["choices"],
+                    "correct_index": c["correct_index"],
+                    "explanations": c["explanations"],
+                    "tags": c.get("tags") or ["auto"],
+                }
+
+                # Fix "correct answer always first" by shuffling and recomputing correct_index.
+                row = _shuffle_mcq_in_place(row, deterministic=True)
+
+                seed_rows.append(row)
             return seed_rows
         except Exception as exc:
             last_err = exc
@@ -470,6 +568,12 @@ async def generate_all_easy_flashcards(*, per_pair: int = 5) -> None:
         )
         existing = _read_existing(out_path)
         combined = _dedupe([*existing, *new_rows])
+        combined = _normalize_seed_rows(combined)
+        dist = {0: 0, 1: 0, 2: 0, 3: 0}
+        for r in combined:
+            if isinstance(r, dict) and _is_valid_mcq_row(r):
+                dist[int(r["correct_index"])] += 1
+        logger.info("correct_index distribution subject_code=%s dist=%s", subject_code, dist)
         _write_json_list(out_path, combined)
         logger.info("Wrote %s total rows to %s", len(combined), out_path.resolve())
 

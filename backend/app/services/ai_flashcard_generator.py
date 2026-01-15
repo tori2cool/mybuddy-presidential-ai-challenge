@@ -1,5 +1,9 @@
+from __future__ import annotations
+
+import hashlib
 import json
 import logging
+import random
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -37,6 +41,121 @@ class FlashcardGenerator:
             base_url=settings.flashcard_api_base,
         )
 
+    # -----------------------------
+    # Post-parse normalization
+    # -----------------------------
+
+    @staticmethod
+    def _stable_seed_for_card(
+        *,
+        subject: str,
+        age_range: str,
+        difficulty: str,
+        question: str,
+    ) -> int:
+        """
+        Deterministic seed per card. Keeps shuffles stable across runs for identical content.
+        """
+        joined = "||".join(
+            [
+                (subject or "").strip(),
+                (age_range or "").strip(),
+                (difficulty or "").strip(),
+                (question or "").strip(),
+            ]
+        )
+        digest = hashlib.sha256(joined.encode("utf-8")).digest()
+        return int.from_bytes(digest[:8], "big", signed=False)
+
+    @staticmethod
+    def _shuffle_one_card_in_place(
+        c: dict[str, Any],
+        *,
+        subject: str,
+        age_range: str,
+        difficulty: str,
+        deterministic: bool = True,
+    ) -> None:
+        """
+        Shuffle choices + explanations together and update correct_index.
+        Preserves alignment: explanations[i] always explains choices[i].
+
+        Tries a few times to avoid leaving the correct answer at index 0 (common bias),
+        but will accept it if it happens.
+        """
+        choices: list[str] = c["choices"]
+        explanations: list[str] = c["explanations"]
+        correct_index: int = c["correct_index"]
+
+        correct_choice = choices[correct_index]
+        correct_expl = explanations[correct_index]
+
+        paired = list(zip(choices, explanations))
+
+        rng = random.Random()
+        if deterministic:
+            rng.seed(
+                FlashcardGenerator._stable_seed_for_card(
+                    subject=subject,
+                    age_range=age_range,
+                    difficulty=difficulty,
+                    question=str(c.get("question", "")),
+                )
+            )
+        else:
+            rng.seed()
+
+        for _ in range(6):
+            rng.shuffle(paired)
+            # try to avoid "correct always first"
+            if paired[0][0] != correct_choice:
+                break
+
+        new_choices, new_explanations = zip(*paired)
+        new_choices = list(new_choices)
+        new_explanations = list(new_explanations)
+
+        new_correct_index = new_choices.index(correct_choice)
+
+        # Sanity: ensure correct explanation stayed paired with correct choice
+        if new_explanations[new_correct_index] != correct_expl:
+            # Should never happen with paired shuffle, but keep it safe.
+            for idx, (ch, ex) in enumerate(zip(new_choices, new_explanations)):
+                if ch == correct_choice and ex == correct_expl:
+                    new_correct_index = idx
+                    break
+
+        c["choices"] = new_choices
+        c["explanations"] = new_explanations
+        c["correct_index"] = new_correct_index
+
+    def _shuffle_cards_post_parse(
+        self,
+        cards: list[dict[str, Any]],
+        *,
+        subject: str,
+        age_range: str,
+        difficulty: str,
+        deterministic: bool = True,
+    ) -> list[dict[str, Any]]:
+        """
+        Post-parse normalization: shuffle choices/explanations for each card to avoid the
+        "correct_index always 0" pattern, while preserving correctness and alignment.
+        """
+        for c in cards:
+            self._shuffle_one_card_in_place(
+                c,
+                subject=subject,
+                age_range=age_range,
+                difficulty=difficulty,
+                deterministic=deterministic,
+            )
+        return cards
+
+    # -----------------------------
+    # Prompting
+    # -----------------------------
+
     def _build_prompt(
         self,
         subject: str,
@@ -54,7 +173,6 @@ class FlashcardGenerator:
 
         IMPORTANT: Do not use str.format() on prompts that contain JSON braces.
         """
-
         cleaned_interests = [x.strip() for x in (interests or []) if isinstance(x, str) and x.strip()]
         interest_str = ", ".join(cleaned_interests)
 
@@ -209,6 +327,10 @@ class FlashcardGenerator:
         sections.extend(["", "Return ONLY valid JSON (no markdown outside the JSON)."])
         return "\n".join(sections)
 
+    # -----------------------------
+    # Main API
+    # -----------------------------
+
     async def generate_flashcards(
         self,
         subject: str,
@@ -270,6 +392,16 @@ class FlashcardGenerator:
                 allowed_interests=interests,
             )
 
+            # Fix common model bias: correct answer always appears as choices[0].
+            # Deterministic keeps stable ordering for identical content across runs.
+            cards = self._shuffle_cards_post_parse(
+                cards,
+                subject=subject,
+                age_range=age_range,
+                difficulty=difficulty,
+                deterministic=True,
+            )
+
             if enforce_exact_count and len(cards) != count:
                 raise ValueError(f"Model returned {len(cards)} flashcards; expected {count}")
 
@@ -302,6 +434,10 @@ class FlashcardGenerator:
                             await res
                     except Exception:
                         logger.exception("[AI Flashcard Generator] failed to close OpenAI client cleanly")
+
+    # -----------------------------
+    # Strict parsing / validation
+    # -----------------------------
 
     def _parse_result_strict(self, raw: str, allowed_interests: list[str]) -> list[dict]:
         """
