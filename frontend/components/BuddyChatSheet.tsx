@@ -9,6 +9,7 @@ import {
   Platform,
   FlatList,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -79,6 +80,26 @@ export function BuddyChatSheet() {
   const [isDiaryMode, setIsDiaryMode] = useState(false);
   const [showOptionsPanel, setShowOptionsPanel] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 150);  // small delay to let layout settle
+    });
+
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const translateY = useSharedValue(0);
 
@@ -213,6 +234,8 @@ export function BuddyChatSheet() {
               { 
                 backgroundColor: theme.backgroundRoot,
                 paddingBottom: insets.bottom,
+                height: keyboardHeight > 0 ? '95%' : undefined,  // or '95%' if you want a tiny top gap
+                maxHeight: keyboardHeight > 0 ? '100%' : '90%',   // override maxHeight
               },
               sheetStyle
             ]}
@@ -330,11 +353,12 @@ export function BuddyChatSheet() {
               </View>
             ) : null}
 
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={0}
-            >
-              <View style={[styles.inputContainer, { borderTopColor: theme.textSecondary + '20' }]}>
+              <View style={[styles.inputContainer, 
+                { 
+                  borderTopColor: theme.textSecondary + '20', 
+                  paddingBottom: keyboardHeight > 0 ? keyboardHeight : Spacing.sm,  // ← this lifts just the input above keyboard
+                }
+              ]}>
                 {isDiaryMode ? (
                   <View style={[styles.diaryModeIndicator, { backgroundColor: theme.secondary + '20' }]}>
                     <Feather name="edit-3" size={14} color={theme.secondary} />
@@ -346,6 +370,7 @@ export function BuddyChatSheet() {
                     </Pressable>
                   </View>
                 ) : null}
+
                 <View style={styles.inputRow}>
                   <TextInput
                     style={[
@@ -384,14 +409,13 @@ export function BuddyChatSheet() {
                     />
                   </Pressable>
                 </View>
-              </View>
-            </KeyboardAvoidingView>
-          </Animated.View>
-        </GestureDetector>
-      </View>
-    </Modal>
-  );
-}
+              </View>  
+            </Animated.View>
+          </GestureDetector>
+        </View>
+      </Modal>
+    );
+  }
 
 const styles = StyleSheet.create({
   overlay: {
