@@ -58,7 +58,6 @@ for _ in $(seq 1 60); do
     break
   fi
   sleep 1
-
 done
 
 # Confirm auth + query works
@@ -69,12 +68,10 @@ for _ in $(seq 1 60); do
     break
   fi
   sleep 1
-
 done
 
 # Final check (fail hard if not ready)
 docker exec app-db pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" >/dev/null
-
 docker exec -e PGPASSWORD="${POSTGRES_PASS:-}" app-db \
   psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -tAc "SELECT 1" >/dev/null
 
@@ -89,7 +86,6 @@ for _ in $(seq 1 60); do
     break
   fi
   sleep 1
-
 done
 
 # Final check (fail hard if not ready)
@@ -139,40 +135,70 @@ for var in REDIS_URL CELERY_BROKER_URL CELERY_RESULT_BACKEND; do
   if [[ -n "${!var:-}" ]]; then
     export "$var"="$(rewrite_host "${!var}" "redis" "localhost")"
   fi
-
 done
 
 export ENVIRONMENT="local"
 
 # ---------------------------
-# Run processes
+# Process management
 # ---------------------------
 PIDS=()
+BEAT_SCHEDULE_FILE="${BEAT_SCHEDULE_FILE:-./.celerybeat-schedule}"
+
+kill_group() {
+  # Kill an entire process group (PGID == PID when started with setsid)
+  local pid="$1"
+  if [[ -n "${pid}" ]] && kill -0 "${pid}" >/dev/null 2>&1; then
+    kill -- "-${pid}" >/dev/null 2>&1 || true
+  fi
+}
+
 cleanup() {
   set +e
   echo "Shutting down..."
+
+  # Graceful stop (whole groups)
   for pid in "${PIDS[@]:-}"; do
-    if [[ -n "${pid}" ]] && kill -0 "${pid}" >/dev/null 2>&1; then
-      kill "${pid}" >/dev/null 2>&1 || true
-    fi
+    kill_group "${pid}"
   done
-  # Give them a moment then force kill if needed
-  sleep 1
+
+  # Give them a moment, then force kill if needed
+  sleep 2
   for pid in "${PIDS[@]:-}"; do
     if [[ -n "${pid}" ]] && kill -0 "${pid}" >/dev/null 2>&1; then
-      kill -9 "${pid}" >/dev/null 2>&1 || true
+      kill -9 -- "-${pid}" >/dev/null 2>&1 || true
     fi
   done
 }
 trap cleanup EXIT INT TERM
 
+# ---------------------------
+# Preflight: kill stale celery/beat (dev-scope)
+# ---------------------------
+echo "Killing any stale celery worker/beat for this app (if any)..."
+pkill -f "celery -A app.celery_app.celery_app worker" >/dev/null 2>&1 || true
+pkill -f "celery -A app.celery_app.celery_app beat" >/dev/null 2>&1 || true
+# Some systems show 'ForkPoolWorker-*' as separate processes; killing the parent
+# worker group is usually enough, but this helps if a child got orphaned.
+pkill -f "celery.*ForkPoolWorker" >/dev/null 2>&1 || true
+
+# Beat schedule file can cause confusing behavior between runs
+rm -f "${BEAT_SCHEDULE_FILE}" "${BEAT_SCHEDULE_FILE}.db" 2>/dev/null || true
+
+# ---------------------------
+# Run processes
+# ---------------------------
 echo "Starting celery worker..."
-celery -A app.celery_app.celery_app worker --loglevel=INFO &
+# Start in a new session/process group so we can kill the whole tree on exit.
+setsid celery -A app.celery_app.celery_app worker --loglevel=INFO &
 PIDS+=("$!")
 
 echo "Starting celery beat..."
-celery -A app.celery_app.celery_app beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule &
+setsid celery -A app.celery_app.celery_app beat --loglevel=INFO --schedule="${BEAT_SCHEDULE_FILE}" &
 PIDS+=("$!")
+
+echo "Active celery processes:"
+pgrep -af "celery -A app.celery_app.celery_app (worker|beat)" || true
 
 echo "Starting uvicorn (reload) in foreground..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
