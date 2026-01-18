@@ -1,3 +1,4 @@
+import React, { forwardRef } from 'react';
 import { Text, type TextProps } from "react-native";
 
 import { useTheme } from "@/hooks/useTheme";
@@ -9,45 +10,45 @@ export type ThemedTextProps = TextProps & {
   type?: "hero" | "title" | "headline" | "body" | "caption";
 };
 
-export function ThemedText({
-  style,
-  lightColor,
-  darkColor,
-  type = "body",
-  ...rest
-}: ThemedTextProps) {
-  const { theme, isDark } = useTheme();
+export const ThemedText = forwardRef<Text, ThemedTextProps>(
+  ({ style, lightColor, darkColor, type = "body", ...rest }, ref) => {
+    const { theme, isDark } = useTheme();
 
-  const getColor = () => {
-    if (isDark && darkColor) {
-      return darkColor;
-    }
+    const getColor = () => {
+      if (isDark && darkColor) {
+        return darkColor;
+      }
 
-    if (!isDark && lightColor) {
-      return lightColor;
-    }
+      if (!isDark && lightColor) {
+        return lightColor;
+      }
 
-    return theme.text;
-  };
+      return theme.text;
+    };
 
-  const getTypeStyle = () => {
-    switch (type) {
-      case "hero":
-        return Typography.hero;
-      case "title":
-        return Typography.title;
-      case "headline":
-        return Typography.headline;
-      case "body":
-        return Typography.body;
-      case "caption":
-        return Typography.caption;
-      default:
-        return Typography.body;
-    }
-  };
+    const getTypeStyle = () => {
+      switch (type) {
+        case "hero":
+          return Typography.hero;
+        case "title":
+          return Typography.title;
+        case "headline":
+          return Typography.headline;
+        case "body":
+          return Typography.body;
+        case "caption":
+          return Typography.caption;
+        default:
+          return Typography.body;
+      }
+    };
 
-  return (
-    <Text style={[{ color: getColor() }, getTypeStyle(), style]} {...rest} />
-  );
-}
+    return (
+      <Text
+        ref={ref} 
+        style={[{ color: getColor() }, getTypeStyle(), style]}
+        {...rest}
+      />
+    );
+  }
+);

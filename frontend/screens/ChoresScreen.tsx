@@ -17,6 +17,10 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { getDailyChores } from "@/services/choresService";
 import { Chore } from "@/types/models";
 import { useCurrentChildId } from "@/contexts/ChildContext";
+import { NavigatorScreenParams, useNavigation } from "@react-navigation/native";
+import { RootStackParamList, TabParamList } from "@/navigation/RootNavigator";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useProfileScroll } from "@/contexts/ProfileScrollContext";
 
 export default function ChoresScreen() {
   const { theme } = useTheme();
@@ -94,7 +98,7 @@ export default function ChoresScreen() {
             return next;
           });
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   };
 
@@ -109,6 +113,8 @@ export default function ChoresScreen() {
       label: "Help with dishes",
       icon: "star",
       isExtra: true,
+      tags: null,
+      ageRangeId: null
     };
     setExtraChores((prev) => [...prev, newChore]);
   };
@@ -312,5 +318,10 @@ const styles = StyleSheet.create({
   celebrationSubtext: {
     fontSize: 14,
     marginTop: Spacing.xs,
+  },
+  settingsButton: {
+    backgroundColor: "rgba(0,0,0,0.2)",
+    borderRadius: 22,
+    marginTop: 10
   },
 });

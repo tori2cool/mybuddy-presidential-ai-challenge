@@ -17,6 +17,8 @@ import { BuddyChatSheet } from "./components/BuddyChatSheet";
 import { BuddyCustomizer } from "./components/BuddyCustomizer";
 import { MainAppOverlays } from "./components/MainAppOverlays";
 import { FirstTimeTermsModal } from "@/components/FirstTimeTermsModal";
+import Toast from 'react-native-toast-message';
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 function AppInner() {
   const { loading, isAuthenticated, showTermsModal, setShowTermsModal, logout } = useAuth();
@@ -29,9 +31,10 @@ function AppInner() {
     <>
       <BuddyProvider>
         <DashboardProvider>
-          <NavigationContainer>
-            <RootNavigator />
-          </NavigationContainer>
+            <NavigationContainer>
+              <RootNavigator />
+              <Toast />
+            </NavigationContainer>
         </DashboardProvider>
       </BuddyProvider>
 
@@ -62,7 +65,9 @@ export default function App() {
           <SafeAreaProvider>
             <GestureHandlerRootView style={styles.root}>
               <KeyboardProvider>
-                <AppInner />
+                <ThemeProvider>
+                  <AppInner />
+                </ThemeProvider>
               </KeyboardProvider>
             </GestureHandlerRootView>
           </SafeAreaProvider>

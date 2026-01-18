@@ -60,8 +60,8 @@ export interface Affirmation {
   id: UUID;
   text: string;
   image: string | null;
-  gradient: [string, string];
-  tags: string[] | null;
+  gradient?: string[];
+  tags?: string[] | null;
   ageRangeId: UUID | null;
 }
 
@@ -170,10 +170,6 @@ export type AchievementOut = {
 };
 
 export type TodayStatsOut = {
-<<<<<<< HEAD
-=======
-  currentStreak: number;
->>>>>>> flashcards-version
   date: string;
   flashcardsCompleted: number;
   flashcardsCorrect: number;
@@ -210,14 +206,8 @@ export type SubjectProgressOut = {
 };
 
 export type BalancedProgressOut = {
-<<<<<<< HEAD
   canLevelUp: boolean;
   currentLevel: string;
-=======
-  currentGrade: string;
-  canLevelUp: boolean;
-  currentLevel: number;
->>>>>>> flashcards-version
   nextLevel: string | null;
   requiredPerSubject: number;
   subjectProgress: Record<SubjectCode, SubjectProgressOut>;

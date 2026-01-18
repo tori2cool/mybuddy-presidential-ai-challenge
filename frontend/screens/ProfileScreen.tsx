@@ -1,4 +1,21 @@
-// frontend/screens/ProfileScreen.tsx
+/**
+ * PROFILE SCREEN
+ * 
+ * This screen shows user stats, achievements, settings, and now a Favorite Affirmations section.
+ * 
+ * Favorites logic:
+ * - Uses favoritesService.ts to load full favorited affirmations (currently mock/placeholder data for UI testing)
+ * - useFocusEffect → calls getFavoriteAffirmations → sets state for FlatList
+ * - No changes needed here for backend — swap happens in favoritesService.ts:
+ *   - Replace getFavoriteAffirmations with API call (GET /favorites/affirmations returning [{id, text, gradient, ...}])
+ *   - Service already filters/returns objects; screens don't care about backend vs local
+ * 
+ * To connect backend (once endpoints ready):
+ * 1. Update favoritesService.ts (see comments there)
+ * 2. Test: Favorites from Affirmations tab appear in section with real text/gradients
+ *
+*/
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -6,6 +23,11 @@ import {
   Pressable,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
+  Modal,
+  Dimensions,
+  Platform,
+  FlatList
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
@@ -30,11 +52,19 @@ import type {
   SubjectProgressOut,
 } from "@/types/models";
 
-import { useNavigation } from "@react-navigation/native";
+import { RouteProp, useFocusEffect, useNavigation } from "@react-navigation/native";
 import { AINoticeFooter } from "@/components/AINoticeFooter";
+import Toast from "react-native-toast-message";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { HelpSupportModal } from '@/components/HelpSupportModal';
+import { useRoute } from '@react-navigation/native';
+import { findNodeHandle } from 'react-native';
+import { RootStackParamList } from "@/navigation/RootNavigator";
+import { useProfileScroll } from "@/contexts/ProfileScrollContext";
+import { getFavoriteAffirmations } from '@/services/favoritesService';
 
 export default function ProfileScreen() {
-  const { theme } = useTheme();
+  const { theme, setMode } = useTheme();
   const navigation = useNavigation();
   const { childId } = useCurrentChild(); // string | null
 
@@ -49,6 +79,29 @@ export default function ProfileScreen() {
 
   // ✅ Difficulties should be objects (DifficultyThreshold), not DifficultyCode[]
   const [difficulties, setDifficulties] = useState<DifficultyThreshold[]>([]);
+
+  const [showThemeModal, setShowThemeModal] = useState(false);
+
+  const [showHelpModal, setShowHelpModal] = useState(false);
+
+  const handleThemePress = () => {
+    setShowThemeModal(true);
+  };
+
+  const insets = useSafeAreaInsets();
+
+  const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+  // Dynamic container width based on platform
+  const containerWidth = Platform.OS === 'web'
+    ? Math.min(SCREEN_WIDTH * 0.55, 400)  // wider on large screens, cap at 400px
+    : '100%';  // full width on mobile
+
+  const route = useRoute<RouteProp<RootStackParamList, 'ProfileTab'>>();
+  const scrollRef = useRef<ScrollView>(null);
+  const settingsRef = useRef<View>(null);
+
+  const { registerScrollFn } = useProfileScroll();
 
   // ---- Load child name ----
   useEffect(() => {
@@ -103,6 +156,38 @@ export default function ProfileScreen() {
     };
   }, [avatarsById]);
 
+  // Favorite Affirmations
+  const [favoriteAffirmations, setFavoriteAffirmations] = useState<
+    Array<{ id: string; text: string }>
+  >([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadFavorites = async () => {
+        setLoadingFavorites(true);
+        try {
+          const data = await getFavoriteAffirmations();
+          setFavoriteAffirmations(data);
+        } catch (e) {
+          console.error('Failed to load favorite affirmations', e);
+        } finally {
+          setLoadingFavorites(false);
+        }
+      };
+      loadFavorites();
+    }, [])
+  );
+
+  // Auto-scroll effect
+  useEffect(() => {
+    registerScrollFn(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollToEnd({ animated: true });
+      }
+    });
+  }, [registerScrollFn]); // runs once on mount
+
   const {
     data: dashboard,
     refreshDashboard,
@@ -151,7 +236,7 @@ export default function ProfileScreen() {
 
   // Initial background refresh (SWR); keep non-blocking.
   useEffect(() => {
-    refreshDashboard({ force: false }).catch(() => {});
+    refreshDashboard({ force: false }).catch(() => { });
   }, [refreshDashboard]);
 
   // ---- Fetch subjects for this child ----
@@ -216,8 +301,22 @@ export default function ProfileScreen() {
     [dashboard],
   );
 
+  const handleNotificationsPress = () => {
+    Toast.show({
+      type: 'info',
+      text1: 'Coming in Version 2.0',
+      text2: 'Notifications will be available soon – stay tuned!',
+      position: 'bottom',
+      visibilityTime: 3500,
+      autoHide: true,
+      bottomOffset: 80,                 // extra space to avoid overlapping tab bar / bottom nav
+      text1Style: { color: "#8B5CF6", fontWeight: '600' },
+      text2Style: { color: "#6B7280" },
+    });
+  };
+
   return (
-    <ScreenScrollView refreshControl={refreshControl}>
+    <><ScreenScrollView ref={scrollRef} refreshControl={refreshControl}>
       <ThemedView style={styles.container}>
         <View style={styles.avatarSection}>
           <AvatarThumb
@@ -225,8 +324,7 @@ export default function ProfileScreen() {
             imageUri={(childAvatarId ? avatarsById?.get(childAvatarId)?.imagePath : null) ?? null}
             backgroundColor={theme.backgroundSecondary}
             size={100}
-            borderRadius={BorderRadius.lg}
-          />
+            borderRadius={BorderRadius.lg} />
 
           <ThemedText type="title" style={styles.name}>
             {childName ?? "Profile"}
@@ -276,8 +374,7 @@ export default function ProfileScreen() {
             <Feather
               name={(reward?.icon ?? "award") as any}
               size={16}
-              color="white"
-            />
+              color="white" />
             <ThemedText style={styles.levelText}>{reward?.level ?? ""}</ThemedText>
           </View>
         </View>
@@ -339,8 +436,7 @@ export default function ProfileScreen() {
                 <Feather
                   name={(reward?.icon ?? "award") as any}
                   size={14}
-                  color="white"
-                />
+                  color="white" />
                 <ThemedText style={styles.levelTextSmall}>{reward?.level ?? ""}</ThemedText>
               </View>
 
@@ -380,8 +476,7 @@ export default function ProfileScreen() {
                 const current = subjectProg?.correct ?? 0;
                 const met = subjectProg?.meetsRequirement ?? false;
 
-                const progressPercent =
-                  required > 0 ? Math.min((current / required) * 100, 100) : 100;
+                const progressPercent = required > 0 ? Math.min((current / required) * 100, 100) : 100;
 
                 return (
                   <View key={subject.id} style={styles.subjectProgressItem}>
@@ -424,8 +519,7 @@ export default function ProfileScreen() {
                             width: `${progressPercent}%`,
                             backgroundColor: met ? "#10B981" : subject.color,
                           },
-                        ]}
-                      />
+                        ]} />
                     </View>
                   </View>
                 );
@@ -441,7 +535,6 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Everything below here is unchanged from your file */}
         <ThemedText type="headline" style={styles.sectionTitle}>
           Today's Progress
         </ThemedText>
@@ -534,10 +627,9 @@ export default function ProfileScreen() {
                 <ThemedText
                   type="headline"
                   style={{
-                    color:
-                      (dashboard?.week.accuracyPct ?? 0) >= 70
-                        ? theme.success
-                        : theme.text,
+                    color: (dashboard?.week.accuracyPct ?? 0) >= 70
+                      ? theme.success
+                      : theme.text,
                   }}
                 >
                   {dashboard?.week.accuracyPct ?? 0}%
@@ -660,23 +752,77 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <ThemedText type="headline" style={styles.sectionTitle}>
+        <ThemedText
+          type="headline"
+          style={styles.sectionTitle}
+        >
+          Favorite Affirmations
+        </ThemedText>
+
+        <ThemedView
+          style={[
+            styles.statsCard,
+            { backgroundColor: theme.backgroundDefault }
+          ]}
+        >
+          {loadingFavorites ? (
+            <ThemedText style={{ color: theme.textSecondary, textAlign: 'center', paddingVertical: Spacing.md }}>
+              Loading...
+            </ThemedText>
+          ) : favoriteAffirmations.length === 0 ? (
+            <ThemedText style={{ color: theme.textSecondary, textAlign: 'center', paddingVertical: Spacing.md }}>
+              No favorites yet — heart some affirmations to save them here!
+            </ThemedText>
+          ) : (
+            <FlatList
+              data={favoriteAffirmations}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <ThemedView
+                  style={{
+                    width: 260,
+                    marginRight: Spacing.md,
+                    padding: Spacing.md,
+                    borderRadius: BorderRadius.md,
+                    backgroundColor: theme.backgroundRoot,
+                  }}
+                >
+                  <ThemedText style={{ fontSize: 14, lineHeight: 20, textAlign: 'center' }}>
+                    {item.text}
+                  </ThemedText>
+                </ThemedView>
+              )}
+            />
+          )}
+        </ThemedView>
+
+        <ThemedText ref={settingsRef} type="headline" style={styles.sectionTitle}>
           Settings
         </ThemedText>
 
-        <Pressable style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}>
+        <Pressable
+          style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}
+          onPress={handleNotificationsPress}
+        >
           <Feather name="bell" size={20} color={theme.text} />
           <ThemedText style={styles.settingText}>Notifications</ThemedText>
           <Feather name="chevron-right" size={20} color={theme.textSecondary} />
         </Pressable>
 
-        <Pressable style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}>
+        <Pressable
+          style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}
+          onPress={handleThemePress}
+        >
           <Feather name="droplet" size={20} color={theme.text} />
           <ThemedText style={styles.settingText}>Theme</ThemedText>
           <Feather name="chevron-right" size={20} color={theme.textSecondary} />
         </Pressable>
 
-        <Pressable style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}>
+        <Pressable style={[styles.settingItem, { backgroundColor: theme.backgroundDefault }]}
+          onPress={() => setShowHelpModal(true)}
+        >
           <Feather name="help-circle" size={20} color={theme.text} />
           <ThemedText style={styles.settingText}>Help & Support</ThemedText>
           <Feather name="chevron-right" size={20} color={theme.textSecondary} />
@@ -686,6 +832,97 @@ export default function ProfileScreen() {
         <AINoticeFooter />
       </ThemedView>
     </ScreenScrollView>
+      <Modal
+        visible={showThemeModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowThemeModal(false)}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            justifyContent: 'flex-end',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+          }}
+          activeOpacity={1}
+          onPress={() => setShowThemeModal(false)}
+        >
+          <View
+            style={{
+              backgroundColor: theme.backgroundRoot,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 20,
+              paddingBottom: insets.bottom + 20,
+              maxHeight: '50%',
+              width: containerWidth,
+              alignSelf: 'center',
+              marginHorizontal: Platform.OS === 'web' ? 'auto' : 0,
+            }}
+          >
+            <ThemedText
+              type="headline"
+              style={{ textAlign: 'center', marginBottom: 20, color: theme.text }}
+            >
+              Choose Theme
+            </ThemedText>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: theme.textSecondary + '30',
+              }}
+              onPress={() => {
+                setMode('light');
+                setShowThemeModal(false);
+              }}
+            >
+              <Feather name="sun" size={24} color={theme.text} style={{ marginRight: 16 }} />
+              <ThemedText style={{ fontSize: 18, color: theme.text }}>Light</ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: theme.textSecondary + '30',
+              }}
+              onPress={() => {
+                setMode('dark');
+                setShowThemeModal(false);
+              }}
+            >
+              <Feather name="moon" size={24} color={theme.text} style={{ marginRight: 16 }} />
+              <ThemedText style={{ fontSize: 18, color: theme.text }}>Dark</ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 16,
+              }}
+              onPress={() => {
+                setMode('system');
+                setShowThemeModal(false);
+              }}
+            >
+              <Feather name="smartphone" size={24} color={theme.text} style={{ marginRight: 16 }} />
+              <ThemedText style={{ fontSize: 18, color: theme.text }}>System (Auto)</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      <HelpSupportModal
+        visible={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
+    </>
   );
 }
 

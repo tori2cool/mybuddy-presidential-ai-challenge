@@ -1,19 +1,18 @@
-// frontend/components/ShareMenu.tsx
 import React from 'react';
 import {
   Modal,
   View,
   Pressable,
   StyleSheet,
-  Share,
   Platform,
-  Dimensions
+  Dimensions,
+  Alert,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
 import { Spacing, BorderRadius } from '@/constants/theme';
+import * as Sharing from 'expo-sharing';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -21,52 +20,98 @@ interface ShareMenuProps {
   visible: boolean;
   onClose: () => void;
   affirmationText: string;
+  affirmationImageUri?: string;
 }
 
-export function ShareMenu({ visible, onClose, affirmationText }: ShareMenuProps) {
+export function ShareMenu({
+  visible,
+  onClose,
+  affirmationText,
+  affirmationImageUri,
+}: ShareMenuProps) {
   const { theme } = useTheme();
 
-  const appUrl = 'https://mybuddy-and-me.com'; // or your app store / website link
-  const shareText = `I just read this positive affirmation in MyBuddy:\n\n“${affirmationText}”\n\nDownload MyBuddy and get your daily affirmations!`;
-
-  const encodedText = encodeURIComponent(shareText);
-  const encodedUrl = encodeURIComponent(appUrl);
-
-  const shareUrls = {
-    x: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-    instagram: `https://www.instagram.com/`, // Instagram doesn't have a direct web share; user opens app
-    tiktok: `https://www.tiktok.com/`, // TikTok also lacks direct web share link
-  };
-
-  const handleShare = async (platform: keyof typeof shareUrls) => {
-    if (Platform.OS === 'web') {
-      // Web: open share link in new tab
-      const url = shareUrls[platform];
-      if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }
-      onClose();
-    } else {
-      // Mobile: use native share
-      try {
-        await Share.share({
-          message: `${shareText}\n\n${appUrl}`,
-          url: appUrl,
-          title: 'MyBuddy Affirmation',
-        });
-        onClose();
-      } catch (error) {
-        console.error('Share failed:', error);
-      }
-    }
-  };
+  const appUrl = 'https://mybuddy-and-me.com';
+  const shareMessage = `I just read this positive affirmation in MyBuddy:\n\n“${affirmationText}”\n\nDownload MyBuddy and get your daily affirmations!`;
 
   const brandColors = {
     x: '#000000',
     facebook: '#1877F2',
-    instagram: '#E1306C', // approximate IG pink-purple
-    tiktok: '#000000', // TikTok is mostly black
+    instagram: '#E1306C',
+    tiktok: '#000000',
+  };
+
+  // Dynamic container width based on platform
+  const containerWidth = Platform.OS === 'web'
+    ? Math.min(SCREEN_WIDTH * 0.55, 400)  // wider on large screens, cap at 400px
+    : '100%';  // full width on mobile
+
+  const shareToPlatform = async (platform: 'x' | 'facebook' | 'instagram' | 'tiktok') => {
+    if (!affirmationImageUri) {
+      Alert.alert('No image', 'Image not ready for sharing.');
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      try {
+        if (navigator.share) {
+          const response = await fetch(affirmationImageUri);
+          const blob = await response.blob();
+          const file = new File([blob], 'affirmation.png', { type: 'image/png' });
+          await navigator.share({
+            files: [file],
+            title: 'MyBuddy Affirmation',
+            text: shareMessage,
+          });
+        } else {
+          const link = document.createElement('a');
+          link.href = affirmationImageUri;
+          link.download = `mybuddy-affirmation-${Date.now()}.png`;
+          link.click();
+
+          let shareUrl = '';
+          const encodedText = encodeURIComponent(shareMessage);
+          const encodedUrl = encodeURIComponent(appUrl);
+
+          switch (platform) {
+            case 'x':
+              shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+              break;
+            case 'facebook':
+              shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`;
+              break;
+            case 'instagram':
+              shareUrl = 'https://www.instagram.com/';
+              break;
+            case 'tiktok':
+              shareUrl = 'https://www.tiktok.com/';
+              break;
+          }
+
+          if (shareUrl) {
+            window.open(shareUrl, '_blank', 'noopener,noreferrer');
+          }
+          Alert.alert('Image downloaded', `Upload it manually to ${platform}.`);
+        }
+      } catch (err) {
+        console.error('Web share failed:', err);
+        Alert.alert('Share failed on web', 'Try downloading the image manually.');
+      }
+      onClose();
+      return;
+    }
+
+    else {
+      // Mobile: show "coming soon" message instead of sharing for now
+      Alert.alert(
+        'Coming in Version 2.0',
+        'Full sharing with image preview is coming in the next major version!\n\nFor now you can copy the text manually or screenshot the affirmation.',
+        [
+          { text: 'OK', style: 'default' },
+        ]
+      );
+      onClose(); // still close the menu after alert
+    }
   };
 
   return (
@@ -77,27 +122,29 @@ export function ShareMenu({ visible, onClose, affirmationText }: ShareMenuProps)
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
-        <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
+        <View style={[styles.container, { 
+          backgroundColor: theme.backgroundRoot,
+          width: containerWidth }]}>
           <View style={styles.handle} />
 
           <ThemedText style={styles.title}>Share this affirmation</ThemedText>
 
-          <Pressable style={styles.option} onPress={() => handleShare('x')}>
+          <Pressable style={styles.option} onPress={() => shareToPlatform('x')}>
             <Ionicons name="logo-twitter" size={26} color={brandColors.x} />
             <ThemedText style={styles.optionText}>Share to X</ThemedText>
           </Pressable>
 
-          <Pressable style={styles.option} onPress={() => handleShare('facebook')}>
+          <Pressable style={styles.option} onPress={() => shareToPlatform('facebook')}>
             <Ionicons name="logo-facebook" size={26} color={brandColors.facebook} />
             <ThemedText style={styles.optionText}>Share to Facebook</ThemedText>
           </Pressable>
 
-          <Pressable style={styles.option} onPress={() => handleShare('instagram')}>
+          <Pressable style={styles.option} onPress={() => shareToPlatform('instagram')}>
             <Ionicons name="logo-instagram" size={26} color={brandColors.instagram} />
             <ThemedText style={styles.optionText}>Share to Instagram</ThemedText>
           </Pressable>
 
-          <Pressable style={styles.option} onPress={() => handleShare('tiktok')}>
+          <Pressable style={styles.option} onPress={() => shareToPlatform('tiktok')}>
             <Ionicons name="logo-tiktok" size={26} color={brandColors.tiktok} />
             <ThemedText style={styles.optionText}>Share to TikTok</ThemedText>
           </Pressable>

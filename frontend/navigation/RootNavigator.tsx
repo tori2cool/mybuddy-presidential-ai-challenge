@@ -9,12 +9,29 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCurrentChildId } from "@/contexts/ChildContext";
 import { MainAppOverlays } from "@/components/MainAppOverlays";
 import { View } from "react-native";
+import { NavigatorScreenParams } from "@react-navigation/native";
+import { ProfileScrollProvider } from "@/contexts/ProfileScrollContext";
+
+// Define the param list for your bottom tabs (adjust screen names as they appear in MainTabNavigator.tsx)
+export type TabParamList = {
+  Affirmations: undefined;   // or whatever your tab names actually are
+  // Home?: undefined;
+  // Chores?: undefined;
+  ProfileTab: { scrollToSettings?: boolean };  // ← Profile tab accepts this param
+  // Add the other tabs you have, e.g.:
+  // Dashboard: undefined;
+  // Outdoor: undefined;
+};
 
 export type RootStackParamList = {
   Login: undefined;
   ChildSelect: undefined;
   Onboarding: undefined;
-  Main: undefined;
+  Main: NavigatorScreenParams<TabParamList>;
+  ProfileTab: { scrollToSettings?: boolean }
+  Outdoor: undefined;
+  Chores: undefined;
+  FlashcardsTab: undefined;
   __Overlays__: undefined;
 };
 
@@ -59,8 +76,10 @@ export default function RootNavigator() {
         <Stack.Screen name="Main" options={{ headerShown: false }}>
           {() => (
             <View style={{ flex: 1 }}>
-              <MainTabNavigator />
-              <MainAppOverlays />
+              <ProfileScrollProvider>
+                <MainTabNavigator />
+                <MainAppOverlays />
+              </ProfileScrollProvider>
             </View>
           )}
         </Stack.Screen>

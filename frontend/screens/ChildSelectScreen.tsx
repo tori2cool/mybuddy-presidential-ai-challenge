@@ -15,10 +15,12 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { RootStackParamList } from "@/navigation/RootNavigator";
 import { Spacing, BorderRadius } from "@/constants/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ChildSelect">;
 
 export default function ChildSelectScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const { setChildId } = useCurrentChildId();
   const { loading: authLoading, isAuthenticated } = useAuth();
   const { theme } = useTheme();
@@ -175,7 +177,7 @@ export default function ChildSelectScreen({ navigation }: Props) {
   }, [avatarsError, interestsError, theme.textSecondary]);
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, {paddingTop: insets.top}]}>
       <View style={styles.header}>
         <ThemedText type="title">Who is using MyBuddy?</ThemedText>
         <ThemedText style={{ color: theme.textSecondary, marginTop: 8 }}>

@@ -17,6 +17,12 @@ import { Spacing, BorderRadius, Typography } from "@/constants/theme";
 import { getOutdoorActivities } from "@/services/outdoorService";
 import type { OutdoorActivity, UUID } from "@/types/models";
 import { useCurrentChildId } from "@/contexts/ChildContext";
+import { NavigatorScreenParams, useNavigation } from "@react-navigation/native";
+import { RootStackParamList, TabParamList } from "@/navigation/RootNavigator";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { IconButton } from "@/components/IconButton";
+import { useProfileScroll } from "@/contexts/ProfileScrollContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SEP = " · "; // nice middle-dot separator
 
@@ -29,6 +35,10 @@ export default function OutdoorScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingCompleted, setPendingCompleted] = useState<Set<UUID>>(new Set());
+
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const { triggerScrollToBottom } = useProfileScroll();
 
   useEffect(() => {
     if (!childId) return;
@@ -99,125 +109,127 @@ export default function OutdoorScreen() {
             return next;
           });
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   };
 
   return (
-    <ScreenScrollView>
-      <ThemedView style={styles.container}>
-        {/* Stats bar */}
-        <View style={[styles.statsBar, { backgroundColor: theme.backgroundDefault }]}>
-          <View style={styles.statItem}>
-            <Feather name="sun" size={20} color={theme.success} />
-            <ThemedText style={[styles.statValue, { color: theme.success }]}>
-              {outdoorToday}
-            </ThemedText>
-            <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
-              Today
-            </ThemedText>
+    <View style={{ flex: 1, position: 'relative' }}>
+      <ScreenScrollView>
+        <ThemedView style={styles.container}>
+          {/* Stats bar */}
+          <View style={[styles.statsBar, { backgroundColor: theme.backgroundDefault }]}>
+            <View style={styles.statItem}>
+              <Feather name="sun" size={20} color={theme.success} />
+              <ThemedText style={[styles.statValue, { color: theme.success }]}>
+                {outdoorToday}
+              </ThemedText>
+              <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
+                Today
+              </ThemedText>
+            </View>
+
+            <View style={[styles.statDivider, { backgroundColor: theme.backgroundSecondary }]} />
+
+            <View style={styles.statItem}>
+              <Feather name="compass" size={20} color={theme.secondary} />
+              <ThemedText style={[styles.statValue, { color: theme.secondary }]}>
+                {outdoorTotal}
+              </ThemedText>
+              <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
+                Total
+              </ThemedText>
+            </View>
+
+            <View style={[styles.statDivider, { backgroundColor: theme.backgroundSecondary }]} />
+
+            <View style={styles.statItem}>
+              <Feather name="zap" size={20} color={theme.primary} />
+              <ThemedText style={[styles.statValue, { color: theme.primary }]}>
+                +{outdoorToday * 20}
+              </ThemedText>
+              <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
+                Points
+              </ThemedText>
+            </View>
           </View>
 
-          <View style={[styles.statDivider, { backgroundColor: theme.backgroundSecondary }]} />
+          <ThemedText type="headline" style={styles.sectionTitle}>
+            Today's Adventures
+          </ThemedText>
 
-          <View style={styles.statItem}>
-            <Feather name="compass" size={20} color={theme.secondary} />
-            <ThemedText style={[styles.statValue, { color: theme.secondary }]}>
-              {outdoorTotal}
-            </ThemedText>
-            <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
-              Total
-            </ThemedText>
-          </View>
+          <AsyncStatus loading={loading} error={error} loadingMessage="Loading outdoor activities..." />
 
-          <View style={[styles.statDivider, { backgroundColor: theme.backgroundSecondary }]} />
+          {!loading &&
+            !error &&
+            activities.map((activity) => {
+              const isCompleted = completedSet.has(activity.id);
 
-          <View style={styles.statItem}>
-            <Feather name="zap" size={20} color={theme.primary} />
-            <ThemedText style={[styles.statValue, { color: theme.primary }]}>
-              +{outdoorToday * 20}
-            </ThemedText>
-            <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
-              Points
-            </ThemedText>
-          </View>
-        </View>
-
-        <ThemedText type="headline" style={styles.sectionTitle}>
-          Today's Adventures
-        </ThemedText>
-
-        <AsyncStatus loading={loading} error={error} loadingMessage="Loading outdoor activities..." />
-
-        {!loading &&
-          !error &&
-          activities.map((activity) => {
-            const isCompleted = completedSet.has(activity.id);
-
-            return (
-              <View
-                key={activity.id}
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor: activity.isDaily ? theme.primary + "10" : theme.backgroundDefault,
-                    borderColor: activity.isDaily ? theme.primary : "transparent",
-                    borderWidth: activity.isDaily ? 2 : 0,
-                  },
-                ]}
-              >
-                <View style={styles.cardHeader}>
-                  <View
-                    style={[
-                      styles.iconContainer,
-                      {
-                        backgroundColor: isCompleted ? theme.success : theme.primary + "20",
-                      },
-                    ]}
-                  >
-                    <Feather
-                      name={isCompleted ? "check" : (activity.icon as any)}
-                      size={28}
-                      color={isCompleted ? "white" : theme.primary}
-                    />
-                  </View>
-
-                  <View style={styles.cardContent}>
-                    <View style={styles.titleRow}>
-                      <ThemedText type="headline">{activity.name}</ThemedText>
-                      {activity.isDaily ? (
-                        <View style={[styles.badge, { backgroundColor: theme.secondary }]}>
-                          <ThemedText style={styles.badgeText}>Today</ThemedText>
-                        </View>
-                      ) : null}
+              return (
+                <View
+                  key={activity.id}
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: activity.isDaily ? theme.primary + "10" : theme.backgroundDefault,
+                      borderColor: activity.isDaily ? theme.primary : "transparent",
+                      borderWidth: activity.isDaily ? 2 : 0,
+                    },
+                  ]}
+                >
+                  <View style={styles.cardHeader}>
+                    <View
+                      style={[
+                        styles.iconContainer,
+                        {
+                          backgroundColor: isCompleted ? theme.success : theme.primary + "20",
+                        },
+                      ]}
+                    >
+                      <Feather
+                        name={isCompleted ? "check" : (activity.icon as any)}
+                        size={28}
+                        color={isCompleted ? "white" : theme.primary}
+                      />
                     </View>
 
-                    <ThemedText style={[styles.category, { color: theme.textSecondary }]}>
-                      {activity.category}
-                      {SEP}
-                      {activity.time}
-                      {SEP}+{activity.points} pts
-                    </ThemedText>
-                  </View>
-                </View>
+                    <View style={styles.cardContent}>
+                      <View style={styles.titleRow}>
+                        <ThemedText type="headline">{activity.name}</ThemedText>
+                        {activity.isDaily ? (
+                          <View style={[styles.badge, { backgroundColor: theme.secondary }]}>
+                            <ThemedText style={styles.badgeText}>Today</ThemedText>
+                          </View>
+                        ) : null}
+                      </View>
 
-                {isCompleted ? (
-                  <View style={[styles.completedBanner, { backgroundColor: theme.success + "20" }]}>
-                    <Feather name="check-circle" size={16} color={theme.success} />
-                    <ThemedText style={[styles.completedText, { color: theme.success }]}>
-                      Completed! +{activity.points} points earned!
-                    </ThemedText>
+                      <ThemedText style={[styles.category, { color: theme.textSecondary }]}>
+                        {activity.category}
+                        {SEP}
+                        {activity.time}
+                        {SEP}+{activity.points} pts
+                      </ThemedText>
+                    </View>
                   </View>
-                ) : (
-                  <Button onPress={() => markComplete(activity.id)} style={styles.startButton}>
-                    I'm Done!
-                  </Button>
-                )}
-              </View>
-            );
-          })}
-      </ThemedView>
-    </ScreenScrollView>
+
+                  {isCompleted ? (
+                    <View style={[styles.completedBanner, { backgroundColor: theme.success + "20" }]}>
+                      <Feather name="check-circle" size={16} color={theme.success} />
+                      <ThemedText style={[styles.completedText, { color: theme.success }]}>
+                        Completed! +{activity.points} points earned!
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    <Button onPress={() => markComplete(activity.id)} style={styles.startButton}>
+                      I'm Done!
+                    </Button>
+                  )}
+                </View>
+              );
+            })}
+        </ThemedView>
+      </ScreenScrollView>
+    </View >
   );
 }
 
@@ -306,5 +318,16 @@ const styles = StyleSheet.create({
   },
   completedText: {
     fontWeight: "600",
+  },
+  settingsButton: {
+    backgroundColor: "rgba(0,0,0,0.2)",
+    borderRadius: 22,
+    marginTop: 10
+  },
+  topOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    paddingRight: Spacing.lg,
   },
 });

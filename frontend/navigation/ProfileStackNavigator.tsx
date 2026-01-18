@@ -1,5 +1,5 @@
 import React from "react";
-import { Text } from "react-native";
+import { Platform, Text } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import ProfileScreen from "@/screens/ProfileScreen";
@@ -35,7 +35,12 @@ export default function ProfileStackNavigator() {
                 await AsyncStorage.removeItem("selected_child_id");
                 await AsyncStorage.removeItem("child_session_active");
               }}
-              style={{ color: theme.text, fontWeight: "600" }}
+              style={{
+                color: theme.text,
+                fontWeight: "600",
+                marginRight: Platform.OS === 'web' ? 8 : 0,
+                paddingRight: Platform.OS === 'web' ? 24 : 0,
+              }}
             >
               Logout
             </Text>

@@ -30,6 +30,12 @@ import type {
 } from "@/types/models";
 
 import FlashcardPracticeModal from "@/components/FlashcardPracticeModal";
+import { NavigatorScreenParams, useNavigation } from "@react-navigation/native";
+import { IconButton } from "@/components/IconButton";
+import { RootStackParamList, TabParamList } from "@/navigation/RootNavigator";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useProfileScroll } from "@/contexts/ProfileScrollContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function difficultyLabelOf(d: DifficultyThreshold): string {
   // Backend has label; fallback to name/code
@@ -52,6 +58,9 @@ export default function FlashcardsScreen() {
 
   // DB-driven string (no union)
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyCode>("easy");
+
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { triggerScrollToBottom } = useProfileScroll();
 
   // Fetch subjects (age-range filtered server-side)
   useEffect(() => {
@@ -244,43 +253,43 @@ export default function FlashcardsScreen() {
             {balancedProgress
               ? subjects.length > 0
                 ? subjects.map((subject) => {
-                    const subjectProg = (
-                      balancedProgress.subjectProgress as Record<string, SubjectProgressOut> | undefined
-                    )?.[subject.code];
+                  const subjectProg = (
+                    balancedProgress.subjectProgress as Record<string, SubjectProgressOut> | undefined
+                  )?.[subject.code];
 
-                    const required = subjectProg?.required ?? balancedProgress.requiredPerSubject ?? 0;
-                    const current = subjectProg?.correct ?? 0;
-                    const met = subjectProg?.meetsRequirement ?? false;
+                  const required = subjectProg?.required ?? balancedProgress.requiredPerSubject ?? 0;
+                  const current = subjectProg?.correct ?? 0;
+                  const met = subjectProg?.meetsRequirement ?? false;
 
-                    const progressPercent = required > 0 ? Math.min((current / required) * 100, 100) : 100;
+                  const progressPercent = required > 0 ? Math.min((current / required) * 100, 100) : 100;
 
-                    return (
-                      <View key={subject.id} style={styles.subjectProgressItem}>
-                        <View style={styles.subjectProgressLabel}>
-                          <Feather name={subject.icon as any} size={14} color={subject.color} />
-                          <ThemedText style={[styles.subjectProgressName, { color: theme.text }]}>
-                            {subject.name}
-                          </ThemedText>
-                          <ThemedText style={[styles.subjectProgressCount, { color: theme.textSecondary }]}>
-                            {current}/{required}
-                          </ThemedText>
-                          {met ? <Feather name="check-circle" size={14} color="#10B981" /> : null}
-                        </View>
-
-                        <View style={[styles.miniProgressBar, { backgroundColor: theme.backgroundDefault }]}>
-                          <View
-                            style={[
-                              styles.miniProgressFill,
-                              {
-                                width: `${progressPercent}%`,
-                                backgroundColor: met ? "#10B981" : subject.color,
-                              },
-                            ]}
-                          />
-                        </View>
+                  return (
+                    <View key={subject.id} style={styles.subjectProgressItem}>
+                      <View style={styles.subjectProgressLabel}>
+                        <Feather name={subject.icon as any} size={14} color={subject.color} />
+                        <ThemedText style={[styles.subjectProgressName, { color: theme.text }]}>
+                          {subject.name}
+                        </ThemedText>
+                        <ThemedText style={[styles.subjectProgressCount, { color: theme.textSecondary }]}>
+                          {current}/{required}
+                        </ThemedText>
+                        {met ? <Feather name="check-circle" size={14} color="#10B981" /> : null}
                       </View>
-                    );
-                  })
+
+                      <View style={[styles.miniProgressBar, { backgroundColor: theme.backgroundDefault }]}>
+                        <View
+                          style={[
+                            styles.miniProgressFill,
+                            {
+                              width: `${progressPercent}%`,
+                              backgroundColor: met ? "#10B981" : subject.color,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  );
+                })
                 : null
               : null}
           </View>
@@ -546,5 +555,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  settingsButton: {
+    backgroundColor: "rgba(0,0,0,0.2)",
+    borderRadius: 22,
+    marginTop: 10
+  },
+  topOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    paddingRight: Spacing.lg,
   },
 });
