@@ -8,16 +8,16 @@
     ],
     "question": "Long ago, people did not have cars. How did many people travel instead?",
     "choices": [
-      "By airplane",
       "By submarine",
       "On horseback",
+      "By airplane",
       "By rocket"
     ],
-    "correct_index": 2,
+    "correct_index": 1,
     "explanations": [
-      "Airplanes did not exist yet.",
       "Submarines travel underwater, not on land.",
       "Correct! People often traveled on horseback long ago.",
+      "Airplanes did not exist yet.",
       "Rockets are used for space travel, not everyday travel."
     ]
   },
@@ -30,16 +30,16 @@
     ],
     "question": "Why did many ancient civilizations build cities near rivers?",
     "choices": [
-      "Rivers kept cities hidden",
-      "Rivers provided water and fertile land",
       "Rivers stopped all enemies",
+      "Rivers provided water and fertile land",
+      "Rivers kept cities hidden",
       "Rivers were fun places to swim"
     ],
     "correct_index": 1,
     "explanations": [
-      "Rivers did not hide cities.",
-      "Correct! Rivers gave fresh water and helped crops grow.",
       "Rivers alone could not stop enemies.",
+      "Correct! Rivers gave fresh water and helped crops grow.",
+      "Rivers did not hide cities.",
       "Swimming was not the main reason cities formed."
     ]
   },
@@ -53,17 +53,17 @@
     ],
     "question": "What was feudalism during the Middle Ages?",
     "choices": [
-      "A system of voting for kings",
+      "A type of medieval religion",
       "A system where land was exchanged for loyalty and service",
       "A method of long-distance trade",
-      "A type of medieval religion"
+      "A system of voting for kings"
     ],
     "correct_index": 1,
     "explanations": [
-      "Kings were not elected through voting.",
+      "Feudalism was a social system, not a religion.",
       "Correct! Feudalism was based on land, loyalty, and service.",
       "Trade existed, but feudalism was about land and power.",
-      "Feudalism was a social system, not a religion."
+      "Kings were not elected through voting."
     ]
   },
   {
@@ -77,368 +77,368 @@
     "question": "What is the main purpose of the Bill of Rights?",
     "choices": [
       "To explain how presidents are elected",
-      "To describe how laws are enforced",
+      "To list all U.S. states",
       "To protect individual freedoms from government power",
-      "To list all U.S. states"
+      "To describe how laws are enforced"
     ],
     "correct_index": 2,
     "explanations": [
       "Elections are explained elsewhere in the Constitution.",
-      "Law enforcement is not its main focus.",
+      "States are not listed in the Bill of Rights.",
       "Correct! The Bill of Rights protects individual freedoms.",
-      "States are not listed in the Bill of Rights."
+      "Law enforcement is not its main focus."
     ]
   },
   {
     "subject": "History",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "What does Independence Day celebrate?",
+    "question": "What is a landmark in a community?",
     "choices": [
-      "The first U.S. president was elected",
-      "The U.S. declared independence in 1776",
-      "The Constitution was written",
-      "The Civil War ended"
+      "A new toy store that just opened",
+      "An important place people recognize",
+      "Any place with lots of trees",
+      "A cloud shape in the sky"
     ],
     "correct_index": 1,
     "explanations": [
-      "That event happened later and is not what July 4 celebrates.",
-      "Correct: July 4 marks when the colonies said they were free from Great Britain.",
-      "The Constitution was written in 1787, and it has its own history.",
-      "The Civil War ended in 1865, not on Independence Day."
+      "A store can be popular, but it is not always a landmark.",
+      "A landmark is a place many people know and can point out.",
+      "Trees can be special, but a landmark is usually a known place or site.",
+      "Clouds move and change, so they are not community landmarks."
     ],
     "tags": [
-      "national_holidays_history_meaning"
+      "local_history_landmarks_monuments"
     ]
   },
   {
     "subject": "History",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "Which holiday honors people who served in the military?",
+    "question": "Why do communities build monuments?",
     "choices": [
-      "Presidents Day",
-      "Veterans Day",
-      "Memorial Day",
-      "Independence Day"
+      "To change the weather",
+      "To remember a person or event",
+      "To make traffic go faster",
+      "To grow food for everyone"
     ],
     "correct_index": 1,
     "explanations": [
-      "Presidents Day is used to honor U.S. presidents.",
-      "Correct: Veterans Day thanks people who served in the U.S. military.",
-      "Memorial Day remembers soldiers who died while serving.",
-      "Independence Day celebrates the U.S. declaring independence."
+      "Weather changes naturally; monuments do not control it.",
+      "A monument is built as a memorial to honor someone or something important.",
+      "Traffic signs help cars, but monuments are for remembering.",
+      "Farms grow food, but monuments are not used for planting."
     ],
     "tags": [
-      "national_holidays_history_meaning"
+      "local_history_landmarks_monuments"
     ]
   },
   {
     "subject": "History",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "Which is an example of transportation used long ago?",
+    "question": "During World War II, what does rationing mean?",
     "choices": [
-      "Electric scooter",
-      "Horse and wagon",
-      "Airplane",
-      "Subway train"
+      "Trading toys at school",
+      "Limiting how much people can buy",
+      "Cooking food faster",
+      "Buying as much as you want"
     ],
     "correct_index": 1,
     "explanations": [
-      "Electric scooters are a recent way to travel in some cities.",
-      "Correct: Long ago, people often traveled by horse and wagon.",
-      "Airplanes are modern and were not used long ago.",
-      "Subways are modern city trains, not common long ago."
+      "Toy trading is not part of rationing during a war.",
+      "Rationing means there are limits so supplies can be saved.",
+      "Rationing is about sharing supplies, not cooking speed.",
+      "Rationing is the opposite of unlimited buying."
     ],
     "tags": [
-      "transportation_then_and_now"
+      "world_war_ii_home_front_rationing"
     ]
   },
   {
     "subject": "History",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "How did factories change the way many goods were made?",
+    "question": "Why did families use ration books during World War II?",
     "choices": [
-      "Only farmers made goods",
-      "Goods were made only one at a time",
-      "Machines helped make goods faster",
-      "People stopped using tools"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "Farmers grew food, but factories made many other products.",
-      "Factories often made many similar items, not just one at a time.",
-      "Correct: Factory machines could make many items more quickly.",
-      "Factories used many tools and machines, not fewer tools."
-    ],
-    "tags": [
-      "industrial_revolution_factories"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "Middle School",
-    "difficulty": "easy",
-    "question": "What was the Silk Road mainly used for?",
-    "choices": [
-      "Sending messages by fast horseback mail",
-      "Trading goods across Asia and beyond",
-      "Moving armies to conquer new lands",
-      "Hosting sports games between empires"
-    ],
-    "correct_index": 1,
-    "explanations": [
-      "Some empires had mail systems, but that wasn’t the Silk Road’s main purpose.",
-      "Correct: it was a network of trade routes for exchanging goods.",
-      "Armies traveled, but the routes are best known for trade, not conquest.",
-      "Sports events weren’t the reason these long-distance routes existed."
-    ],
-    "tags": [
-      "silk_road_trade_routes"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "Middle School",
-    "difficulty": "easy",
-    "question": "A society with cities, laws, and writing is best described as what?",
-    "choices": [
-      "A single family clan",
-      "A civilization",
-      "A temporary camp",
-      "A nomadic band"
-    ],
-    "correct_index": 1,
-    "explanations": [
-      "A clan is a small group and doesn’t usually include full city systems.",
-      "Correct: cities, laws, and writing are key features of civilizations.",
-      "Temporary camps are short-term and lack organized government and records.",
-      "Nomadic bands move often and usually don’t build large permanent cities."
-    ],
-    "tags": [
-      "ancient_civilization_definition"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "Middle School",
-    "difficulty": "easy",
-    "question": "Which feature is an example of city planning in the Indus Valley?",
-    "choices": [
-      "Roads shaped like circles around temples",
-      "Floating houses on a lake",
-      "Castles built on tall mountains",
-      "Grid-like streets laid out in blocks"
+      "To plan a vacation trip",
+      "To pick a new president",
+      "To learn new recipes at home",
+      "To help save supplies for soldiers"
     ],
     "correct_index": 3,
     "explanations": [
-      "Indus planning focused on grids and drainage, not circular temple roads.",
-      "Indus cities were built on land with planned streets, not floating homes.",
-      "Castles on mountains fit later medieval settings, not Indus city design.",
-      "Correct: many Indus cities used straight streets in a grid pattern."
+      "Vacations are for travel; ration books were used at stores.",
+      "Voting chooses leaders; ration books were for buying limited goods.",
+      "Recipes can be in cookbooks, but ration books tracked limited items.",
+      "Ration books helped make sure everyone used less so the war effort had supplies."
     ],
     "tags": [
-      "indus_valley_city_planning"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "Middle School",
-    "difficulty": "easy",
-    "question": "What does chronological order mean?",
-    "choices": [
-      "Arranged from biggest to smallest",
-      "Arranged by the first letter",
-      "Arranged from earliest to latest",
-      "Arranged by how important it seems"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "That describes size order, not time order.",
-      "That describes alphabetical order, not a timeline.",
-      "Correct: chronological order follows time from earlier to later.",
-      "Importance is subjective and doesn’t tell the time sequence."
-    ],
-    "tags": [
-      "timeline_chronological_order"
+      "world_war_ii_home_front_rationing"
     ]
   },
   {
     "subject": "History",
     "age_range": "Upper Elementary",
     "difficulty": "easy",
-    "question": "The Underground Railroad was mainly a network used to do what?",
+    "question": "Which document lists freedoms like speech and religion?",
     "choices": [
-      "Carry mail between big cities",
-      "Help enslaved people escape to safety",
-      "Bring gold miners to the West",
-      "Move soldiers during the Civil War"
+      "The Declaration of Independence",
+      "The Mayflower Compact",
+      "The Articles of Confederation",
+      "The Bill of Rights"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "This declared independence from Britain, not a list of rights.",
+      "This was a colony agreement, not a national list of rights.",
+      "This was an early plan for government, but it did not list key freedoms.",
+      "Correct: The Bill of Rights is the first ten amendments that protect freedoms."
+    ],
+    "tags": [
+      "constitution_and_bill_of_rights"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "Which choice best compares the Constitution and the Bill of Rights?",
+    "choices": [
+      "Constitution lists kings; Bill lists colonies",
+      "Constitution sets government; Bill protects rights",
+      "Constitution is a war plan; Bill is a map",
+      "Constitution is a poem; Bill is a song"
     ],
     "correct_index": 1,
     "explanations": [
-      "Mail was delivered by post riders and ships, not this secret network.",
-      "It was a secret system of routes and safe houses to help people escape slavery.",
-      "Gold rush travel was about mining, not escaping slavery.",
-      "It began before the Civil War and was not a military transport system."
+      "The Constitution does not list kings, and the Bill of Rights does not list colonies.",
+      "Correct: The Constitution creates the government, and the Bill of Rights protects freedoms.",
+      "Neither document is a war plan or a map of places.",
+      "They are legal documents, not forms of entertainment."
     ],
     "tags": [
-      "underground_railroad"
+      "constitution_and_bill_of_rights"
     ]
   },
   {
     "subject": "History",
     "age_range": "Upper Elementary",
     "difficulty": "easy",
-    "question": "People called \"conductors\" on the Underground Railroad helped by doing what?",
+    "question": "The Renaissance is best known for renewed interest in what?",
     "choices": [
-      "Writing new laws in Congress",
-      "Building bridges over rivers",
-      "Guiding people to safe houses",
-      "Selling train tickets at stations"
+      "Making the first dinosaurs",
+      "Inventing the compass in China",
+      "Building pyramids in deserts",
+      "Art, science, and learning"
     ],
-    "correct_index": 2,
+    "correct_index": 3,
     "explanations": [
-      "Congress makes laws, but conductors were private helpers, not lawmakers.",
-      "Some routes crossed rivers, but conductors were guides, not bridge builders.",
-      "Conductors were helpers who led escaping people along secret routes to safety.",
-      "There were no real trains or tickets; the names were code words."
+      "Dinosaurs lived long before humans, so people did not make them.",
+      "The compass was invented earlier in China, not as a Renaissance focus.",
+      "Pyramids were built long before, mainly in ancient Egypt.",
+      "Correct: The Renaissance was a time of new art and learning in Europe."
     ],
     "tags": [
-      "underground_railroad"
+      "renaissance_art_and_learning"
     ]
   },
   {
     "subject": "History",
     "age_range": "Upper Elementary",
     "difficulty": "easy",
-    "question": "One reason European explorers sailed to new places was to find what?",
+    "question": "During the Renaissance, many artists used what technique to show depth?",
     "choices": [
-      "A faster way to grow crops",
-      "A place to hold sports games",
-      "New trade routes to Asia",
-      "A new kind of calendar"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "Farming improvements happened, but sailing was not to speed up crop growth.",
-      "Exploration voyages were mainly about trade, land, and religion, not sports.",
-      "Many explorers searched for sea routes to trade for goods like spices and silk.",
-      "Calendars were studied, but they were not a main reason for ocean voyages."
-    ],
-    "tags": [
-      "age_of_exploration_motives"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "Upper Elementary",
-    "difficulty": "easy",
-    "question": "Explorers often wanted to reach Asia to trade for which goods?",
-    "choices": [
-      "Plastic and rubber",
-      "Coal and oil",
-      "Ice and snow",
-      "Spices and silk"
+      "Morse code",
+      "Camouflage",
+      "Blueprinting",
+      "Perspective"
     ],
     "correct_index": 3,
     "explanations": [
-      "Plastic did not exist then, and rubber was not the key reason to reach Asia.",
-      "Coal and oil became important later and were not the main early goal.",
-      "Ice and snow were not major trade goals for long sea voyages.",
-      "Spices and silk were valuable trade goods Europeans wanted from Asia."
+      "Morse code is a system for sending messages with dots and dashes.",
+      "Camouflage is used to hide, not to show depth in art.",
+      "Blueprinting is for building plans, not a common painting technique then.",
+      "Correct: Perspective is a way to make flat art look 3D and deep."
     ],
     "tags": [
-      "age_of_exploration_motives"
+      "renaissance_art_and_learning"
     ]
   },
   {
     "subject": "History",
     "age_range": "High School",
     "difficulty": "easy",
-    "question": "What did the Supreme Court decide in Brown v. Board of Education (1954)?",
+    "question": "What was the main purpose of Hammurabi's Code?",
     "choices": [
-      "Segregated public schools were required by law",
-      "Only private schools had to desegregate",
-      "Schools could choose segregation by local vote",
-      "Segregated public schools were unconstitutional"
-    ],
-    "correct_index": 3,
-    "explanations": [
-      "This is the opposite of the ruling; the decision struck segregation down.",
-      "Brown focused on public schools, not a rule limited to private schools.",
-      "Local voting did not override the Court’s ruling on equal protection.",
-      "The Court ruled school segregation violated the Constitution."
-    ],
-    "tags": [
-      "civil_rights_movement_brown_v_board"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "High School",
-    "difficulty": "easy",
-    "question": "What major change is most associated with the Neolithic Revolution?",
-    "choices": [
-      "People invented the printing press",
-      "People started using paper money",
-      "People began farming and herding animals",
-      "People switched from villages to constant travel"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "The printing press came much later, not in the Neolithic period.",
-      "Paper money is a later economic development, not a Neolithic change.",
-      "The key shift was from hunting-gathering to agriculture and domestication.",
-      "Farming usually led to permanent settlements, not nonstop travel."
-    ],
-    "tags": [
-      "neolithic_revolution_basics"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "High School",
-    "difficulty": "easy",
-    "question": "Which issue helped spark the Protestant Reformation?",
-    "choices": [
-      "A plan to rebuild the Roman Senate",
-      "A new law banning all churches in Europe",
-      "A dispute over who should rule the Ottoman Empire",
-      "The sale of indulgences by the Catholic Church"
-    ],
-    "correct_index": 3,
-    "explanations": [
-      "The Reformation was religious, not a project to restore Roman politics.",
-      "The movement did not begin from a Europe-wide ban on churches.",
-      "The Ottoman succession was unrelated to Luther’s religious protests.",
-      "Martin Luther criticized indulgences, helping start the Reformation."
-    ],
-    "tags": [
-      "protestant_reformation_basic_ideas"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "High School",
-    "difficulty": "easy",
-    "question": "Which feature best describes democracy in ancient Athens?",
-    "choices": [
-      "Laws were made only by generals",
-      "Citizens voted directly in an assembly",
-      "All residents voted, including enslaved people",
-      "Citizens elected a king for life"
+      "To teach priests how to perform temple rituals",
+      "To create a written set of laws with punishments",
+      "To record stories about Mesopotamian gods",
+      "To choose Babylon's next king by election"
     ],
     "correct_index": 1,
     "explanations": [
-      "Generals had influence, but assemblies of citizens made key decisions.",
-      "Athens used direct democracy where citizens voted on decisions.",
-      "Voting was limited to free adult male citizens, not all residents.",
-      "Athens did not choose a lifelong king as its main democratic feature."
+      "Temple rituals are religious practices, not a law code for society.",
+      "It listed rules and specific penalties to guide justice in Babylon.",
+      "Myths and god stories are literature, not a legal rulebook.",
+      "Babylon was ruled by kings; the code was not an election system."
+    ],
+    "tags": [
+      "hammurabis_code_purpose"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "How did the Magna Carta change the power of the English monarchy?",
+    "choices": [
+      "It gave every adult in England the right to vote",
+      "It limited the king by saying he must follow the law",
+      "It made the king the head of the Church of England",
+      "It ended the monarchy and created a republic in 1215"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "Voting rights for all adults did not come from the Magna Carta.",
+      "The Magna Carta supported rule of law and placed limits on royal power.",
+      "The Church of England break happened later under Henry VIII.",
+      "England kept its monarchy; the document did not abolish it."
+    ],
+    "tags": [
+      "magna_carta_limited_monarchy"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "Which action best represents Athenian direct democracy?",
+    "choices": [
+      "Citizens electing senators to vote for them",
+      "A king making laws without consulting anyone",
+      "Foreign residents voting in citywide elections",
+      "Male citizens voting on laws in an assembly"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "Representative voting describes later systems, not Athens' direct model.",
+      "Athenian government was not ruled by a king with total control.",
+      "Foreigners were generally excluded from citizenship and voting.",
+      "In Athens, citizens directly voted on decisions rather than through representatives."
     ],
     "tags": [
       "greek_democracy_athens"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "Which statement best describes the idea of a social contract?",
+    "choices": [
+      "Government should control every part of daily life",
+      "Citizens must sign a paper to have rights",
+      "Kings rule because they are chosen by the gods",
+      "Government gains power from the consent of the people"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "Social contract focuses on protection and order, not total control.",
+      "The theory is an idea about consent, not a literal signed document.",
+      "Divine right is a different idea, not social contract thinking.",
+      "Social contract theory says authority is legitimate when people agree to it."
+    ],
+    "tags": [
+      "enlightenment_social_contract"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Middle School",
+    "difficulty": "easy",
+    "question": "The term Pax Romana refers to a time of what in the Roman Empire?",
+    "choices": [
+      "constant civil war in every province",
+      "one battle that ended all wars forever",
+      "relative peace and stability",
+      "no laws and no government rules"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "The empire still had conflicts, but it was not nonstop civil war everywhere.",
+      "Pax Romana was a long period, not a single battle.",
+      "Pax Romana means “Roman Peace,” a long stretch of calmer, stable rule.",
+      "Rome kept laws and government; Pax Romana did not mean chaos."
+    ],
+    "tags": [
+      "roman_empire_pax_romana"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Middle School",
+    "difficulty": "easy",
+    "question": "How did the Nile River help ancient Egyptians grow food?",
+    "choices": [
+      "It made the desert colder each winter",
+      "It blocked all insects from fields",
+      "Floods left rich soil for farming",
+      "It provided gold nuggets for planting"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "Temperature changes were not the main way the Nile helped farming.",
+      "The Nile did not stop insects; farmers still faced pests.",
+      "Regular flooding left fertile mud that helped crops grow well.",
+      "Gold is valuable, but it does not help seeds grow into crops."
+    ],
+    "tags": [
+      "ancient_egypt_nile_river_importance"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Middle School",
+    "difficulty": "easy",
+    "question": "In ancient Athens, direct democracy meant that citizens did what?",
+    "choices": [
+      "sent governors to vote for them",
+      "voted on laws themselves in an assembly",
+      "picked a king to make all decisions",
+      "let soldiers decide laws during wars"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "Voting through elected representatives is representative democracy, not direct.",
+      "Direct democracy means citizens vote directly on decisions and laws.",
+      "Athens did not use a king as the main decision-maker in its democracy.",
+      "The army was important, but citizens in assemblies made many decisions."
+    ],
+    "tags": [
+      "athens_direct_democracy"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Middle School",
+    "difficulty": "easy",
+    "question": "Which event happened first in time?",
+    "choices": [
+      "1776",
+      "1914",
+      "1865",
+      "1492"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "1776 happens later than 1492, so it is not first.",
+      "1914 is the latest year here, so it is not first.",
+      "1865 is much later than 1492, so it cannot be first.",
+      "1492 is the earliest year listed, so it comes first on a timeline."
+    ],
+    "tags": [
+      "timeline_chronological_order"
     ]
   }
 ]

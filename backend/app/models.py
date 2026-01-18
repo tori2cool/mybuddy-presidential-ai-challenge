@@ -342,7 +342,7 @@ class Affirmation(SQLModel, table=True):
     age_range_id: Optional[UUID] = Field(default=None, foreign_key="age_ranges.id", index=True)
 
 
-class Flashcard(SQLModel, table=True):
+class Flashcard(SoftDeleteMixin, SQLModel, table=True):
     __tablename__ = "flashcards"
 
     id: UUID = Field(sa_column=uuid_pk())

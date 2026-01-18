@@ -43,6 +43,108 @@ def heartbeat() -> str:
     return msg
 
 
+@celery_app.task(name="app.tasks.review_flagged_flashcard")
+def review_flagged_flashcard(flashcard_id: str, child_id: str, reason_code: str) -> dict:
+    """Review a flagged flashcard and decide whether to replace it.
+
+    Sync Celery entrypoint; runs async DB + network work via asyncio.run().
+    """
+
+    async def _run() -> dict:
+        from datetime import datetime, timezone
+
+        from sqlalchemy import select
+
+        from .models import AgeRange, ChildActivityEvent, Flashcard, Subject
+        from .services.content_expansion_queue import (
+            create_content_expansion_request,
+            enqueue_content_expansion_request_after_commit,
+        )
+        from .services.flashcard_checkers import review_flagged_flashcard_decision
+
+        try:
+            fc_uuid = UUID(str(flashcard_id))
+            child_uuid = UUID(str(child_id))
+        except Exception:
+            return {"status": "invalid_args", "flashcard_id": flashcard_id, "child_id": child_id}
+
+        AsyncSessionLocal = get_async_sessionmaker()
+        async with AsyncSessionLocal() as session:
+            fc = (await session.execute(select(Flashcard).where(Flashcard.id == fc_uuid))).scalar_one_or_none()
+            if fc is None:
+                return {"status": "missing_flashcard", "flashcard_id": flashcard_id}
+            if fc.is_deleted:
+                return {"status": "already_deleted", "flashcard_id": flashcard_id}
+
+            subj = (await session.execute(select(Subject).where(Subject.id == fc.subject_id))).scalar_one_or_none()
+            subject_name = subj.name if subj is not None else str(fc.subject_id)
+
+            age_range_code = "all"
+            if fc.age_range_id is not None:
+                ar = (await session.execute(select(AgeRange).where(AgeRange.id == fc.age_range_id))).scalar_one_or_none()
+                if ar is not None and ar.code:
+                    age_range_code = ar.code
+
+            decision = await review_flagged_flashcard_decision(
+                flashcard_question=fc.question,
+                choices=list(fc.choices or []),
+                correct_index=int(fc.correct_index),
+                explanations=list(fc.explanations or []),
+                subject_name=subject_name,
+                age_range_code=age_range_code,
+                difficulty_code=fc.difficulty_code,
+                reason_code=reason_code,
+            )
+
+            session.add(
+                ChildActivityEvent(
+                    child_id=child_uuid,
+                    kind="flashcard_flag_reviewed",
+                    flashcard_id=fc_uuid,
+                    meta={
+                        "reasonCode": reason_code,
+                        "decision": decision.get("decision"),
+                        "confidence": decision.get("confidence"),
+                        "notes": decision.get("notes"),
+                    },
+                )
+            )
+
+            if decision.get("decision") == "replace":
+                now = datetime.now(timezone.utc)
+                fc.is_deleted = True
+                fc.deleted_at = now
+                session.add(fc)
+
+                create_res = await create_content_expansion_request(
+                    session,
+                    child_id=child_uuid,
+                    subject_id=fc.subject_id,
+                    age_range_id=fc.age_range_id,
+                    difficulty_code=fc.difficulty_code,
+                    trigger="flagged_regen_ai",
+                )
+
+                await session.commit()
+
+                if create_res.created:
+                    enqueue_content_expansion_request_after_commit(create_res.request.id)
+
+                return {
+                    "status": "replaced",
+                    "flashcard_id": flashcard_id,
+                    "decision": decision,
+                    "expansion_request_id": str(create_res.request.id),
+                }
+
+            await session.commit()
+            return {"status": "kept", "flashcard_id": flashcard_id, "decision": decision}
+
+    result = asyncio.run(_run())
+    logger.info("review_flagged_flashcard completed: %s", result)
+    return result
+
+
 @celery_app.task(name="app.tasks.process_content_expansion_request")
 def process_content_expansion_request(request_id: str) -> dict:
     """Process a single ContentExpansionRequest.

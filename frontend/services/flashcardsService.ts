@@ -2,6 +2,30 @@
 import type { Flashcard, UUID, DifficultyCode } from "@/types/models";
 import { apiFetch } from "./apiClient";
 
+export async function flagFlashcardForRegen(
+  flashcardId: UUID,
+  childId: UUID,
+  reasonCode: string,
+): Promise<{ status: string }> {
+  if (!flashcardId || flashcardId.trim().length === 0) {
+    throw new Error("flagFlashcardForRegen: flashcardId is required");
+  }
+  if (!childId || childId.trim().length === 0) {
+    throw new Error("flagFlashcardForRegen: childId is required");
+  }
+  if (!reasonCode || reasonCode.trim().length === 0) {
+    throw new Error("flagFlashcardForRegen: reasonCode is required");
+  }
+
+  return apiFetch<{ status: string }>(`/flashcards/${flashcardId}/flag`, {
+    method: "POST",
+    body: {
+      childId,
+      reasonCode,
+    },
+  });
+}
+
 export async function getFlashcards(
   subjectCode: string,
   difficultyCode: DifficultyCode,

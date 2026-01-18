@@ -162,7 +162,7 @@ def context_block(ctx: PromptCtx) -> list[str]:
     )
 
     if guardrails:
-        lines.extend(["", "Difficulty guidance for this age range (STRICT):", *guardrails])
+        lines.extend(["", f"Difficulty guidance for {ctx.age_range_code} (STRICT):", *guardrails])
 
     return lines
 

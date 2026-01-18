@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { ThemedText } from "@/components/ThemedText";
+import { CancelXButton } from "@/components/CancelXButton";
 import { Button } from "@/components/Button";
 import { OnboardingParamList } from "@/navigation/OnboardingNavigator";
 import { Spacing, Typography } from "@/constants/theme";
@@ -18,6 +19,17 @@ export default function OnboardingWelcomeScreen() {
   const navigation = useNavigation<WelcomeScreenNavigationProp>();
   const insets = useSafeAreaInsets();
 
+  const handleCancel = () => {
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.reset({ index: 0, routes: [{ name: "ChildSelect" as never }] });
+      return;
+    }
+
+    // Fallback in case the screen isn't inside the expected nested navigator
+    navigation.navigate("ChildSelect" as never);
+  };
+
   return (
     <LinearGradient
       colors={[...Gradients.sky] as any}
@@ -25,6 +37,7 @@ export default function OnboardingWelcomeScreen() {
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
+      <CancelXButton onPress={handleCancel} />
       <View
         style={[
           styles.content,

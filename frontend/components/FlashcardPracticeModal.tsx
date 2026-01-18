@@ -17,7 +17,7 @@ import type { DifficultyCode, DifficultyThreshold, Subject, Flashcard } from "@/
 import { useDashboard } from "@/contexts/DashboardContext";
 import type { ProgressEvent } from "@/services/eventsService";
 import { Spacing, BorderRadius } from "@/constants/theme";
-import { getFlashcards } from "@/services/flashcardsService";
+import { getFlashcards, flagFlashcardForRegen } from "@/services/flashcardsService";
 import Constants from 'expo-constants';
 
 interface FlashcardPracticeModalProps {
@@ -49,6 +49,9 @@ function FlashcardPracticeModal({
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [flagModalVisible, setFlagModalVisible] = useState(false);
+  const [flagReasonCode, setFlagReasonCode] = useState<string>("wrong");
+  const [flagSubmitting, setFlagSubmitting] = useState(false);
 
   const resolvedDifficultyInfo: { label: string; icon: string; color: string } =
     difficultyInfo
@@ -122,6 +125,30 @@ function FlashcardPracticeModal({
   };
 
   const currentCard = cards[currentIndex];
+
+  const handleFlag = async () => {
+    if (!currentCard?.id || !childId) return;
+
+    setFlagSubmitting(true);
+    try {
+      await flagFlashcardForRegen(currentCard.id, childId, flagReasonCode);
+
+      // Remove the current card locally so the kid doesn't see it again in this session.
+      setCards((prev) => prev.filter((c) => c.id !== currentCard.id));
+      setCurrentIndex((prevIdx) => Math.max(0, Math.min(prevIdx, Math.max(0, cards.length - 2))));
+      setSelectedIndex(null);
+      setHasChecked(false);
+      setIsCorrect(false);
+
+      setFlagModalVisible(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err) {
+      console.error("[FlashcardPracticeModal] flag failed:", err);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setFlagSubmitting(false);
+    }
+  };
 
   const goToNext = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -289,14 +316,106 @@ function FlashcardPracticeModal({
             </View>
           )}
 
+          {/* Flag Modal */}
+          <Modal
+            visible={flagModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setFlagModalVisible(false)}
+          >
+            <View style={styles.flagModalOverlay}>
+              <View style={[styles.flagModalCard, { backgroundColor: theme.backgroundDefault }]}>
+                <ThemedText type="title" style={{ textAlign: "center" }}>
+                  Flag this card
+                </ThemedText>
+
+                <ThemedText style={{ color: theme.textSecondary, textAlign: "center" }}>
+                  Tell us what’s wrong and we’ll replace it.
+                </ThemedText>
+
+                <View style={{ gap: Spacing.sm, marginTop: Spacing.md }}>
+                  {[
+                    { code: "wrong", label: "Wrong Answer" },
+                    { code: "confusing", label: "Confusing or Unclear" },
+                    { code: "ambiguous", label: "Multiple Answers" },
+                    { code: "inappropriate", label: "Not Appropriate" },
+                    { code: "biased", label: "Biased" },
+                  ].map((r) => {
+                    const selected = flagReasonCode === r.code;
+                    return (
+                      <Pressable
+                        key={r.code}
+                        style={[
+                          styles.flagReasonRow,
+                          {
+                            borderColor: selected ? theme.primary : theme.border,
+                            backgroundColor: selected ? theme.primary + "10" : theme.backgroundDefault,
+                          },
+                        ]}
+                        onPress={() => setFlagReasonCode(r.code)}
+                        disabled={flagSubmitting}
+                      >
+                        <ThemedText style={{ color: theme.text, flex: 1 }}>{r.label}</ThemedText>
+                        {selected && <Feather name="check" size={16} color={theme.primary} />}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <View style={{ flexDirection: "row", gap: Spacing.md, marginTop: Spacing.lg }}>
+                  <Pressable
+                    style={[
+                      styles.flagModalButton,
+                      {
+                        backgroundColor: theme.backgroundSecondary ?? theme.backgroundDefault,
+                        borderColor: theme.border,
+                      },
+                    ]}
+                    onPress={() => setFlagModalVisible(false)}
+                    disabled={flagSubmitting}
+                  >
+                    <ThemedText style={{ color: theme.text }}>Cancel</ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    style={[
+                      styles.flagModalButton,
+                      { backgroundColor: theme.error, borderColor: theme.error, opacity: flagSubmitting ? 0.7 : 1 },
+                    ]}
+                    onPress={handleFlag}
+                    disabled={flagSubmitting}
+                  >
+                    <ThemedText style={{ color: "white", fontWeight: "600" }}>
+                      {flagSubmitting ? "Flagging..." : "Flag for Review"}
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
           {/* Question Screen */}
           {!showResults && !isLoading && currentCard && (
             <View style={styles.questionContainer}>
               <View style={[styles.questionCard, { backgroundColor: theme.backgroundDefault }]}>
-                <View style={[styles.cardLabel, { backgroundColor: subject?.color + "20" }]}>
-                  <ThemedText style={[styles.cardLabelText, { color: subject?.color }]}>
-                    Question {currentIndex + 1}
-                  </ThemedText>
+                <View style={styles.questionHeaderRow}>
+                  <View style={[styles.cardLabel, { backgroundColor: subject?.color + "20" }]}>
+                    <ThemedText style={[styles.cardLabelText, { color: subject?.color }]}>
+                      Question {currentIndex + 1}
+                    </ThemedText>
+                  </View>
+
+                  <Pressable
+                    style={[styles.flagIconButton, { backgroundColor: theme.backgroundDefault }]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setFlagModalVisible(true);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Flag question"
+                  >
+                    <ThemedText style={[styles.flagIconText, { color: theme.textSecondary }]}>🚩</ThemedText>
+                  </Pressable>
                 </View>
                 <ThemedText type="title" style={styles.questionText}>
                   {currentCard.question}
@@ -430,6 +549,7 @@ function FlashcardPracticeModal({
                   </View>
                 )}
 
+
                 {/* Action Buttons */}
                 {!hasChecked ? (
                   <Pressable
@@ -530,12 +650,26 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     marginBottom: Spacing.xl,
   },
+  questionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Spacing.md,
+  },
   cardLabel: {
     alignSelf: "flex-start",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
-    marginBottom: Spacing.md,
+  },
+  flagIconButton: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+  },
+  flagIconText: {
+    fontSize: 18,
+    lineHeight: 18,
   },
   cardLabelText: {
     fontSize: 12,
@@ -687,5 +821,36 @@ const styles = StyleSheet.create({
   },
   resultButtonLabel: {
     marginLeft: Spacing.sm,
+  },
+
+  flagModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.xl,
+  },
+  flagModalCard: {
+    width: "100%",
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  flagReasonRow: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  flagModalButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
   },
 });

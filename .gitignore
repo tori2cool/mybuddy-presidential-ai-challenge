@@ -1,6 +1,7 @@
 # -------------------------------------------------------
-# get our seed images in then ignore img/*
-#img/*
+# get our seed stuff in then ignore later
+/backend/img/*
+/backend/app/seed_data/flashcards/*.json
 
 # -------------------------------------------------------
 # Python bytecode and cache
@@ -128,3 +129,9 @@ _remote_sources.txt
 # Local Docker volumes
 # -------------------------------------------------------
 backend/volumes/
+
+# -------------------------------------------------------
+# Logs
+# -------------------------------------------------------
+backend/logs/*.log*
+backend/.celerybeat-schedule

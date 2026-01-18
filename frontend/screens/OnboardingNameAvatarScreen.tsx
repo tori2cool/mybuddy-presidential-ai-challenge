@@ -8,10 +8,12 @@ import {
   ScrollView,
   Platform,
 } from "react-native";
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { createChild } from "@/services/childrenService";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { CancelXButton } from "@/components/CancelXButton";
 import { Button } from "@/components/Button";
 import { OnboardingParamList } from "@/navigation/OnboardingNavigator";
 import { Spacing, Typography, BorderRadius } from "@/constants/theme";
@@ -24,20 +26,33 @@ import { getInterests } from "@/services/interestsService";
 // IMPORTANT: use the API types you showed (no Avatar.key / Interest.key)
 import type { Avatar, Interest, UUID } from "@/types/models";
 
+type NameAvatarNav = NativeStackNavigationProp<OnboardingParamList, "NameAvatar">;
+
 type Props = NativeStackScreenProps<OnboardingParamList, "NameAvatar"> & {
   onComplete: (childId: string) => void | Promise<void>;
 };
 
 export default function OnboardingNameAvatarScreen({ route, onComplete }: Props) {
+  const navigation = useNavigation<NameAvatarNav>();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
+  const handleCancel = () => {
+    // NameAvatar is inside the nested onboarding navigator; reset the parent root stack
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.reset({ index: 0, routes: [{ name: "ChildSelect" as never }] });
+      return;
+    }
+
+    navigation.navigate("ChildSelect" as never);
+  };
+
   // Assumption based on your previous code: route params contains a list of interest IDs.
   // If it's actually "keys" (like "sports"), then fix that at the source and pass UUIDs instead.
-const { interests } = route.params as Readonly<{ interests: string[] }>;
+  const { interests } = route.params as Readonly<{ interests: UUID[] }>;
 
-const interestIds: UUID[] | null =
-  interests && interests.length > 0 ? interests.map((id) => String(id)) : null;
+  const interestIds: UUID[] | null = interests && interests.length > 0 ? interests : null;
 
   const [name, setName] = useState("");
   const [birthday, setBirthday] = useState<Date | null>(null);
@@ -143,6 +158,7 @@ const interestIds: UUID[] | null =
 
   return (
     <ThemedView style={styles.container}>
+      <CancelXButton onPress={handleCancel} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[

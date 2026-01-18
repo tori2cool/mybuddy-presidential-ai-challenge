@@ -9,7 +9,8 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import case, func, text
+from sqlalchemy import Date, case, cast, func, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -21,6 +22,7 @@ from ..models import (
     Affirmation,
     Avatar,
     Child,
+    ChildActivityEvent,
     ChildBalancedProgressCounter,
     ChildFlashcardPerformance,
     ChildProgress,
@@ -533,6 +535,7 @@ async def list_flashcards(
             Flashcard.subject_id == subject.id,
             Flashcard.difficulty_code == difficulty_code,
             Flashcard.age_range_id == age_range.id,  # age_range is guaranteed above
+            Flashcard.is_deleted == False,  # noqa: E712
         )
     )
 
@@ -682,6 +685,100 @@ async def list_flashcards(
         )
 
     return out
+
+
+@router.post("/flashcards/{flashcard_id}/flag")
+async def flag_flashcard(
+    flashcard_id: UUID,
+    payload: dict,
+    session: AsyncSession = Depends(get_session),
+    user: dict = Depends(get_current_user),
+):
+    """Record a flashcard flag and enqueue AI review.
+
+    Body: { childId: UUID, reasonCode: str, note?: str }
+
+    Enforces a per-child daily limit (America/New_York local day).
+    Uses ChildActivityEvent per-day dedupe so the same card can only be flagged
+    once per child per day (idempotent).
+    """
+
+    from ..tasks import review_flagged_flashcard
+
+    child_id = payload.get("childId")
+    reason_code = payload.get("reasonCode")
+
+    if not child_id:
+        raise HTTPException(status_code=422, detail="childId is required")
+    if not reason_code or not isinstance(reason_code, str):
+        raise HTTPException(status_code=422, detail="reasonCode is required")
+
+    try:
+        child_uuid = UUID(str(child_id))
+    except Exception:
+        raise HTTPException(status_code=422, detail="childId must be a valid UUID")
+
+    owner_sub = user.get("sub")
+    child = (
+        await session.execute(select(Child).where(Child.id == child_uuid, Child.owner_sub == owner_sub))
+    ).scalars().first()
+
+    if child is None:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    fc = (await session.execute(select(Flashcard).where(Flashcard.id == flashcard_id))).scalars().first()
+    if fc is None:
+        raise HTTPException(status_code=404, detail="Flashcard not found")
+
+    # ------------------------------------------------------------------
+    # Daily per-child flag limit (5/day), bucketed by America/New_York day
+    # Must match ChildActivityEvent's per-day dedupe index expression.
+    # ------------------------------------------------------------------
+    local_day_expr = cast(func.timezone("America/New_York", ChildActivityEvent.created_at), Date)
+    today_expr = cast(func.timezone("America/New_York", func.now()), Date)
+
+    existing_flags_today = (
+        await session.execute(
+            select(func.count())
+            .select_from(ChildActivityEvent)
+            .where(
+                ChildActivityEvent.child_id == child.id,
+                ChildActivityEvent.kind == "flashcard_flag",
+                local_day_expr == today_expr,
+            )
+        )
+    ).scalar_one()
+
+    if int(existing_flags_today) >= 5:
+        raise HTTPException(status_code=429, detail="Daily flag limit reached (5/day)")
+
+    # Record the flag event so the unique per-day dedupe index can prevent
+    # the same card from being flagged multiple times in a day.
+    event = ChildActivityEvent(
+        child_id=child.id,
+        kind="flashcard_flag",
+        flashcard_id=flashcard_id,
+        meta={"reasonCode": reason_code, "dedupeKey": f"flag:{flashcard_id}"},
+    )
+    session.add(event)
+
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        return {"status": "already_flagged_today"}
+
+    # After commit: enqueue AI review task.
+    try:
+        review_flagged_flashcard.delay(str(flashcard_id), str(child.id), reason_code)
+    except Exception:
+        logger.exception(
+            "flag_flashcard: failed to enqueue review task flashcard_id=%s child_id=%s",
+            str(flashcard_id),
+            str(child.id),
+        )
+
+    return {"status": "flag_received"}
 
 
 @router.get("/chores/daily")

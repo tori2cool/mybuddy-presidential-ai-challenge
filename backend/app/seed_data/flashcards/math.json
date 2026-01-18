@@ -8,17 +8,17 @@
     ],
     "question": "How many apples are there?",
     "choices": [
-      "5",
+      "2",
       "3",
-      "10",
-      "2"
+      "5",
+      "10"
     ],
     "correct_index": 1,
     "explanations": [
-      "Five is too many apples.",
+      "There are more than two apples.",
       "Correct! There are three apples.",
-      "Ten is much more than the number shown.",
-      "There are more than two apples."
+      "Five is too many apples.",
+      "Ten is much more than the number shown."
     ]
   },
   {
@@ -30,17 +30,17 @@
     ],
     "question": "What is 4 + 3?",
     "choices": [
-      "9",
       "6",
+      "7",
       "8",
-      "7"
+      "9"
     ],
-    "correct_index": 3,
+    "correct_index": 1,
     "explanations": [
-      "9 is much too high.",
       "4 plus 3 is more than 6.",
+      "Correct! 4 + 3 equals 7.",
       "8 is too high.",
-      "Correct! 4 + 3 equals 7."
+      "9 is much too high."
     ]
   },
   {
@@ -52,16 +52,16 @@
     ],
     "question": "What is 6 × 4?",
     "choices": [
-      "64",
-      "20",
       "10",
+      "20",
+      "64",
       "24"
     ],
     "correct_index": 3,
     "explanations": [
-      "64 is 8 × 8, not 6 × 4.",
-      "20 is too small.",
       "6 times 4 is more than 10.",
+      "20 is too small.",
+      "64 is 8 × 8, not 6 × 4.",
       "Correct! 6 × 4 equals 24."
     ]
   },
@@ -76,15 +76,15 @@
     "choices": [
       "1/4",
       "4/1",
-      "2/4",
-      "3/4"
+      "3/4",
+      "2/4"
     ],
-    "correct_index": 2,
+    "correct_index": 3,
     "explanations": [
       "1/4 is smaller than 1/2.",
       "4/1 equals 4, not 1/2.",
-      "Correct! 2/4 simplifies to 1/2.",
-      "3/4 is larger than 1/2."
+      "3/4 is larger than 1/2.",
+      "Correct! 2/4 simplifies to 1/2."
     ]
   },
   {
@@ -111,200 +111,68 @@
   },
   {
     "subject": "Math",
-    "age_range": "Preschool",
+    "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "Which numeral shows seven?",
+    "question": "A triangle has base 10 cm and height 6 cm. What is its area?",
     "choices": [
-      "8",
-      "6",
-      "7",
-      "9"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "8 is one more than seven.",
-      "6 is one less than seven.",
-      "7 is the numeral for seven.",
-      "9 is two more than seven."
-    ],
-    "tags": [
-      "number_recognition_0_to_10"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "Preschool",
-    "difficulty": "easy",
-    "question": "What is one more than 5?",
-    "choices": [
-      "5",
-      "7",
-      "6",
-      "4"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "5 is the starting number, not one more.",
-      "7 is two more than 5.",
-      "One more means add 1: 5 + 1 = 6.",
-      "4 is one less than 5."
-    ],
-    "tags": [
-      "one_more_one_less"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "Preschool",
-    "difficulty": "easy",
-    "question": "Where is the cat compared to the box: cat is above the box.",
-    "choices": [
-      "The cat is to the right of the box.",
-      "The cat is to the left of the box.",
-      "The cat is on top of the box.",
-      "The cat is under the box."
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "Right is side-to-side, not higher.",
-      "Left is side-to-side, not higher.",
-      "Above means higher than, like on top.",
-      "Under means below, not above."
-    ],
-    "tags": [
-      "positional_words_left_right_above_below"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "Preschool",
-    "difficulty": "easy",
-    "question": "What number comes next: 11, 12, 13, __?",
-    "choices": [
-      "20",
-      "14",
-      "16",
-      "15"
-    ],
-    "correct_index": 1,
-    "explanations": [
-      "20 skips many numbers after 13.",
-      "Counting goes up by 1, so 14 comes next.",
-      "16 is three numbers after 13.",
-      "15 comes after 14, so it is too far."
-    ],
-    "tags": [
-      "counting_to_20"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "High School",
-    "difficulty": "easy",
-    "question": "Lines with slopes 3 and 3 are parallel when which relationship is true?",
-    "choices": [
-      "They have the same y-intercept",
-      "Their slopes add to 0",
-      "Their slopes are equal",
-      "Their slopes are negative reciprocals"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "Parallel lines can have different y-intercepts and still never meet.",
-      "Slopes adding to 0 is not a rule for parallel lines.",
-      "Non-vertical parallel lines have the same slope, like 3 and 3.",
-      "Negative reciprocals describe perpendicular lines, not parallel ones."
-    ],
-    "tags": [
-      "parallel_lines_slope"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "High School",
-    "difficulty": "easy",
-    "question": "After factoring x^2 + 5x + 6 = 0, what are the solutions?",
-    "choices": [
-      "x = 2 and x = 3",
-      "x = 1 and x = 6",
-      "x = -2 and x = -3",
-      "x = -1 and x = -6"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "(x-2)(x-3)=0 would give x=2 or x=3, but it expands to x^2-5x+6.",
-      "(x-1)(x-6)=0 expands to x^2-7x+6, not the given quadratic.",
-      "(x+2)(x+3)=0, so x=-2 or x=-3.",
-      "(x+1)(x+6)=0 expands to x^2+7x+6, not x^2+5x+6."
-    ],
-    "tags": [
-      "solve_quadratic_by_factoring_simple"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "High School",
-    "difficulty": "easy",
-    "question": "Factor out the GCF: 6x^2 + 9x.",
-    "choices": [
-      "6x( x + 3)",
-      "3x^2(2 + 3x)",
-      "9x( x + 2)",
-      "3x(2x + 3)"
+      "16 cm²",
+      "40 cm²",
+      "60 cm²",
+      "30 cm²"
     ],
     "correct_index": 3,
     "explanations": [
-      "6x is not a factor of 9x, so it is not common to both terms.",
-      "3x^2 is not a factor of 9x because x^2 does not divide x.",
-      "9x is not a factor of 6x^2, so it cannot be the GCF.",
-      "The GCF is 3x, leaving 2x+3 inside the parentheses."
+      "16 cm² does not match 1/2 × base × height for these values.",
+      "40 cm² would require different base or height values.",
+      "60 cm² is base × height, missing the 1/2 for a triangle.",
+      "Area = 1/2 × 10 × 6 = 30 square centimeters."
     ],
     "tags": [
-      "factor_gcf_from_polynomial"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "High School",
-    "difficulty": "easy",
-    "question": "Convert 4.2 × 10^3 to standard form.",
-    "choices": [
-      "4.2003",
-      "4200",
-      "0.0042",
-      "42"
-    ],
-    "correct_index": 1,
-    "explanations": [
-      "4.2003 changes digits instead of shifting the decimal point.",
-      "10^3 moves the decimal 3 places right: 4.2 → 4200.",
-      "0.0042 would come from 4.2 × 10^-3, moving left.",
-      "42 moves the decimal only 1 place right, not 3."
-    ],
-    "tags": [
-      "scientific_notation_to_standard"
+      "area_of_triangle_basic"
     ]
   },
   {
     "subject": "Math",
     "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "A triangle has base 10 cm and height 6 cm. What is its area?",
+    "question": "Two lines intersect. If one angle is 47°, what is its vertical angle?",
     "choices": [
-      "16 cm²",
-      "20 cm²",
-      "60 cm²",
-      "30 cm²"
+      "133°",
+      "47°",
+      "43°",
+      "94°"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "133° is a supplementary angle to 47°, not the vertical angle.",
+      "Vertical angles are opposite angles and have equal measure, so it is 47°.",
+      "43° is close but not equal; vertical angles must match exactly.",
+      "94° is double 47°, but vertical angles are equal, not doubled."
+    ],
+    "tags": [
+      "vertical_angles_equal"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Middle School",
+    "difficulty": "easy",
+    "question": "Which number is rational?",
+    "choices": [
+      "√2",
+      "0.1010010001...",
+      "π",
+      "0.125"
     ],
     "correct_index": 3,
     "explanations": [
-      "16 cm² comes from adding 10 and 6, which is not an area formula.",
-      "20 cm² could be 1/2 × 10 × 4, but the height is 6.",
-      "60 cm² is base × height, but a triangle needs half of that.",
-      "Triangle area is 1/2 × 10 × 6 = 30 cm²."
+      "√2 is irrational because its decimal does not end or repeat.",
+      "0.1010010001... does not show a repeating pattern, so it is not rational.",
+      "π is irrational and cannot be written as a ratio of integers.",
+      "0.125 is a terminating decimal, so it can be written as a fraction."
     ],
     "tags": [
-      "area_of_triangles_and_parallelograms"
+      "rational_numbers_definition"
     ]
   },
   {
@@ -313,171 +181,303 @@
     "difficulty": "easy",
     "question": "A parallelogram has base 9 m and height 4 m. What is its area?",
     "choices": [
-      "18 m²",
-      "13 m²",
       "26 m²",
+      "13 m²",
+      "18 m²",
       "36 m²"
     ],
     "correct_index": 3,
     "explanations": [
-      "18 m² is half of 36, which is used for triangles, not parallelograms.",
-      "13 m² is 9 + 4, which is not an area calculation.",
-      "26 m² comes from 9 + 4 + 13, but adding lengths doesn't give area.",
-      "Parallelogram area is base × height: 9 × 4 = 36 m²."
+      "26 m² comes from adding 9 + 4 + 13, which is not an area formula.",
+      "13 m² is base + height, which gives a length, not an area.",
+      "18 m² is half of 36, but parallelograms use base × height, not half.",
+      "Area = base × height = 9 × 4 = 36 square meters."
     ],
     "tags": [
-      "area_of_triangles_and_parallelograms"
+      "area_of_parallelogram_basic"
     ]
   },
   {
     "subject": "Math",
-    "age_range": "Middle School",
+    "age_range": "Preschool",
     "difficulty": "easy",
-    "question": "Two angles are complementary. One angle is 35°. What is the other angle?",
-    "choices": [
-      "45°",
-      "55°",
-      "65°",
-      "145°"
-    ],
-    "correct_index": 1,
-    "explanations": [
-      "45° would pair with 45° to make 90°, but the given angle is 35°.",
-      "Complementary angles add to 90°, so 90 − 35 = 55°.",
-      "65° would make 100° with 35°, which is too large for complementary.",
-      "145° would make a total of 180°, which is supplementary, not complementary."
-    ],
-    "tags": [
-      "angle_relationships_complementary_supplementary"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "Middle School",
-    "difficulty": "easy",
-    "question": "Two angles are supplementary. One angle is 112°. What is the other angle?",
-    "choices": [
-      "58°",
-      "78°",
-      "68°",
-      "22°"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "58° would make 170° total, which is too small.",
-      "78° would make 190° total, which is too large.",
-      "Supplementary angles add to 180°, so 180 − 112 = 68°.",
-      "22° would make 134° total, not 180°."
-    ],
-    "tags": [
-      "angle_relationships_complementary_supplementary"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "Upper Elementary",
-    "difficulty": "easy",
-    "question": "Choose the correct symbol: 0.45 __ 0.5.",
-    "choices": [
-      ">",
-      "=",
-      "<",
-      "≈"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "This would mean 0.45 is larger, but 45 hundredths is less than 50 hundredths.",
-      "They are not equal because the hundredths values are different.",
-      "0.45 is 45 hundredths and 0.5 is 50 hundredths, so 0.45 is smaller.",
-      "≈ means “about equal,” but these decimals compare exactly with < or >."
-    ],
-    "tags": [
-      "compare_decimals_to_hundredths"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "Upper Elementary",
-    "difficulty": "easy",
-    "question": "A triangle has side lengths 6, 6, and 4. What type of triangle is it?",
-    "choices": [
-      "Right",
-      "Isosceles",
-      "Scalene",
-      "Equilateral"
-    ],
-    "correct_index": 1,
-    "explanations": [
-      "Right describes an angle, not side lengths, so you can’t tell that from these sides.",
-      "Isosceles means it has exactly 2 equal sides; here 6 and 6 match.",
-      "Scalene has no equal sides, but two sides are both 6.",
-      "Equilateral has 3 equal sides, but one side is 4."
-    ],
-    "tags": [
-      "classify_triangles_by_sides"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "Upper Elementary",
-    "difficulty": "easy",
-    "question": "Which decimal is equal to the fraction 7/10?",
-    "choices": [
-      "0.70",
-      "0.17",
-      "0.7",
-      "0.07"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "0.70 equals 70/100, which is the same as 7/10, but the question asks for 0.7.",
-      "0.17 is 17 hundredths, a different value than 7 tenths.",
-      "7/10 means 7 tenths, which is 0.7.",
-      "0.07 is 7 hundredths, which matches 7/100, not 7/10."
-    ],
-    "tags": [
-      "fraction_decimal_equivalents_tenths_hundredths"
-    ]
-  },
-  {
-    "subject": "Math",
-    "age_range": "Upper Elementary",
-    "difficulty": "easy",
-    "question": "What is the greatest common factor of 18 and 24?",
+    "question": "Which number is this: 8?",
     "choices": [
       "3",
-      "9",
       "6",
-      "12"
+      "9",
+      "8"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "3 is a different numeral.",
+      "6 is a different numeral and is smaller than 8.",
+      "9 is a different numeral and is one more than 8.",
+      "8 is the numeral shown."
+    ],
+    "tags": [
+      "recognize_numerals_0_10"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "question": "What number comes after 5?",
+    "choices": [
+      "4",
+      "5",
+      "6",
+      "7"
     ],
     "correct_index": 2,
     "explanations": [
-      "3 is a common factor, but it is not the greatest one.",
-      "9 divides 18, but 24 ÷ 9 is not a whole number.",
-      "6 divides both 18 and 24, and no larger shared factor works.",
-      "12 divides 24, but 18 ÷ 12 is not a whole number."
+      "4 comes before 5, not after.",
+      "5 is the same number, not the next one.",
+      "After 5 comes 6 when you count.",
+      "7 comes after 6, so it is too far."
     ],
     "tags": [
-      "gcf_of_two_numbers_under_50"
+      "before_after_numbers_0_10"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "question": "What comes next in this pattern: clap, tap, clap, tap, ___?",
+    "choices": [
+      "tap",
+      "jump",
+      "clap",
+      "snap"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "Tap would repeat BB, not ABAB.",
+      "Jump is not part of the repeating rule.",
+      "The pattern is ABAB, so it goes back to clap.",
+      "Snap is a new action and breaks the pattern."
+    ],
+    "tags": [
+      "patterns_abab_aabb_abc"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Preschool",
+    "difficulty": "easy",
+    "question": "Which container holds more: a bucket or a cup?",
+    "choices": [
+      "spoon",
+      "bucket",
+      "cup",
+      "bottle cap"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "A spoon holds only a tiny amount.",
+      "A bucket can hold a lot more liquid than a cup.",
+      "A cup holds less than a bucket.",
+      "A bottle cap holds very little liquid."
+    ],
+    "tags": [
+      "compare_capacity_more_less"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "What is 3,478 + 2,159?",
+    "choices": [
+      "5,737",
+      "6,637",
+      "5,527",
+      "5,637"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "This is 100 too large; the hundreds place sum was overstated.",
+      "This is 1,000 too large; the thousands place was added incorrectly.",
+      "This is 110 too small; the hundreds and tens were not regrouped correctly.",
+      "Add by place value: 3,478 + 2,159 = 5,637."
+    ],
+    "tags": [
+      "add_multi_digit_whole_numbers"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "What is 4.35 + 2.47?",
+    "choices": [
+      "6.92",
+      "6.72",
+      "6.82",
+      "7.82"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "This is 0.10 too large; the hundredths regrouping was misused.",
+      "This is 0.10 too small; the tenths were added incorrectly.",
+      "Line up decimals: 4.35 + 2.47 = 6.82.",
+      "This is 1.00 too large; the ones place was increased by mistake."
+    ],
+    "tags": [
+      "add_decimals_to_hundredths"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "Which fraction is greater: 5/8 or 3/8?",
+    "choices": [
+      "1/8",
+      "3/8",
+      "7/8",
+      "5/8"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "One eighth is the smallest amount listed here.",
+      "With eighths, 3 parts is less than 5 parts.",
+      "Seven eighths is greater than both, but it is not one of the two compared.",
+      "Same denominator means same-sized parts; 5 parts is more than 3 parts."
+    ],
+    "tags": [
+      "compare_fractions_same_denominator"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "In 6,402,915, what is the value of the digit 4?",
+    "choices": [
+      "40,000",
+      "4,000",
+      "4,000,000",
+      "400,000"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "40,000 would be the ten-thousands place, not where the 4 is.",
+      "4,000 would be the thousands place, which is a different digit here.",
+      "4,000,000 would be the millions place, but the 6 is in that place.",
+      "The 4 is in the hundred-thousands place, so it means 400,000."
+    ],
+    "tags": [
+      "place_value_to_millions"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "In y - 3 = -2(x - 5), which ordered pair is the point on the line?",
+    "choices": [
+      "(-2, 5)",
+      "(3, 5)",
+      "(5, -2)",
+      "(5, 3)"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "This uses the slope as a coordinate, but -2 is the slope m, not x1.",
+      "This swaps x and y; the point is (x1, y1), not (y1, x1).",
+      "This mixes the x-value with the slope; -2 is m, not the y-coordinate.",
+      "Point-slope form y - y1 = m(x - x1) uses (x1, y1) = (5, 3)."
+    ],
+    "tags": [
+      "point_slope_form_recognition"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "Solve the system by elimination: x + y = 7 and x - y = 1.",
+    "choices": [
+      "(1, 6)",
+      "(6, 1)",
+      "(3, 4)",
+      "(4, 3)"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "If x = 1, then x + y = 7 gives y = 6, but x - y would be -5.",
+      "If x = 6, then x + y = 7 gives y = 1, but x - y would be 5.",
+      "If x = 3, then x - y = 1 gives y = 2, not 4.",
+      "Add equations: 2x = 8 so x = 4; then y = 7 - 4 = 3."
+    ],
+    "tags": [
+      "solving_system_by_elimination_simple"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "Solve by substitution: y = 2x + 1 and 3x + y = 10.",
+    "choices": [
+      "(1, 3)",
+      "(2, 5)",
+      "(3, 7)",
+      "(4, 9)"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "If x = 1, then y = 3, but 3x + y = 6, not 10.",
+      "If x = 2, then y = 5, but 3x + y = 11, not 10.",
+      "Substitute: 3x + (2x + 1) = 10 → 5x = 9 → x = 3; y = 7.",
+      "If x = 4, then y = 9, but 3x + y = 21, not 10."
+    ],
+    "tags": [
+      "solving_system_by_substitution_simple"
+    ]
+  },
+  {
+    "subject": "Math",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "What does the solution to a system of two linear equations represent on a graph?",
+    "choices": [
+      "Any point on either line",
+      "The point where the two lines intersect",
+      "The slope of the steeper line",
+      "The y-intercept of the first line"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "Points on only one line satisfy just one equation, not both at the same time.",
+      "A solution is an ordered pair that makes both equations true, so it’s their intersection.",
+      "Slope describes steepness; it is not an ordered pair that solves both equations.",
+      "A y-intercept is where one line crosses the y-axis, not where both lines meet."
+    ],
+    "tags": [
+      "systems_of_equations_solution_meaning"
     ]
   },
   {
     "subject": "Math",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "In the number 47, which digit is in the tens place?",
+    "question": "In the number 47, what is the value of the digit 4?",
     "choices": [
-      "7",
-      "47",
       "4",
-      "0"
+      "11",
+      "7",
+      "40"
     ],
-    "correct_index": 2,
+    "correct_index": 3,
     "explanations": [
-      "7 is in the ones place, not the tens place.",
-      "47 is the whole number, not a single digit place.",
-      "The left digit shows tens, so 47 has 4 tens.",
-      "0 is not a digit in 47."
+      "4 is the digit, but its value in 47 is tens, not ones.",
+      "11 is the sum of the digits, not the value of the 4.",
+      "7 is the value of the ones digit, not the 4.",
+      "The 4 is in the tens place, so it means 4 tens, or 40."
     ],
     "tags": [
       "place_value_tens_ones"
@@ -487,66 +487,66 @@
     "subject": "Math",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "Which unit is best to measure the length of a paperclip?",
+    "question": "There are 3 groups of 4. How many in all?",
     "choices": [
-      "kilograms",
-      "meters",
-      "centimeters",
-      "gallons"
+      "34",
+      "7",
+      "12",
+      "16"
     ],
     "correct_index": 2,
     "explanations": [
-      "Kilograms measure mass (how heavy), not length.",
-      "Meters are used for longer lengths like a room or doorway.",
-      "A paperclip is short, so centimeters are a good small unit.",
-      "Gallons measure liquid volume, not length."
+      "34 puts the numbers side by side, not a total.",
+      "7 comes from adding 3 + 4, but groups mean repeated addition.",
+      "3 groups of 4 means 4 + 4 + 4, which equals 12.",
+      "16 would be 4 groups of 4, not 3 groups of 4."
     ],
     "tags": [
-      "metric_length_cm_m"
+      "basic_multiplication_as_equal_groups"
     ]
   },
   {
     "subject": "Math",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "What is 3 + 4 + 5?",
+    "question": "Solve the doubles fact: 6 + 6 = __",
     "choices": [
-      "11",
-      "10",
       "13",
+      "16",
+      "11",
       "12"
     ],
     "correct_index": 3,
     "explanations": [
-      "11 is too small; adding all three numbers gives more than 11.",
-      "10 is what you get if you forget one of the numbers.",
-      "13 is too large; the sum of 3, 4, and 5 is 12.",
-      "3 + 4 = 7, and 7 + 5 = 12."
+      "13 is one more than 12, but 6 + 6 does not reach 13.",
+      "16 would be 8 + 8, not 6 + 6.",
+      "11 is one less than 12, but doubling 6 makes 12.",
+      "A doubles fact adds the same number twice: 6 + 6 = 12."
     ],
     "tags": [
-      "add_three_one_digit_numbers"
+      "doubles_addition_facts"
     ]
   },
   {
     "subject": "Math",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "Which equation belongs to the fact family for 4, 6, and 10?",
+    "question": "To solve 8 + 5, which step makes a ten first?",
     "choices": [
-      "6 − 10 = 4",
-      "4 + 6 = 11",
-      "10 − 4 = 6",
-      "10 + 4 = 6"
+      "8 + 8 - 3",
+      "8 + 1 + 4",
+      "8 + 5 + 10",
+      "8 + 2 + 3"
     ],
-    "correct_index": 2,
+    "correct_index": 3,
     "explanations": [
-      "6 minus 10 does not equal 4; it would go below zero.",
-      "4 + 6 equals 10, not 11.",
-      "It uses the same three numbers and is a related subtraction fact.",
-      "Adding 10 and 4 makes 14, not 6."
+      "This uses subtraction and does not show making 10 from 8 + 5.",
+      "8 + 1 makes 9, not 10, so it does not make a ten first.",
+      "Adding 10 changes the problem; you should only split the 5.",
+      "Break 5 into 2 and 3 so 8 + 2 makes 10, then add 3."
     ],
     "tags": [
-      "fact_families_add_sub"
+      "make_ten_strategy"
     ]
   }
 ]

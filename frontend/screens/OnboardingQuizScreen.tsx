@@ -4,6 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { CancelXButton } from "@/components/CancelXButton";
 import { Button } from "@/components/Button";
 import type { OnboardingParamList } from "@/navigation/OnboardingNavigator";
 import { Spacing, Typography, BorderRadius } from "@/constants/theme";
@@ -19,6 +20,16 @@ export default function OnboardingQuizScreen() {
   const navigation = useNavigation<QuizScreenNavigationProp>();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+
+  const handleCancel = () => {
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.reset({ index: 0, routes: [{ name: "ChildSelect" as never }] });
+      return;
+    }
+
+    navigation.navigate("ChildSelect" as never);
+  };
 
   // ✅ store selected interest UUIDs
   const [selectedIds, setSelectedIds] = useState<UUID[]>([]);
@@ -62,6 +73,7 @@ export default function OnboardingQuizScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <CancelXButton onPress={handleCancel} />
       <View
         style={[
           styles.header,

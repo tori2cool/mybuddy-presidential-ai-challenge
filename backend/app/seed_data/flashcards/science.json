@@ -8,16 +8,16 @@
     ],
     "question": "Which of these is a living thing?",
     "choices": [
-      "Chair",
-      "Dog",
       "Rock",
+      "Dog",
+      "Chair",
       "Shoe"
     ],
     "correct_index": 1,
     "explanations": [
-      "Chairs do not grow or breathe.",
-      "Correct! A dog is a living thing.",
       "Rocks are not alive.",
+      "Correct! A dog is a living thing.",
+      "Chairs do not grow or breathe.",
       "Shoes are not alive."
     ]
   },
@@ -30,15 +30,15 @@
     ],
     "question": "What do plants need to grow?",
     "choices": [
-      "Only darkness",
       "Candy and toys",
+      "Only darkness",
       "Loud music",
       "Sunlight and water"
     ],
     "correct_index": 3,
     "explanations": [
-      "Plants do not grow without light.",
       "Candy and toys do not help plants grow.",
+      "Plants do not grow without light.",
       "Noise does not help plants grow.",
       "Correct! Plants need sunlight and water to grow."
     ]
@@ -52,17 +52,17 @@
     ],
     "question": "Which state of matter has a definite shape and volume?",
     "choices": [
-      "Gas",
-      "Solid",
       "Liquid",
-      "Energy"
+      "Energy",
+      "Gas",
+      "Solid"
     ],
-    "correct_index": 1,
+    "correct_index": 3,
     "explanations": [
-      "Gases change both shape and volume.",
-      "Correct! Solids keep their shape and volume.",
       "Liquids change shape but keep volume.",
-      "Energy is not a state of matter."
+      "Energy is not a state of matter.",
+      "Gases change both shape and volume.",
+      "Correct! Solids keep their shape and volume."
     ]
   },
   {
@@ -74,15 +74,15 @@
     ],
     "question": "What is the basic unit of life?",
     "choices": [
-      "Atom",
       "Organ",
+      "Atom",
       "Cell",
       "Tissue"
     ],
     "correct_index": 2,
     "explanations": [
-      "Atoms make up matter, but not life on their own.",
       "Organs are made of many cells.",
+      "Atoms make up matter, but not life on their own.",
       "Correct! Cells are the basic unit of life.",
       "Tissues are groups of cells."
     ]
@@ -97,15 +97,15 @@
     "question": "What happens to atoms during a chemical reaction?",
     "choices": [
       "They change into protons",
-      "They disappear",
       "They are rearranged to form new substances",
+      "They disappear",
       "They turn into energy"
     ],
-    "correct_index": 2,
+    "correct_index": 1,
     "explanations": [
       "Atoms do not turn into protons in chemical reactions.",
-      "Atoms are conserved and do not disappear.",
       "Correct! Atoms are rearranged to form new substances.",
+      "Atoms are conserved and do not disappear.",
       "Energy may be involved, but atoms remain."
     ]
   },
@@ -113,19 +113,19 @@
     "subject": "Science",
     "age_range": "Preschool",
     "difficulty": "easy",
-    "question": "Which is something most animals need every day?",
+    "question": "What does a pet dog need every day?",
     "choices": [
-      "Sticker",
-      "Water",
-      "Toy",
-      "Hat"
+      "A toy car",
+      "Water to drink",
+      "A pillow fort",
+      "A shiny coin"
     ],
     "correct_index": 1,
     "explanations": [
-      "A sticker is for decorating, not for living.",
+      "Toys are fun, but they are not a basic need.",
       "Animals need water to live and stay healthy.",
-      "A toy can be fun, but it is not a need.",
-      "A hat can keep you warm, but animals do not need hats."
+      "A fort can be cozy, but it is not a daily need.",
+      "A coin is not something a dog needs to live."
     ],
     "tags": [
       "basic_needs_of_animals"
@@ -135,41 +135,41 @@
     "subject": "Science",
     "age_range": "Preschool",
     "difficulty": "easy",
-    "question": "Opening a drawer is a what kind of force?",
+    "question": "What pulls things down to the ground?",
     "choices": [
-      "Spin",
-      "Float",
-      "Pull",
-      "Push"
+      "Wind",
+      "Gravity",
+      "Sunlight",
+      "Sound"
     ],
-    "correct_index": 2,
+    "correct_index": 1,
     "explanations": [
-      "Spinning turns something around, like a top.",
-      "Floating happens in water or air, not from your hands.",
-      "You pull the drawer toward you to open it.",
-      "A push moves something away from you, like closing the drawer."
+      "Wind is moving air that can push, not pull down.",
+      "Gravity is a pull that brings things toward Earth.",
+      "Sunlight helps you see, but it does not pull objects down.",
+      "Sound is something you hear, not a pulling force."
     ],
     "tags": [
-      "push_and_pull"
+      "gravity_makes_things_fall"
     ]
   },
   {
     "subject": "Science",
     "age_range": "Preschool",
     "difficulty": "easy",
-    "question": "When water falls from clouds, the weather is what?",
+    "question": "What weather do you see when drops fall from clouds?",
     "choices": [
-      "Windy",
-      "Cloudy",
       "Sunny",
-      "Rainy"
+      "Windy",
+      "Rainy",
+      "Snowy"
     ],
-    "correct_index": 3,
+    "correct_index": 2,
     "explanations": [
-      "Windy means air is moving a lot.",
-      "Cloudy means many clouds, even if no rain falls.",
-      "Sunny means lots of sunlight in the sky.",
-      "Rain is water falling from clouds."
+      "Sunny weather has lots of bright sunlight.",
+      "Windy weather means you feel air moving.",
+      "Rainy weather has raindrops falling from clouds.",
+      "Snowy weather has snowflakes falling, not raindrops."
     ],
     "tags": [
       "weather_types"
@@ -179,132 +179,44 @@
     "subject": "Science",
     "age_range": "Preschool",
     "difficulty": "easy",
-    "question": "Ice feels what temperature?",
+    "question": "Which object is most likely to float in water?",
     "choices": [
-      "Warm",
-      "Cold",
-      "Spicy",
-      "Hot"
+      "A rock",
+      "A piece of wood",
+      "A glass marble",
+      "A metal spoon"
     ],
     "correct_index": 1,
     "explanations": [
-      "Warm is not as cold as ice and not as hot as soup.",
-      "Ice is cold because it is frozen water.",
-      "Spicy is a taste, not a temperature.",
-      "Hot is a high temperature, like soup on the stove."
+      "Many rocks sink to the bottom in water.",
+      "Wood often floats on top of water.",
+      "A marble is solid and usually sinks in water.",
+      "A spoon usually sinks because it is metal and dense."
     ],
     "tags": [
-      "hot_and_cold_temperature"
-    ]
-  },
-  {
-    "subject": "Science",
-    "age_range": "Early Elementary",
-    "difficulty": "easy",
-    "question": "What happens to ice when it is warmed?",
-    "choices": [
-      "It changes into smoke",
-      "It becomes a rock",
-      "It turns into sand",
-      "It melts into liquid water"
-    ],
-    "correct_index": 3,
-    "explanations": [
-      "Smoke comes from burning, not from warming ice.",
-      "Rocks do not form from warming ice in everyday life.",
-      "Sand is tiny rock pieces, not what ice becomes when warmed.",
-      "Warming can cause melting, so ice changes from a solid to a liquid."
-    ],
-    "tags": [
-      "melting_and_freezing"
-    ]
-  },
-  {
-    "subject": "Science",
-    "age_range": "Early Elementary",
-    "difficulty": "easy",
-    "question": "What makes a dropped ball fall to the ground?",
-    "choices": [
-      "Wind",
-      "Gravity",
-      "Sunlight",
-      "Sound"
-    ],
-    "correct_index": 1,
-    "explanations": [
-      "Wind can push things sideways, but it does not cause falling.",
-      "Gravity is a force that pulls objects down toward Earth.",
-      "Sunlight is light energy and does not pull objects downward.",
-      "Sound is made by vibrations and does not make objects fall."
-    ],
-    "tags": [
-      "gravity_everyday"
-    ]
-  },
-  {
-    "subject": "Science",
-    "age_range": "Early Elementary",
-    "difficulty": "easy",
-    "question": "Which state of matter keeps its own shape?",
-    "choices": [
-      "Gas",
-      "Mist",
-      "Liquid",
-      "Solid"
-    ],
-    "correct_index": 3,
-    "explanations": [
-      "A gas spreads out to fill the space it is in, like air.",
-      "Mist is tiny liquid droplets in air, not a main state of matter.",
-      "A liquid takes the shape of its container, like water in a cup.",
-      "A solid keeps its shape, like a block or a toy."
-    ],
-    "tags": [
-      "states_of_matter_basic"
-    ]
-  },
-  {
-    "subject": "Science",
-    "age_range": "Early Elementary",
-    "difficulty": "easy",
-    "question": "Which body part helps a duck swim?",
-    "choices": [
-      "Long whiskers",
-      "Big ears",
-      "Sharp claws",
-      "Webbed feet"
-    ],
-    "correct_index": 3,
-    "explanations": [
-      "Whiskers help some animals feel things, not swim better.",
-      "Big ears can help with hearing, not moving through water.",
-      "Sharp claws can help grip, but they are not for swimming like paddles.",
-      "Webbed feet act like paddles to push against water."
-    ],
-    "tags": [
-      "adaptations_basic"
+      "sink_or_float_in_water"
     ]
   },
   {
     "subject": "Science",
     "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "Which organelle contains most of a cell's DNA?",
+    "question": "In a plant cell, which structure provides extra support and shape?",
     "choices": [
+      "Cytoplasm",
+      "Cell wall",
       "Cell membrane",
-      "Mitochondria",
-      "Nucleus",
-      "Ribosome"
+      "Nucleus"
     ],
-    "correct_index": 2,
+    "correct_index": 1,
     "explanations": [
-      "The cell membrane controls what enters and leaves the cell.",
-      "Mitochondria release energy from food; they are not the main DNA holder.",
-      "The nucleus stores most DNA and helps control cell activities.",
-      "Ribosomes build proteins using instructions, but they don’t store most DNA."
+      "Cytoplasm is the jelly-like fluid inside the cell, not a rigid support layer.",
+      "Correct: the cell wall is a stiff outer layer that helps a plant cell keep its shape.",
+      "The cell membrane is flexible and controls what enters and leaves the cell.",
+      "The nucleus holds DNA and directs cell activities, but it does not provide outer support."
     ],
     "tags": [
-      "nucleus_role"
+      "cell_wall_in_plants"
     ]
   },
   {
@@ -313,17 +225,17 @@
     "difficulty": "easy",
     "question": "Which sequence shows levels of organization from smallest to largest?",
     "choices": [
-      "organ system → organ → tissue → cell",
-      "cell → tissue → organ → organ system",
-      "cell → organ → tissue → organ system",
-      "tissue → cell → organ → organ system"
+      "Organ systems, organs, tissues, cells",
+      "Cells, tissues, organs, organ systems",
+      "Cells, organs, tissues, organ systems",
+      "Tissues, cells, organs, organ systems"
     ],
     "correct_index": 1,
     "explanations": [
-      "This lists largest to smallest, not smallest to largest.",
-      "Cells group to form tissues, tissues form organs, and organs form organ systems.",
-      "Organs are made of tissues, so tissue must come before organ.",
-      "Tissues are made of cells, so tissue cannot come before cell."
+      "This lists the levels from largest to smallest, not smallest to largest.",
+      "Correct: cells group into tissues, tissues build organs, and organs work in organ systems.",
+      "Organs are made of tissues, so tissues must come before organs.",
+      "Tissues are made of cells, so tissues cannot come before cells."
     ],
     "tags": [
       "levels_of_organization"
@@ -333,220 +245,308 @@
     "subject": "Science",
     "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "A book resting on a high shelf has mostly which type of energy?",
+    "question": "In which state of matter are particles farthest apart and moving fastest?",
     "choices": [
-      "Thermal energy",
-      "Kinetic energy",
-      "Sound energy",
-      "Potential energy"
+      "Liquid",
+      "Solid",
+      "Gas",
+      "Plasma"
     ],
-    "correct_index": 3,
+    "correct_index": 2,
     "explanations": [
-      "Thermal energy relates to temperature, not mainly to height.",
-      "Kinetic energy is energy of motion, and the book is not moving.",
-      "Sound energy comes from vibrations, and the book is not vibrating loudly.",
-      "Its height gives it stored gravitational potential energy."
+      "Liquid particles are close together and slide past each other, not far apart.",
+      "Solid particles are tightly packed and mainly vibrate in place.",
+      "Correct: gas particles are spread out and move freely in all directions.",
+      "Plasma is a special high-energy state, but this course usually compares solid, liquid, and gas."
     ],
     "tags": [
-      "potential_vs_kinetic_energy"
+      "states_of_matter_particle_motion"
     ]
   },
   {
     "subject": "Science",
     "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "What term describes particles moving from high concentration to low concentration?",
+    "question": "Which example shows mutualism?",
     "choices": [
+      "A tick feeds on a dog's blood",
+      "A lion hunts and eats a zebra",
+      "Mold grows on old bread",
+      "Bees pollinate flowers while getting nectar"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "A tick benefits while the dog is harmed, which is parasitism.",
+      "Predation is not a long-term close partnership between species.",
+      "Mold breaks down bread; it benefits, but the bread does not benefit.",
+      "Correct: the bee gets food and the flower gets pollinated, so both benefit."
+    ],
+    "tags": [
+      "symbiosis_mutualism"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "Why do shoes have treads on the bottom?",
+    "choices": [
+      "To make shoes weigh more",
+      "To increase grip and reduce slipping",
+      "To make your feet grow faster",
+      "To cool your feet by letting air in"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "Extra weight is not the purpose; treads are shaped to prevent slipping.",
+      "Treads make more friction, a force that helps you grip the ground.",
+      "Feet grow because of your body, not because of shoe bottoms.",
+      "Cooling might feel nice, but treads are mainly for traction, not airflow."
+    ],
+    "tags": [
+      "friction_everyday_effects"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "About how long does it take for the Moon to go through its phases?",
+    "choices": [
+      "About 365 days",
+      "About 29 days",
+      "About 7 days",
+      "About 24 hours"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "A year is much longer than the Moon’s phase cycle.",
+      "The Moon’s phases repeat in a cycle of about a month, around 29 days.",
+      "A week is only part of the cycle, not the whole set of phases.",
+      "A day is too short; the Moon’s look changes over many nights."
+    ],
+    "tags": [
+      "moon_phases_basic_pattern"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "An apple falls from a tree because of what force?",
+    "choices": [
+      "Magnetism",
+      "Friction",
+      "Gravity",
+      "Electric current"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "Magnetism pulls certain metals, but it doesn’t cause apples to fall.",
+      "Friction resists motion between surfaces; it doesn’t pull things downward.",
+      "Gravity is a force that pulls objects toward Earth’s surface.",
+      "Electric current is moving electricity in a circuit, not a pulling force."
+    ],
+    "tags": [
+      "gravity_falling_objects"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "A habitat is best described as an organism’s what?",
+    "choices": [
+      "Weather report for the week",
+      "Home where it gets what it needs",
+      "Favorite food on a menu",
+      "Body parts and organs"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "Weather can affect habitats, but a habitat is more than a forecast.",
+      "A habitat is the place an organism lives and finds food, water, shelter, and space.",
+      "Food is part of a habitat, but a habitat is the whole living place.",
+      "Body parts are part of the organism, not the place it lives."
+    ],
+    "tags": [
+      "ecosystems_habitat_definition"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "Which sequence correctly describes how genetic information becomes a protein?",
+    "choices": [
+      "DNA → protein → mRNA",
+      "mRNA → DNA → protein",
+      "Protein → mRNA → DNA",
+      "DNA → mRNA → protein"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "Proteins are built using mRNA; protein is not made before mRNA.",
+      "mRNA is made from DNA, not the other way around in normal cells.",
+      "DNA stores genetic info; proteins don’t get turned back into DNA.",
+      "Transcription makes mRNA from DNA, then translation makes a protein."
+    ],
+    "tags": [
+      "protein_synthesis_dna_to_rna_to_protein"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "For a wave traveling at constant speed, if frequency increases, what happens to wavelength?",
+    "choices": [
+      "Wavelength increases",
+      "Wavelength decreases",
+      "Wavelength stays the same",
+      "Wavelength becomes zero"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "If wavelength increased too, speed would have to increase as well.",
+      "With v = fλ and v constant, higher f means smaller λ.",
+      "Keeping λ the same while f rises would change the wave speed.",
+      "A wavelength of zero would mean no repeating wave pattern."
+    ],
+    "tags": [
+      "waves_frequency_wavelength_speed"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "Water vapor cools and forms clouds. Which process is this?",
+    "choices": [
+      "Precipitation",
       "Condensation",
-      "Freezing",
       "Evaporation",
-      "Diffusion"
+      "Transpiration"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "Precipitation is water falling from clouds, not cloud formation.",
+      "Condensation changes water vapor into tiny liquid droplets in clouds.",
+      "Evaporation changes liquid water into water vapor, the opposite direction.",
+      "Transpiration is water vapor released from plant leaves."
+    ],
+    "tags": [
+      "water_cycle_processes"
+    ]
+  },
+  {
+    "subject": "Science",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "In the equation 2H2 + O2 → 2H2O, which substances are the reactants?",
+    "choices": [
+      "H2O and O2",
+      "H2O only",
+      "2H2O",
+      "H2 and O2"
     ],
     "correct_index": 3,
     "explanations": [
-      "Condensation is gas changing into liquid, like water on a cold cup.",
-      "Freezing is liquid changing into a solid.",
-      "Evaporation is liquid changing into gas at the surface.",
-      "Diffusion spreads particles out from crowded areas to less crowded areas."
+      "O2 is a reactant, but H2O is not a reactant in this equation.",
+      "H2O is the product formed, shown on the right side.",
+      "2H2O is the amount of product made, not the starting substances.",
+      "Reactants are on the left side: hydrogen gas and oxygen gas."
     ],
     "tags": [
-      "diffusion_definition"
+      "chemical_reactions_reactants_products"
     ]
   },
   {
     "subject": "Science",
-    "age_range": "High School",
+    "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "In a heterozygous genotype, the expressed trait is usually controlled by which allele?",
+    "question": "When ice warms up, what change happens?",
     "choices": [
-      "The recessive allele",
-      "Both alleles equally",
-      "The dominant allele",
-      "A random allele each time"
+      "It turns into a gas right away",
+      "It melts into liquid water",
+      "It becomes a rock",
+      "It freezes into solid ice"
     ],
-    "correct_index": 2,
+    "correct_index": 1,
     "explanations": [
-      "A recessive trait usually shows only when both alleles are recessive.",
-      "Equal expression describes codominance or incomplete dominance, not simple dominance.",
-      "In simple dominance, the dominant allele masks the recessive in a heterozygote.",
-      "Allele expression follows inheritance rules, not random switching."
+      "Ice can become gas, but it usually melts into liquid first.",
+      "Melting is when a solid, like ice, turns into a liquid.",
+      "Warming ice does not change it into rock.",
+      "Freezing happens when a liquid cools and becomes a solid."
     ],
     "tags": [
-      "mendel_dominant_recessive"
+      "melting_and_freezing"
     ]
   },
   {
     "subject": "Science",
-    "age_range": "High School",
+    "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "Which electromagnetic wave has a longer wavelength than visible light?",
+    "question": "Which action is a pull?",
     "choices": [
-      "Gamma rays",
-      "X-rays",
-      "Ultraviolet",
-      "Infrared"
+      "Shoving a box away",
+      "Kicking a ball across the yard",
+      "Pushing a door open",
+      "Pulling a wagon toward you"
     ],
     "correct_index": 3,
     "explanations": [
-      "Gamma rays have the shortest wavelengths in the spectrum.",
-      "X-rays have much shorter wavelengths than visible light.",
-      "Ultraviolet has shorter wavelengths than visible light.",
-      "Infrared is just below visible light and has longer wavelengths."
+      "Shoving sends the box away, which is a push.",
+      "Kicking makes the ball move away from you, so it is a push.",
+      "Pushing a door moves it away from your body.",
+      "A pull moves something toward you, like bringing a wagon closer."
     ],
     "tags": [
-      "electromagnetic_spectrum_order"
+      "pushes_and_pulls"
     ]
   },
   {
     "subject": "Science",
-    "age_range": "High School",
+    "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "Which particle has a positive charge and is found in the nucleus?",
+    "question": "Which state of matter keeps its own shape?",
     "choices": [
-      "Electron",
-      "Neutron",
-      "Proton",
-      "Photon"
+      "Gas",
+      "Steam",
+      "Liquid",
+      "Solid"
     ],
-    "correct_index": 2,
+    "correct_index": 3,
     "explanations": [
-      "Electrons are negatively charged and found outside the nucleus.",
-      "Neutrons are in the nucleus but have no charge.",
-      "Protons are positively charged and located in the nucleus.",
-      "Photons are light particles, not parts of an atom’s nucleus."
+      "A gas spreads out to fill the space it is in, like air.",
+      "Steam is water as a gas, so it does not keep a shape.",
+      "A liquid takes the shape of its container, like water in a cup.",
+      "A solid has its own shape, like a block or a toy."
     ],
     "tags": [
-      "atom_structure_protons_neutrons_electrons"
+      "states_of_matter_basic"
     ]
   },
   {
     "subject": "Science",
-    "age_range": "High School",
+    "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "In a closed container, the total mass before and after a chemical reaction is how changed?",
+    "question": "Grass is eaten by a rabbit. The rabbit is eaten by a fox. Which is the producer?",
     "choices": [
-      "It becomes zero",
-      "It stays the same",
-      "It always increases",
-      "It always decreases"
+      "Fox",
+      "Grass",
+      "Sun",
+      "Rabbit"
     ],
     "correct_index": 1,
     "explanations": [
-      "Mass does not vanish during a reaction; matter remains present.",
-      "In a closed system, atoms are rearranged but not created or destroyed, so mass is conserved.",
-      "Mass doesn’t increase in a closed container because no extra matter enters.",
-      "Mass doesn’t decrease in a closed container because no matter escapes."
+      "A fox is a consumer because it eats other animals.",
+      "Plants like grass are producers because they make their own food.",
+      "The Sun gives energy, but it is not a producer in a food chain.",
+      "A rabbit is a consumer because it eats plants for energy."
     ],
     "tags": [
-      "conservation_of_mass_chemical_reactions"
-    ]
-  },
-  {
-    "subject": "Science",
-    "age_range": "Upper Elementary",
-    "difficulty": "easy",
-    "question": "Which tool measures temperature?",
-    "choices": [
-      "Wind vane",
-      "Thermometer",
-      "Rain gauge",
-      "Barometer"
-    ],
-    "correct_index": 1,
-    "explanations": [
-      "A wind vane shows wind direction, not temperature.",
-      "A thermometer measures temperature, how hot or cold something is.",
-      "A rain gauge measures how much rain falls, not temperature.",
-      "A barometer measures air pressure, not temperature."
-    ],
-    "tags": [
-      "simple_weather_instruments"
-    ]
-  },
-  {
-    "subject": "Science",
-    "age_range": "Upper Elementary",
-    "difficulty": "easy",
-    "question": "A seesaw is an example of a what simple machine?",
-    "choices": [
-      "Pulley",
-      "Lever",
-      "Wedge",
-      "Screw"
-    ],
-    "correct_index": 1,
-    "explanations": [
-      "A pulley uses a wheel and rope to lift, not a seesaw.",
-      "A lever is a bar that pivots on a fulcrum, like a seesaw.",
-      "A wedge is used to split or cut, like an axe blade.",
-      "A screw is an inclined plane wrapped around, like a jar lid thread."
-    ],
-    "tags": [
-      "simple_machines_lever"
-    ]
-  },
-  {
-    "subject": "Science",
-    "age_range": "Upper Elementary",
-    "difficulty": "easy",
-    "question": "Which sequence lists Earth’s layers from outside to inside?",
-    "choices": [
-      "Mantle, crust, inner core, outer core",
-      "Crust, mantle, outer core, inner core",
-      "Crust, outer core, mantle, inner core",
-      "Outer core, inner core, mantle, crust"
-    ],
-    "correct_index": 1,
-    "explanations": [
-      "The crust is the outside layer, so it cannot come after the mantle.",
-      "Earth goes from crust to mantle, then outer core, then inner core.",
-      "The mantle is between crust and core, so it cannot be after outer core.",
-      "The crust is the outermost layer, so it cannot be listed last."
-    ],
-    "tags": [
-      "earth_layers_crust_mantle_core"
-    ]
-  },
-  {
-    "subject": "Science",
-    "age_range": "Upper Elementary",
-    "difficulty": "easy",
-    "question": "Breathing in brings which gas into the lungs?",
-    "choices": [
-      "Helium",
-      "Smoke",
-      "Oxygen",
-      "Carbon dioxide"
-    ],
-    "correct_index": 2,
-    "explanations": [
-      "Helium is not needed for breathing and is not in most air.",
-      "Smoke is not a gas your body needs and can harm lungs.",
-      "Oxygen is the gas your body needs to help get energy from food.",
-      "Carbon dioxide is a waste gas the body breathes out more of."
-    ],
-    "tags": [
-      "human_body_respiratory_system_basic"
+      "food_chains_simple"
     ]
   }
 ]
