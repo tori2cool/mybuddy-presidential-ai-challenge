@@ -1,7 +1,7 @@
 [
   { "label": "Make my bed", "icon": "home", "is_extra": false, "tags": ["space"], "age_range": "Preschool" },
   { "label": "Put away clothes", "icon": "user", "is_extra": false, "tags": ["organization"], "age_range": "Preschool" },
-  { "label": "Clean my room", "icon": "trash-2", "is_extra": false, "tags": ["responsibility"], "age_range": "Preschool" },
+  { "label": "Pick up toys in my room", "icon": "trash-2", "is_extra": false, "tags": ["responsibility"], "age_range": "Preschool" },
 
   { "label": "Organize my backpack", "icon": "package", "is_extra": false, "tags": ["organization"], "age_range": "Early Elementary" },
   { "label": "Feed the pets", "icon": "heart", "is_extra": false, "tags": ["responsibility"], "age_range": "Early Elementary" },
@@ -9,15 +9,21 @@
   { "label": "Water the plants", "icon": "droplet", "is_extra": false, "tags": ["nature"], "age_range": "Early Elementary" },
   { "label": "Empty small trash cans", "icon": "trash-2", "is_extra": false, "tags": ["responsibility"], "age_range": "Early Elementary" },
 
-  { "label": "Do the dishes", "icon": "coffee", "is_extra": false, "tags": ["responsibility"], "age_range": "Late Elementary" },
-  { "label": "Walk the dog", "icon": "activity", "is_extra": false, "tags": ["pets"], "age_range": "Late Elementary" },
-  { "label": "Vacuum living room", "icon": "wind", "is_extra": false, "tags": ["responsibility"], "age_range": "Late Elementary" },
-  { "label": "Fold laundry", "icon": "list", "is_extra": false, "tags": ["responsibility"], "age_range": "Late Elementary" },
-  { "label": "Clean bathroom sink", "icon": "droplets", "is_extra": false, "tags": ["cleaning"], "age_range": "Late Elementary" },
+  { "label": "Do the dishes", "icon": "coffee", "is_extra": false, "tags": ["responsibility"], "age_range": "Upper Elementary" },
+  { "label": "Walk the dog with permission", "icon": "activity", "is_extra": false, "tags": ["pets"], "age_range": "Upper Elementary" },
+  { "label": "Vacuum the living room", "icon": "wind", "is_extra": false, "tags": ["responsibility"], "age_range": "Upper Elementary" },
+  { "label": "Fold and put away laundry", "icon": "list", "is_extra": false, "tags": ["responsibility"], "age_range": "Upper Elementary" },
+  { "label": "Clean the bathroom sink", "icon": "droplets", "is_extra": false, "tags": ["cleaning"], "age_range": "Upper Elementary" },
 
-  { "label": "Mow the lawn", "icon": "scissors", "is_extra": false, "tags": ["responsibility"], "age_range": "Teen" },
-  { "label": "Wash the car", "icon": "truck", "is_extra": false, "tags": ["responsibility"], "age_range": "Teen" },
-  { "label": "Cook a meal", "icon": "clock", "is_extra": false, "tags": ["responsibility"], "age_range": "Teen" },
-  { "label": "Clean the garage", "icon": "tool", "is_extra": false, "tags": ["responsibility"], "age_range": "Teen" },
-  { "label": "Do laundry", "icon": "rotate-ccw", "is_extra": false, "tags": ["responsibility"], "age_range": "Teen" }
+  { "label": "Help with laundry", "icon": "rotate-ccw", "is_extra": false, "tags": ["responsibility"], "age_range": "Middle School" },
+  { "label": "Wash the car with supervision", "icon": "truck", "is_extra": false, "tags": ["responsibility"], "age_range": "Middle School" },
+  { "label": "Clean shared spaces", "icon": "tool", "is_extra": false, "tags": ["responsibility"], "age_range": "Middle School" },
+  { "label": "Prepare a simple meal", "icon": "clock", "is_extra": false, "tags": ["responsibility"], "age_range": "Middle School" },
+  { "label": "Take out the trash", "icon": "trash-2", "is_extra": false, "tags": ["responsibility"], "age_range": "Middle School" },
+
+  { "label": "Do my own laundry", "icon": "rotate-ccw", "is_extra": false, "tags": ["responsibility"], "age_range": "High School" },
+  { "label": "Cook a full meal", "icon": "clock", "is_extra": false, "tags": ["responsibility"], "age_range": "High School" },
+  { "label": "Mow the lawn", "icon": "scissors", "is_extra": false, "tags": ["responsibility"], "age_range": "High School" },
+  { "label": "Wash the car", "icon": "truck", "is_extra": false, "tags": ["responsibility"], "age_range": "High School" },
+  { "label": "Clean and organize the garage", "icon": "tool", "is_extra": false, "tags": ["responsibility"], "age_range": "High School" }
 ]

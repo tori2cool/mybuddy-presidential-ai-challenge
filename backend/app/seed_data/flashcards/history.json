@@ -4,329 +4,441 @@
     "age_range": "Early Elementary",
     "difficulty": "easy",
     "tags": [
-      "horseback"
+      "daily_life"
     ],
-    "question": "Before cars, many people traveled on horseback 🏇. What animal did they ride?",
+    "question": "Long ago, people did not have cars. How did many people travel instead?",
     "choices": [
-      "Horse",
-      "Dog",
-      "Cat",
-      "Fish"
+      "By airplane",
+      "By submarine",
+      "On horseback",
+      "By rocket"
     ],
-    "correct_index": 0,
+    "correct_index": 2,
     "explanations": [
-      "Correct! People rode a horse 🏇.",
-      "Dogs don’t carry people for travel like horses do.",
-      "Cats are too small to ride.",
-      "Fish live in water and can’t be ridden."
+      "Airplanes did not exist yet.",
+      "Submarines travel underwater, not on land.",
+      "Correct! People often traveled on horseback long ago.",
+      "Rockets are used for space travel, not everyday travel."
     ]
   },
   {
     "subject": "History",
-    "age_range": "Late Elementary",
+    "age_range": "Upper Elementary",
     "difficulty": "easy",
     "tags": [
-      "auto"
+      "ancient_civilizations"
     ],
-    "question": "The Underground Railroad helped people escape from slavery. What was its main purpose?",
+    "question": "Why did many ancient civilizations build cities near rivers?",
     "choices": [
-      "To help enslaved people escape to freedom",
-      "To build train tracks across the country",
-      "To teach people how to drive trains",
-      "To move goods faster for factories"
+      "Rivers kept cities hidden",
+      "Rivers provided water and fertile land",
+      "Rivers stopped all enemies",
+      "Rivers were fun places to swim"
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "Correct! It was a secret network to help enslaved people reach freedom.",
-      "It wasn’t a real railroad with tracks and trains.",
-      "It wasn’t a school for train drivers.",
-      "Its purpose was helping people escape, not shipping factory goods."
+      "Rivers did not hide cities.",
+      "Correct! Rivers gave fresh water and helped crops grow.",
+      "Rivers alone could not stop enemies.",
+      "Swimming was not the main reason cities formed."
     ]
   },
   {
     "subject": "History",
-    "age_range": "Teen",
+    "age_range": "Middle School",
     "difficulty": "easy",
     "tags": [
-      "auto"
+      "government",
+      "middle_ages"
     ],
-    "question": "What is the Bill of Rights?",
+    "question": "What was feudalism during the Middle Ages?",
     "choices": [
-      "The first 10 amendments to the U.S. Constitution",
-      "The rules for becoming a U.S. president",
-      "A list of all U.S. states in order",
-      "A plan for building the first railroad"
+      "A system of voting for kings",
+      "A system where land was exchanged for loyalty and service",
+      "A method of long-distance trade",
+      "A type of medieval religion"
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "Correct! The Bill of Rights is the first 10 amendments to the Constitution.",
-      "That’s about elections and government roles, not the Bill of Rights.",
-      "That’s geography, not constitutional rights.",
-      "That’s transportation history, not constitutional rights."
+      "Kings were not elected through voting.",
+      "Correct! Feudalism was based on land, loyalty, and service.",
+      "Trade existed, but feudalism was about land and power.",
+      "Feudalism was a social system, not a religion."
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "tags": [
+      "government",
+      "us_history"
+    ],
+    "question": "What is the main purpose of the Bill of Rights?",
+    "choices": [
+      "To explain how presidents are elected",
+      "To describe how laws are enforced",
+      "To protect individual freedoms from government power",
+      "To list all U.S. states"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "Elections are explained elsewhere in the Constitution.",
+      "Law enforcement is not its main focus.",
+      "Correct! The Bill of Rights protects individual freedoms.",
+      "States are not listed in the Bill of Rights."
     ]
   },
   {
     "subject": "History",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "Who was the first President of the United States?",
+    "question": "What does Independence Day celebrate?",
     "choices": [
-      "George Washington",
-      "Abraham Lincoln",
-      "Thomas Jefferson",
-      "Benjamin Franklin"
-    ],
-    "correct_index": 0,
-    "explanations": [
-      "Correct—George Washington was chosen as the first U.S. President.",
-      "Abraham Lincoln was president later, during the Civil War.",
-      "Thomas Jefferson was the third U.S. President, not the first.",
-      "Benjamin Franklin helped the country get started, but he was not a president."
-    ],
-    "tags": [
-      "auto"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "Early Elementary",
-    "difficulty": "easy",
-    "question": "What is a word that means “a very old time long ago”?",
-    "choices": [
-      "History",
-      "Homework",
-      "Future",
-      "Weather"
-    ],
-    "correct_index": 0,
-    "explanations": [
-      "Correct—history is about what happened long ago.",
-      "Homework is school work you do at home, not the past.",
-      "The future is time that has not happened yet.",
-      "Weather describes what the sky is like, not events long ago."
-    ],
-    "tags": [
-      "auto"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "Early Elementary",
-    "difficulty": "easy",
-    "question": "What did people use to send messages far away before phones and email were common?",
-    "choices": [
-      "Letters",
-      "Televisions",
-      "Microwaves",
-      "Flashlights"
-    ],
-    "correct_index": 0,
-    "explanations": [
-      "Correct—people wrote letters and sent them through the mail.",
-      "Televisions show programs, but they are not used to send personal messages.",
-      "Microwaves heat food, not messages.",
-      "Flashlights help you see in the dark, but they do not deliver messages."
-    ],
-    "tags": [
-      "auto"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "Early Elementary",
-    "difficulty": "easy",
-    "question": "Which job did many people do in early America to grow food for their families and towns?",
-    "choices": [
-      "Farmer",
-      "Astronaut",
-      "Movie actor",
-      "Computer programmer"
-    ],
-    "correct_index": 0,
-    "explanations": [
-      "Correct—farmers grew crops and raised animals so people could eat.",
-      "Astronauts travel to space, which was not a common job in early America.",
-      "Movie actors perform in films, but movies did not exist in early America.",
-      "Computer programmers write code on computers, which did not exist in early America."
-    ],
-    "tags": [
-      "auto"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "Late Elementary",
-    "difficulty": "easy",
-    "question": "What is a main reason historians study primary sources like letters and diaries?",
-    "choices": [
-      "To learn what people thought and experienced at the time",
-      "To find the fastest way to travel in the past",
-      "To make sure every story from the past is exactly the same",
-      "To replace maps so we do not need geography"
-    ],
-    "correct_index": 0,
-    "explanations": [
-      "Primary sources were made by people who lived then, so they give firsthand clues about life and feelings.",
-      "Letters and diaries can mention travel, but their main purpose is not to teach the fastest travel routes.",
-      "Different people describe events differently, and primary sources do not make all stories identical.",
-      "Primary sources do not replace maps; geography and maps are still needed to understand places."
-    ],
-    "tags": [
-      "auto"
-    ]
-  },
-  {
-    "subject": "History",
-    "age_range": "Late Elementary",
-    "difficulty": "easy",
-    "question": "Which event is celebrated on Independence Day in the United States?",
-    "choices": [
-      "The Declaration of Independence was adopted",
       "The first U.S. president was elected",
-      "The Civil War ended",
-      "The Constitution was written"
+      "The U.S. declared independence in 1776",
+      "The Constitution was written",
+      "The Civil War ended"
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "Independence Day marks when the Declaration of Independence was approved in 1776.",
-      "Electing a president is important, but it is not what July 4 celebrates.",
-      "The Civil War ended in 1865, which is a different event and date.",
-      "The Constitution was written in 1787, not the event celebrated on July 4."
+      "That event happened later and is not what July 4 celebrates.",
+      "Correct: July 4 marks when the colonies said they were free from Great Britain.",
+      "The Constitution was written in 1787, and it has its own history.",
+      "The Civil War ended in 1865, not on Independence Day."
     ],
     "tags": [
-      "auto"
+      "national_holidays_history_meaning"
     ]
   },
   {
     "subject": "History",
-    "age_range": "Late Elementary",
+    "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "What was the main job of a medieval knight?",
+    "question": "Which holiday honors people who served in the military?",
     "choices": [
-      "To fight and protect a lord's land",
-      "To teach children in village schools",
-      "To run elections for the kingdom",
-      "To invent new farming machines"
+      "Presidents Day",
+      "Veterans Day",
+      "Memorial Day",
+      "Independence Day"
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "Knights were trained soldiers who served a lord and helped defend people and land.",
-      "Some knights could read, but teaching was not their main role.",
-      "Elections like we have today were not a typical job for knights in medieval times.",
-      "Farming tools changed over time, but inventing machines was not the main duty of knights."
+      "Presidents Day is used to honor U.S. presidents.",
+      "Correct: Veterans Day thanks people who served in the U.S. military.",
+      "Memorial Day remembers soldiers who died while serving.",
+      "Independence Day celebrates the U.S. declaring independence."
     ],
     "tags": [
-      "auto"
+      "national_holidays_history_meaning"
     ]
   },
   {
     "subject": "History",
-    "age_range": "Late Elementary",
+    "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "Why did many early civilizations grow near rivers like the Nile, Tigris, and Euphrates?",
+    "question": "Which is an example of transportation used long ago?",
     "choices": [
-      "Rivers provided water for drinking and farming",
-      "Rivers made summers colder everywhere nearby",
-      "Rivers stopped all enemies from ever attacking",
-      "Rivers made it unnecessary to trade with others"
+      "Electric scooter",
+      "Horse and wagon",
+      "Airplane",
+      "Subway train"
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "Rivers gave fresh water and helped crops grow, which made it easier for cities to develop.",
-      "Rivers can affect local weather a little, but they do not make summers colder everywhere.",
-      "Rivers could be obstacles, but they did not prevent all attacks or wars.",
-      "People still traded for goods they did not have, even if they lived near a river."
+      "Electric scooters are a recent way to travel in some cities.",
+      "Correct: Long ago, people often traveled by horse and wagon.",
+      "Airplanes are modern and were not used long ago.",
+      "Subways are modern city trains, not common long ago."
     ],
     "tags": [
-      "auto"
+      "transportation_then_and_now"
     ]
   },
   {
     "subject": "History",
-    "age_range": "Teen",
+    "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "What was the main purpose of the Magna Carta, signed in 1215?",
+    "question": "How did factories change the way many goods were made?",
     "choices": [
-      "To limit the king’s power by putting some rights into law",
-      "To create the first democratic election for everyone in England",
-      "To end all wars between England and France forever",
-      "To make the king the head of the Christian church"
+      "Only farmers made goods",
+      "Goods were made only one at a time",
+      "Machines helped make goods faster",
+      "People stopped using tools"
     ],
-    "correct_index": 0,
+    "correct_index": 2,
     "explanations": [
-      "Correct: The Magna Carta forced the king to follow certain laws and recognized some rights for nobles.",
-      "Wrong: It did not create voting rights for everyone; broad democracy came much later.",
-      "Wrong: It was about power and law inside England, not a permanent peace treaty with France.",
-      "Wrong: Making the king head of the church is linked to Henry VIII in the 1500s, not 1215."
+      "Farmers grew food, but factories made many other products.",
+      "Factories often made many similar items, not just one at a time.",
+      "Correct: Factory machines could make many items more quickly.",
+      "Factories used many tools and machines, not fewer tools."
     ],
     "tags": [
-      "auto"
+      "industrial_revolution_factories"
     ]
   },
   {
     "subject": "History",
-    "age_range": "Teen",
+    "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "Which event is commonly seen as the start of the French Revolution in 1789?",
+    "question": "What was the Silk Road mainly used for?",
     "choices": [
-      "The storming of the Bastille",
-      "The signing of the Treaty of Versailles",
-      "The crowning of Napoleon as emperor",
-      "The start of the Industrial Revolution"
+      "Sending messages by fast horseback mail",
+      "Trading goods across Asia and beyond",
+      "Moving armies to conquer new lands",
+      "Hosting sports games between empires"
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "Correct: The Bastille’s fall became a powerful symbol of people rising against royal authority.",
-      "Wrong: The Treaty of Versailles was signed in 1919 after World War I, not in 1789.",
-      "Wrong: Napoleon’s coronation happened later (1804) and did not begin the revolution.",
-      "Wrong: Industrialization began earlier in Britain and isn’t the single starting event of the French Revolution."
+      "Some empires had mail systems, but that wasn’t the Silk Road’s main purpose.",
+      "Correct: it was a network of trade routes for exchanging goods.",
+      "Armies traveled, but the routes are best known for trade, not conquest.",
+      "Sports events weren’t the reason these long-distance routes existed."
     ],
     "tags": [
-      "auto"
+      "silk_road_trade_routes"
     ]
   },
   {
     "subject": "History",
-    "age_range": "Teen",
+    "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "What was one main goal of the Underground Railroad in the United States?",
+    "question": "A society with cities, laws, and writing is best described as what?",
     "choices": [
-      "To help enslaved people escape to freedom",
-      "To transport gold quickly between mining towns",
-      "To move soldiers secretly during the Civil War",
-      "To build the first subway system in New York City"
+      "A single family clan",
+      "A civilization",
+      "A temporary camp",
+      "A nomadic band"
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "Correct: It was a network of people and safe places that helped enslaved people reach free states or Canada.",
-      "Wrong: It was not a system for shipping valuables like gold; it focused on human freedom and safety.",
-      "Wrong: While it involved secrecy, its purpose wasn’t moving soldiers; it was aiding escaping enslaved people.",
-      "Wrong: It wasn’t a real railroad or subway; the name was a metaphor for a secret route."
+      "A clan is a small group and doesn’t usually include full city systems.",
+      "Correct: cities, laws, and writing are key features of civilizations.",
+      "Temporary camps are short-term and lack organized government and records.",
+      "Nomadic bands move often and usually don’t build large permanent cities."
     ],
     "tags": [
-      "auto"
+      "ancient_civilization_definition"
     ]
   },
   {
     "subject": "History",
-    "age_range": "Teen",
+    "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "In ancient Rome, what was a republic?",
+    "question": "Which feature is an example of city planning in the Indus Valley?",
     "choices": [
-      "A government where citizens elect representatives to make decisions",
-      "A government ruled by a king who inherits the throne",
-      "A government controlled entirely by priests and temples",
-      "A government where every law is voted on by one emperor"
+      "Roads shaped like circles around temples",
+      "Floating houses on a lake",
+      "Castles built on tall mountains",
+      "Grid-like streets laid out in blocks"
     ],
-    "correct_index": 0,
+    "correct_index": 3,
     "explanations": [
-      "Correct: The Roman Republic used elected officials (like consuls) and representative bodies (like the Senate).",
-      "Wrong: A hereditary king describes a monarchy, not a republic.",
-      "Wrong: Rule by priests is a theocracy, which is not how the Roman Republic was organized.",
-      "Wrong: An emperor is one ruler; the republic was not run by a single emperor voting on laws."
+      "Indus planning focused on grids and drainage, not circular temple roads.",
+      "Indus cities were built on land with planned streets, not floating homes.",
+      "Castles on mountains fit later medieval settings, not Indus city design.",
+      "Correct: many Indus cities used straight streets in a grid pattern."
     ],
     "tags": [
-      "auto"
+      "indus_valley_city_planning"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Middle School",
+    "difficulty": "easy",
+    "question": "What does chronological order mean?",
+    "choices": [
+      "Arranged from biggest to smallest",
+      "Arranged by the first letter",
+      "Arranged from earliest to latest",
+      "Arranged by how important it seems"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "That describes size order, not time order.",
+      "That describes alphabetical order, not a timeline.",
+      "Correct: chronological order follows time from earlier to later.",
+      "Importance is subjective and doesn’t tell the time sequence."
+    ],
+    "tags": [
+      "timeline_chronological_order"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "The Underground Railroad was mainly a network used to do what?",
+    "choices": [
+      "Carry mail between big cities",
+      "Help enslaved people escape to safety",
+      "Bring gold miners to the West",
+      "Move soldiers during the Civil War"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "Mail was delivered by post riders and ships, not this secret network.",
+      "It was a secret system of routes and safe houses to help people escape slavery.",
+      "Gold rush travel was about mining, not escaping slavery.",
+      "It began before the Civil War and was not a military transport system."
+    ],
+    "tags": [
+      "underground_railroad"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "People called \"conductors\" on the Underground Railroad helped by doing what?",
+    "choices": [
+      "Writing new laws in Congress",
+      "Building bridges over rivers",
+      "Guiding people to safe houses",
+      "Selling train tickets at stations"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "Congress makes laws, but conductors were private helpers, not lawmakers.",
+      "Some routes crossed rivers, but conductors were guides, not bridge builders.",
+      "Conductors were helpers who led escaping people along secret routes to safety.",
+      "There were no real trains or tickets; the names were code words."
+    ],
+    "tags": [
+      "underground_railroad"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "One reason European explorers sailed to new places was to find what?",
+    "choices": [
+      "A faster way to grow crops",
+      "A place to hold sports games",
+      "New trade routes to Asia",
+      "A new kind of calendar"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "Farming improvements happened, but sailing was not to speed up crop growth.",
+      "Exploration voyages were mainly about trade, land, and religion, not sports.",
+      "Many explorers searched for sea routes to trade for goods like spices and silk.",
+      "Calendars were studied, but they were not a main reason for ocean voyages."
+    ],
+    "tags": [
+      "age_of_exploration_motives"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "question": "Explorers often wanted to reach Asia to trade for which goods?",
+    "choices": [
+      "Plastic and rubber",
+      "Coal and oil",
+      "Ice and snow",
+      "Spices and silk"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "Plastic did not exist then, and rubber was not the key reason to reach Asia.",
+      "Coal and oil became important later and were not the main early goal.",
+      "Ice and snow were not major trade goals for long sea voyages.",
+      "Spices and silk were valuable trade goods Europeans wanted from Asia."
+    ],
+    "tags": [
+      "age_of_exploration_motives"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "What did the Supreme Court decide in Brown v. Board of Education (1954)?",
+    "choices": [
+      "Segregated public schools were required by law",
+      "Only private schools had to desegregate",
+      "Schools could choose segregation by local vote",
+      "Segregated public schools were unconstitutional"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "This is the opposite of the ruling; the decision struck segregation down.",
+      "Brown focused on public schools, not a rule limited to private schools.",
+      "Local voting did not override the Court’s ruling on equal protection.",
+      "The Court ruled school segregation violated the Constitution."
+    ],
+    "tags": [
+      "civil_rights_movement_brown_v_board"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "What major change is most associated with the Neolithic Revolution?",
+    "choices": [
+      "People invented the printing press",
+      "People started using paper money",
+      "People began farming and herding animals",
+      "People switched from villages to constant travel"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "The printing press came much later, not in the Neolithic period.",
+      "Paper money is a later economic development, not a Neolithic change.",
+      "The key shift was from hunting-gathering to agriculture and domestication.",
+      "Farming usually led to permanent settlements, not nonstop travel."
+    ],
+    "tags": [
+      "neolithic_revolution_basics"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "Which issue helped spark the Protestant Reformation?",
+    "choices": [
+      "A plan to rebuild the Roman Senate",
+      "A new law banning all churches in Europe",
+      "A dispute over who should rule the Ottoman Empire",
+      "The sale of indulgences by the Catholic Church"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "The Reformation was religious, not a project to restore Roman politics.",
+      "The movement did not begin from a Europe-wide ban on churches.",
+      "The Ottoman succession was unrelated to Luther’s religious protests.",
+      "Martin Luther criticized indulgences, helping start the Reformation."
+    ],
+    "tags": [
+      "protestant_reformation_basic_ideas"
+    ]
+  },
+  {
+    "subject": "History",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "Which feature best describes democracy in ancient Athens?",
+    "choices": [
+      "Laws were made only by generals",
+      "Citizens voted directly in an assembly",
+      "All residents voted, including enslaved people",
+      "Citizens elected a king for life"
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "Generals had influence, but assemblies of citizens made key decisions.",
+      "Athens used direct democracy where citizens voted on decisions.",
+      "Voting was limited to free adult male citizens, not all residents.",
+      "Athens did not choose a lifelong king as its main democratic feature."
+    ],
+    "tags": [
+      "greek_democracy_athens"
     ]
   }
 ]

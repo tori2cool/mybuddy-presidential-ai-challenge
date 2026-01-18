@@ -1,354 +1,442 @@
 [
   {
     "subject": "Reading",
-    "age_range": "Preschool",
+    "age_range": "Early Elementary",
     "difficulty": "easy",
     "tags": [
-      "space"
+      "phonics"
     ],
-    "question": "Which word names something you can see in space: star or eat? 🌟",
+    "question": "Which word starts with the same sound as \"cat\"?",
     "choices": [
-      "Star",
-      "Eat",
-      "Jump",
-      "Sleep"
+      "Dog",
+      "Car",
+      "Sun",
+      "Ball"
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "Correct! A star 🌟 is something you can see in space.",
-      "Eat is an action, not something you see in space.",
-      "Jump is an action, not something you see in space.",
-      "Sleep is something you do, not something you see in space."
+      "\"Dog\" starts with a different sound.",
+      "Correct! \"Car\" starts with the same \"c\" sound as \"cat\".",
+      "\"Sun\" starts with a different sound.",
+      "\"Ball\" starts with a different sound."
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Upper Elementary",
+    "difficulty": "easy",
+    "tags": [
+      "comprehension"
+    ],
+    "question": "Why did the character bring an umbrella?",
+    "choices": [
+      "They were going swimming",
+      "It was very hot",
+      "It was raining",
+      "They wanted to play a game"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "Umbrellas are not needed for swimming.",
+      "Umbrellas are not used for heat.",
+      "Correct! The umbrella was used because it was raining.",
+      "The umbrella was not for playing a game."
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "Middle School",
+    "difficulty": "easy",
+    "tags": [
+      "main_idea"
+    ],
+    "question": "What is the main idea of a passage?",
+    "choices": [
+      "Every small detail in the passage",
+      "The last word of the passage",
+      "What the passage is mostly about",
+      "The longest sentence"
+    ],
+    "correct_index": 2,
+    "explanations": [
+      "Details support the main idea but are not the main idea.",
+      "The last word is not the main idea.",
+      "Correct! The main idea tells what the passage is mostly about.",
+      "Length does not determine importance."
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "tags": [
+      "analysis"
+    ],
+    "question": "What does an author’s tone describe?",
+    "choices": [
+      "The number of characters in the story",
+      "The setting of the story",
+      "The length of the text",
+      "The author’s attitude toward the subject"
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "Characters are part of the story, not tone.",
+      "Setting describes where and when the story takes place.",
+      "Length does not describe tone.",
+      "Correct! Tone shows how the author feels about the topic."
     ]
   },
   {
     "subject": "Reading",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "tags": [
-      "trucks"
-    ],
-    "question": "You are making a monster truck poster 🚚 and want to describe it as very big. Which word means almost the same as 'big'?",
+    "question": "Choose the correct word: The kids left ____ backpacks by the door.",
     "choices": [
-      "Large",
-      "Tiny",
-      "Quiet",
-      "Slow"
+      "they're",
+      "theirs",
+      "their",
+      "there"
     ],
-    "correct_index": 0,
+    "correct_index": 2,
     "explanations": [
-      "Correct! Large means big.",
-      "Tiny means very small, the opposite of big.",
-      "Quiet is about sound, not size.",
-      "Slow is about speed, not size."
-    ]
-  },
-  {
-    "subject": "Reading",
-    "age_range": "Teen",
-    "difficulty": "easy",
+      "\"They're\" means \"they are,\" which doesn't fit here.",
+      "\"Theirs\" is a pronoun, but the sentence needs a word before \"backpacks.\"",
+      "\"Their\" shows the backpacks belong to the kids.",
+      "\"There\" tells a place, not who owns something."
+    ],
     "tags": [
-      "sports"
-    ],
-    "question": "A sports article copies sentences from another writer without naming them. What is this called?",
-    "choices": [
-      "Plagiarism",
-      "Paraphrasing",
-      "Summarizing",
-      "Proofreading"
-    ],
-    "correct_index": 0,
-    "explanations": [
-      "Correct! Plagiarism is using someone’s words or ideas without giving credit.",
-      "Paraphrasing is rewriting in your own words (with credit if it’s someone else’s idea).",
-      "Summarizing is giving a shorter version of the main points.",
-      "Proofreading is checking for mistakes in writing."
+      "homophones_their_there_theyre"
     ]
   },
   {
     "subject": "Reading",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "Which word is the opposite of \"hot\"?",
+    "question": "Which sentence uses commas correctly?",
     "choices": [
-      "cold",
-      "warm",
-      "heat",
-      "steam"
+      "I packed, apples, crackers, and juice.",
+      "I packed apples, crackers, and juice.",
+      "I packed apples crackers and juice.",
+      "I packed apples, crackers and juice."
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "\"Cold\" means not hot, so it is the opposite.",
-      "\"Warm\" is close to hot, not the opposite.",
-      "\"Heat\" is something that makes things hot, not an opposite word.",
-      "\"Steam\" is something you might see from hot water, not an opposite word."
+      "These commas split the sentence in the wrong places.",
+      "Commas separate the three items in the list.",
+      "Without commas, the list is harder to read.",
+      "A comma is needed between apples and crackers in this list."
     ],
     "tags": [
-      "auto"
+      "commas_in_series_simple"
     ]
   },
   {
     "subject": "Reading",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "What does the word \"tiny\" mean?",
+    "question": "Which end mark completes the sentence: Please close the door___",
     "choices": [
-      "very small",
-      "very loud",
-      "very fast",
-      "very heavy"
+      ",",
+      "!",
+      "?",
+      "."
     ],
-    "correct_index": 0,
+    "correct_index": 3,
     "explanations": [
-      "\"Tiny\" means very small.",
-      "\"Very loud\" is about sound, not size.",
-      "\"Very fast\" is about speed, not size.",
-      "\"Very heavy\" is about weight, not size."
+      "A comma does not end a sentence.",
+      "An exclamation point shows strong feeling, which isn't needed here.",
+      "A question mark is for a question, and this is not asking.",
+      "A period ends a statement or polite command."
     ],
     "tags": [
-      "auto"
+      "punctuation_end_marks"
     ]
   },
   {
     "subject": "Reading",
     "age_range": "Early Elementary",
     "difficulty": "easy",
-    "question": "Read the sentence: \"Liam put on his boots because it was raining.\" Why did Liam put on his boots?",
+    "question": "Which contraction matches the words: I am?",
     "choices": [
-      "It was raining.",
-      "He wanted to go swimming.",
-      "He took off his shoes.",
-      "He was eating lunch."
+      "I'am",
+      "I m",
+      "Im",
+      "I'm"
     ],
-    "correct_index": 0,
+    "correct_index": 3,
     "explanations": [
-      "The sentence says he put on boots because it was raining.",
-      "Swimming is not mentioned, and boots are not for swimming.",
-      "Taking off shoes is a different action and does not answer why he put on boots.",
-      "Eating lunch has nothing to do with boots or rain in the sentence."
+      "The apostrophe is placed incorrectly in this spelling.",
+      "A space is not used to make a contraction.",
+      "This is missing the apostrophe that shows missing letters.",
+      "\"I'm\" is the contraction for \"I am\" with an apostrophe."
     ],
     "tags": [
-      "auto"
+      "contractions_apostrophe"
     ]
   },
   {
     "subject": "Reading",
-    "age_range": "Early Elementary",
+    "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "Which sentence is a question?",
+    "question": "Maya stayed after class to help stack chairs without being asked. Which trait fits her best?",
     "choices": [
-      "Where is my pencil?",
-      "My pencil is yellow.",
-      "I sharpened my pencil.",
-      "Please bring my pencil."
+      "jealous",
+      "helpful",
+      "careless",
+      "shy"
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "It asks something and ends with a question mark.",
-      "This tells a fact and ends with a period.",
-      "This tells what happened and ends with a period.",
-      "This is a request (a command) and ends with a period."
+      "Jealousy is wanting what someone else has, not shown here.",
+      "Helping without being asked shows she likes to assist others.",
+      "Careless means not paying attention, but she is being responsible.",
+      "Shy means quiet or nervous around others; the action shows kindness instead."
     ],
     "tags": [
-      "auto"
+      "character_traits_from_actions"
     ]
   },
   {
     "subject": "Reading",
-    "age_range": "Late Elementary",
+    "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "Read the sentence: \"Maya tiptoed into the library so she wouldn't disturb anyone.\" What does \"disturb\" mean here?",
+    "question": "In: \"The room was dim, but the hallway was bright.\" The word dim most nearly means ____.",
     "choices": [
-      "bother or interrupt",
-      "decorate or improve",
-      "teach a new skill",
-      "borrow a book"
-    ],
-    "correct_index": 0,
-    "explanations": [
-      "\"Disturb\" means to bother or interrupt, so Maya is being quiet.",
-      "\"Decorate\" means to make something look nicer, which doesn't fit being quiet in a library.",
-      "\"Teach\" is about helping someone learn, not about making noise.",
-      "\"Borrow\" means to take something to use and return later, which isn't what the sentence is describing."
-    ],
-    "tags": [
-      "auto"
-    ]
-  },
-  {
-    "subject": "Reading",
-    "age_range": "Late Elementary",
-    "difficulty": "easy",
-    "question": "Read the sentence: \"After the storm, the sidewalk was slick.\" What does \"slick\" most likely mean?",
-    "choices": [
-      "slippery",
-      "colorful",
       "noisy",
-      "warm"
+      "warm",
+      "crowded",
+      "dark"
     ],
-    "correct_index": 0,
+    "correct_index": 3,
     "explanations": [
-      "\"Slick\" means slippery, which can happen when things are wet after a storm.",
-      "\"Colorful\" describes how something looks, not how it feels to walk on.",
-      "\"Noisy\" describes sound, but a sidewalk isn't described that way here.",
-      "\"Warm\" describes temperature, not the surface after rain."
+      "Noisy is about sound, and the sentence contrasts light, not sound.",
+      "Warm describes temperature, which is not being compared in the sentence.",
+      "Crowded describes how full a place is, not how much light there is.",
+      "Bright is the opposite of dark, so dim means dark."
     ],
     "tags": [
-      "auto"
+      "context_clues_antonym"
     ]
   },
   {
     "subject": "Reading",
-    "age_range": "Late Elementary",
+    "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "Read the sentence: \"Lena glanced at the clock and grabbed her backpack.\" What can you infer Lena is about to do?",
+    "question": "How does a heavy snowstorm setting most likely affect the characters in a story?",
     "choices": [
-      "leave soon",
-      "take a nap",
-      "paint a picture",
-      "start cooking dinner"
+      "They can swim easily in the ocean.",
+      "They may have trouble traveling on roads.",
+      "They will finish homework faster than usual.",
+      "They will instantly learn a new language."
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "Checking the clock and grabbing a backpack are clues that she is about to leave.",
-      "A nap would fit clues like yawning or lying down, not grabbing a backpack.",
-      "Painting would involve art supplies, not a clock and backpack as the main clues.",
-      "Cooking dinner would involve food or the kitchen, which the sentence doesn't mention."
+      "A snowstorm does not make ocean swimming easier or safer.",
+      "Snow and ice can block roads and slow down travel.",
+      "Weather might change plans, but it doesn't directly speed up homework.",
+      "A storm cannot cause someone to suddenly know a language."
     ],
     "tags": [
-      "auto"
+      "setting_time_place_effect"
     ]
   },
   {
     "subject": "Reading",
-    "age_range": "Late Elementary",
+    "age_range": "Middle School",
     "difficulty": "easy",
-    "question": "Read the sentence: \"The tiny kitten squeezed through the narrow gap.\" What does \"narrow\" mean?",
+    "question": "Which word best helps create an annoyed tone?",
     "choices": [
-      "not wide",
-      "very bright",
-      "very soft",
-      "very heavy"
+      "peaceful",
+      "irritating",
+      "delightful",
+      "curious"
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "\"Narrow\" means not wide, so the gap is small from side to side.",
-      "\"Bright\" describes light, not the size of a gap.",
-      "\"Soft\" describes texture, but a gap isn't usually described that way.",
-      "\"Heavy\" describes weight, which doesn't fit a gap."
+      "Peaceful suggests calm, not irritation or frustration.",
+      "Irritating suggests something bothers the speaker, showing annoyance.",
+      "Delightful shows pleasure, which fits a happy tone instead.",
+      "Curious shows interest and questions, not an annoyed attitude."
     ],
     "tags": [
-      "animals"
+      "tone_word_choice"
     ]
   },
   {
     "subject": "Reading",
-    "age_range": "Late Elementary",
+    "age_range": "Upper Elementary",
     "difficulty": "easy",
-    "question": "Read the sentence: \"Jordan was disappointed because the picnic was canceled.\" Why was Jordan disappointed?",
+    "question": "If the guide words are \"harbor\" and \"hatch\", which word belongs on that page?",
     "choices": [
-      "The picnic was canceled.",
-      "Jordan forgot to bring a blanket.",
-      "The picnic had too many games.",
-      "Jordan already ate lunch."
+      "helmet",
+      "hazel",
+      "happen",
+      "haste"
     ],
-    "correct_index": 0,
+    "correct_index": 3,
     "explanations": [
-      "The sentence directly says Jordan was disappointed because the picnic was canceled.",
-      "Forgetting a blanket is a possible problem, but the sentence does not say that happened.",
-      "Having many games would usually make a picnic more fun, and the sentence doesn't mention games.",
-      "Eating lunch doesn't explain disappointment about a canceled picnic, and the sentence doesn't mention lunch."
+      "\"helmet\" starts with he, which comes after ha in the alphabet.",
+      "\"hazel\" comes after hatch, so it would be on a later page.",
+      "\"happen\" comes before harbor, so it would be on an earlier page.",
+      "\"haste\" comes after harbor and before hatch alphabetically."
     ],
     "tags": [
-      "auto"
+      "dictionary_entry_guide_words"
     ]
   },
   {
     "subject": "Reading",
-    "age_range": "Teen",
+    "age_range": "Upper Elementary",
     "difficulty": "easy",
-    "question": "Read the sentence: \"Maya was reluctant to speak up during the meeting.\" What does \"reluctant\" most nearly mean?",
+    "question": "In \"The dog sat by the bank and watched the ducks,\" what does the word bank mean?",
     "choices": [
-      "unwilling",
-      "excited",
-      "prepared",
-      "loud"
+      "a loud barking sound",
+      "a row of seats",
+      "the side of a river",
+      "a place to keep money"
     ],
-    "correct_index": 0,
+    "correct_index": 2,
     "explanations": [
-      "\"Reluctant\" means not wanting to do something, so she didn't want to speak up.",
-      "\"Excited\" means eager or thrilled, which is the opposite of hesitant.",
-      "\"Prepared\" means ready, but the sentence is about willingness, not readiness.",
-      "\"Loud\" describes volume, not a person's willingness to act."
+      "A barking sound is not a meaning of bank and doesn't fit the sentence.",
+      "A row of seats is a different meaning, but it doesn't match ducks by water.",
+      "Ducks and water clues suggest a riverbank, the land beside water.",
+      "A money bank fits saving cash, but the sentence is about ducks outside."
     ],
     "tags": [
-      "auto"
+      "homographs_multiple_meanings"
     ]
   },
   {
     "subject": "Reading",
-    "age_range": "Teen",
+    "age_range": "Upper Elementary",
     "difficulty": "easy",
-    "question": "Read the sentence: \"Because the roads were icy, the school closed early.\" What is the cause of the school closing early?",
+    "question": "Mia packed a raincoat and checked the dark clouds. What can you infer about Mia?",
     "choices": [
-      "The roads were icy.",
-      "The school closed early.",
-      "Students finished their homework.",
-      "The weather was warm."
+      "She is training for a race.",
+      "She thinks it might rain soon.",
+      "She forgot where she lives.",
+      "She is going to a costume party."
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "Icy roads are the reason (cause) given for the early closing.",
-      "This is the effect (what happened), not the cause (why it happened).",
-      "Homework is not mentioned as the reason for closing.",
-      "Warm weather would not explain icy roads or an early closure."
+      "Training for a race would involve running gear, not cloud-watching.",
+      "A raincoat and dark clouds are clues that she expects rain.",
+      "Nothing in the sentence suggests she is confused about her home.",
+      "A costume party would need costumes, not a raincoat for clouds."
     ],
     "tags": [
-      "auto"
+      "inference_using_text_evidence"
     ]
   },
   {
     "subject": "Reading",
-    "age_range": "Teen",
+    "age_range": "Upper Elementary",
     "difficulty": "easy",
-    "question": "Read the sentence: \"Jordan scanned the article to find the date of the event.\" What does \"scanned\" mean here?",
+    "question": "A class planted seeds, watered daily, and sprouts appeared. What conclusion fits best?",
     "choices": [
-      "looked quickly for specific information",
-      "read every word slowly",
-      "copied the article by hand",
-      "argued with the writer"
+      "Sprouts can talk to each other.",
+      "Plants need water to grow.",
+      "Seeds grow faster in the dark.",
+      "Watering makes seeds change color."
     ],
-    "correct_index": 0,
+    "correct_index": 1,
     "explanations": [
-      "To \"scan\" is to glance through text to locate a detail, like a date.",
-      "Reading every word slowly is closer to \"studied\" or \"read carefully,\" not \"scanned.\"",
-      "Copying by hand is a different task and not what \"scanned\" means in reading.",
-      "Arguing with the writer is not a reading strategy and doesn't fit the sentence."
+      "Talking sprouts adds new information not supported by the details.",
+      "The sprouts appeared after daily watering, so water helped the seeds grow.",
+      "The passage does not mention darkness or compare light and dark.",
+      "The passage never says the seeds changed color from watering."
     ],
     "tags": [
-      "auto"
+      "drawing_conclusions"
     ]
   },
   {
     "subject": "Reading",
-    "age_range": "Teen",
+    "age_range": "High School",
     "difficulty": "easy",
-    "question": "Read the sentence: \"The museum was crowded; however, we still enjoyed the exhibit.\" What does \"however\" signal?",
+    "question": "Which sentence best states the central idea of: \"Volunteers cleaned the park, planted trees, and picked up trash.\"?",
     "choices": [
-      "a contrast between two ideas",
-      "an example that supports the first idea",
-      "a time order of events",
-      "a definition of a word"
+      "Trash is always found near playgrounds.",
+      "Trees are the most important part of any park.",
+      "Parks should charge money to enter.",
+      "Volunteers improved the park by working together."
     ],
-    "correct_index": 0,
+    "correct_index": 3,
     "explanations": [
-      "\"However\" shows that the second idea goes against what you might expect from the first.",
-      "An example would add evidence, but \"however\" introduces an opposing point instead.",
-      "Time order uses words like \"first\" or \"later,\" not \"however.\"",
-      "Definitions explain meanings, but this sentence is comparing two ideas."
+      "The passage says trash was picked up, not where it was found.",
+      "The passage mentions trees, but not that they are the most important.",
+      "The passage is about volunteering, not park entry fees.",
+      "It sums up the actions as a shared effort to make the park better."
     ],
     "tags": [
-      "auto"
+      "central_idea_supporting_details"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "Which detail best supports the central idea that sleep helps students learn?",
+    "choices": [
+      "Some students ate cereal before the test.",
+      "One student forgot a pencil on test day.",
+      "The classroom had bright posters on the walls.",
+      "Students who slept 8 hours remembered more vocabulary."
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "Breakfast may matter, but it does not show sleep improving learning.",
+      "Forgetting a pencil is unrelated to how sleep affects learning.",
+      "Room decorations do not provide evidence about sleep and learning.",
+      "It directly links more sleep to better memory, supporting the idea."
+    ],
+    "tags": [
+      "central_idea_supporting_details"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "Which detail shows the narrator is third-person omniscient?",
+    "choices": [
+      "Maya walked to the stage and adjusted the microphone.",
+      "Maya worried about the speech, while Jordan felt excited.",
+      "Jordan waved from the front row and smiled.",
+      "The auditorium was quiet as the lights dimmed."
+    ],
+    "correct_index": 1,
+    "explanations": [
+      "This is an outside action and could fit limited or omniscient narration.",
+      "It reveals feelings of two characters, showing the narrator knows both minds.",
+      "A visible action does not show access to a character’s inner thoughts.",
+      "Setting description alone does not prove the narrator knows all thoughts."
+    ],
+    "tags": [
+      "third_person_limited_vs_omniscient"
+    ]
+  },
+  {
+    "subject": "Reading",
+    "age_range": "High School",
+    "difficulty": "easy",
+    "question": "Which description best matches third-person limited point of view?",
+    "choices": [
+      "The narrator speaks directly to the reader using “you.”",
+      "The narrator tells the story using “I” and “me.”",
+      "The narrator explains what every character is thinking.",
+      "The narrator shares only one character’s thoughts and feelings."
+    ],
+    "correct_index": 3,
+    "explanations": [
+      "Using “you” is second person, not third-person limited.",
+      "Using “I” is first person, not third-person limited.",
+      "Knowing everyone’s thoughts is third-person omniscient.",
+      "Third-person limited focuses on one character’s inner experience."
+    ],
+    "tags": [
+      "third_person_limited_vs_omniscient"
     ]
   }
 ]

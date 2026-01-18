@@ -3,7 +3,6 @@ import asyncio
 import json
 import logging
 import os
-from time import sleep
 from uuid import UUID
 
 import redis
@@ -54,11 +53,14 @@ def process_content_expansion_request(request_id: str) -> dict:
     async def _run() -> dict:
         from datetime import datetime, timezone
 
-        from sqlalchemy import case, func, select, text
+        from sqlalchemy import func, select
 
-        from .models import AgeRange, Child, ContentExpansionRequest, Flashcard, Interest, Subject
+        from .models import AgeRange, Child, ContentExpansionRequest, Flashcard, Subject
         from .services.ai_flashcard_generator import FlashcardGenerator
         from .services.content_expansion import check_auto_flashcard_limit
+        from openai import AsyncOpenAI
+
+        from .services.topic_catalog import get_or_create_topic_catalog, select_topics_for_batch
 
         # Debug: helps diagnose cross-process / cross-loop issues in Celery prefork
         loop = asyncio.get_running_loop()
@@ -111,36 +113,19 @@ def process_content_expansion_request(request_id: str) -> dict:
                     "max": settings.max_auto_flashcards,
                 }
 
+            # Keep a reference to child for logging/traceability.
             child = (await session.execute(select(Child).where(Child.id == req.child_id))).scalar_one_or_none()
-
-            interests_ids: list[str] = child.interests if (child and child.interests) else []
-            interests_names: list[str] = []
-            if interests_ids:
-                # Child.interests are stored as UUID strings; Flashcard tags + AI generator expect Interest.name strings.
-                interest_uuid_list: list[UUID] = []
-                for x in interests_ids:
-                    try:
-                        interest_uuid_list.append(UUID(str(x)))
-                    except Exception:
-                        # Ignore malformed values; child interests can be user-provided / legacy.
-                        continue
-
-                if interest_uuid_list:
-                    interests_names = (
-                        await session.execute(
-                            select(Interest.name).where(Interest.id.in_(interest_uuid_list))
-                        )
-                    ).scalars().all()
 
             subj = (await session.execute(select(Subject).where(Subject.id == req.subject_id))).scalar_one_or_none()
             subject_name = subj.name if subj else str(req.subject_id)
 
-            age_name = "all"
+            age_range_code = "all"
+            ar = None
             if req.age_range_id:
                 ar = (
                     await session.execute(select(AgeRange).where(AgeRange.id == req.age_range_id))
                 ).scalar_one_or_none()
-                age_name = ar.name if ar else str(req.age_range_id)
+                age_range_code = ar.code if ar else str(req.age_range_id)
 
             generator = FlashcardGenerator()
 
@@ -156,17 +141,6 @@ def process_content_expansion_request(request_id: str) -> dict:
                 difficulty_candidates = ["hard", "medium", "easy"]
             elif requested_difficulty == "medium":
                 difficulty_candidates = ["medium", "easy"]
-
-            # Prefer flashcards whose tags match child interests (Flashcard.tags stores Interest.name strings)
-            interest_order = None
-            if interests_names:
-                when_clauses = []
-                for interest_name in interests_names:
-                    when_clauses.append(
-                        (func.coalesce(Flashcard.tags, text("'[]'::jsonb")).op("?")(str(interest_name)), 0)
-                    )
-                when_clauses.append((True, 1))
-                interest_order = case(*when_clauses)
 
             for candidate_difficulty in difficulty_candidates:
                 examples_stmt = (
@@ -187,12 +161,9 @@ def process_content_expansion_request(request_id: str) -> dict:
                 if req.age_range_id is not None:
                     examples_stmt = examples_stmt.where(Flashcard.age_range_id == req.age_range_id)
 
-                if interest_order is not None:
-                    examples_stmt = examples_stmt.order_by(interest_order, func.random())
-                else:
-                    examples_stmt = examples_stmt.order_by(func.random())
+                examples_stmt = examples_stmt.order_by(func.random())
 
-                examples_rows = (await session.execute(examples_stmt.limit(5))).all()
+                examples_rows = (await session.execute(examples_stmt.limit(1))).all()
                 if examples_rows:
                     examples_difficulty_used = candidate_difficulty
                     examples = [
@@ -222,24 +193,115 @@ def process_content_expansion_request(request_id: str) -> dict:
                     if t not in example_tags:
                         example_tags.append(t)
 
+            # Build deterministic seed for topic selection.
+            topic_seed = f"{req.child_id}:{req.subject_id}:{age_range_code}:{req.difficulty_code}:{request_uuid}"  # deterministic
+
+            # Obtain topic catalog (cached in Redis) via topic helper model.
+            topic_client: AsyncOpenAI | None = None
+            try:
+                topic_client = AsyncOpenAI(
+                    api_key=settings.flashcard_api_key,
+                    base_url=settings.flashcard_api_base,
+                )
+
+                helper_model = settings.topic_helper_model or generator.model
+
+                # retry/backoff: 2 retries (3 total attempts)
+                delays = [0.0, 0.5, 1.5]
+                catalog = None
+                last_exc: Exception | None = None
+                for d in delays:
+                    if d:
+                        await asyncio.sleep(d)
+                    try:
+                        catalog = await get_or_create_topic_catalog(
+                            redis_sync_client=redis_client,
+                            openai_client=topic_client,
+                            model=helper_model,
+                            version=settings.topic_catalog_version,
+                            subject=subject_name,
+                            age_range_code=age_range_code,
+                            difficulty=req.difficulty_code,
+                            rotate=settings.topic_catalog_rotate,
+                            count=settings.topic_catalog_count,
+                            ttl_seconds=settings.topic_catalog_ttl_seconds,
+                        )
+                        if catalog:
+                            break
+                    except Exception as exc:
+                        last_exc = exc
+                        logger.warning(
+                            "process_content_expansion_request: topic catalog attempt failed request_id=%s err=%s",
+                            request_id,
+                            exc,
+                        )
+                        catalog = None
+
+                if not catalog:
+                    raise RuntimeError("Failed to obtain non-empty topic catalog") from last_exc
+
+                n_pool = min(settings.topic_pool_size, len(catalog))
+                selected = select_topics_for_batch(catalog, count=n_pool, deterministic_seed=topic_seed)
+                topic_tags = [t.topic for t in selected]
+                # Build compact topic_pool in the NEW schema expected by the generator.
+                # (The generator is also tolerant of legacy keys via aliases, but keep it consistent.)
+                topic_pool: list[dict] = []
+                for t in selected:
+                    topic = getattr(t, "topic", None)
+                    if not isinstance(topic, str) or not topic.strip():
+                        continue
+
+                    stem_templates = getattr(t, "stem_templates", None)
+                    anchor_facts = getattr(t, "anchor_facts", None)
+                    misconceptions = getattr(t, "misconceptions", None)
+                    keywords = getattr(t, "keywords", None)
+
+                    # Runtime guard: avoid crashing Celery task on unexpected topic item shape.
+                    topic_pool.append(
+                        {
+                            "topic": topic.strip(),
+                            "stem_templates": list(stem_templates or [])[:3],
+                            "anchor_facts": list(anchor_facts or [])[:6],
+                            "misconceptions": list(misconceptions or [])[:4],
+                            "keywords": list(keywords or [])[:8],
+                        }
+                    )
+
+            finally:
+                if topic_client is not None:
+                    close_fn = getattr(topic_client, "close", None) or getattr(topic_client, "aclose", None)
+                    if close_fn is not None:
+                        try:
+                            res = close_fn()
+                            if res is not None:
+                                await res
+                        except Exception:
+                            logger.exception(
+                                "process_content_expansion_request: failed to close topic helper client"
+                            )
+
             logger.info(
-                "process_content_expansion_request: AI input request_id=%s child_id=%s subject=%s difficulty=%s age_range=%s interests_names=%s interests_ids=%s examples_count=%s example_tags=%s",
+                "process_content_expansion_request: AI input request_id=%s child_id=%s subject=%s difficulty=%s age_range_code=%s topic_tags=%s examples_count=%s example_tags=%s",
                 request_id,
-                str(req.child_id),
+                (str(child.id) if child is not None else str(req.child_id)),
                 subject_name,
                 req.difficulty_code,
-                age_name,
-                interests_names,
-                interests_ids,
+                age_range_code,
+                topic_tags,
                 len(examples),
                 example_tags,
             )
 
+            # Generator expects age_range_code (not label/min/max)
+            # NOTE: this duplicates the earlier computed age_range_code, but keep explicit here for clarity.
+            age_range_code = (ar.code if (req.age_range_id and ar is not None) else "all")
+
             flashcard_data = await generator.generate_flashcards(
                 subject=subject_name,
-                age_range=age_name,
+                age_range_code=age_range_code,
                 difficulty=req.difficulty_code,
-                interests=interests_names,
+                topic_tags=topic_tags,
+                topic_pool=topic_pool,
                 count=5,
                 examples=examples,
                 examples_difficulty_used=examples_difficulty_used,
@@ -263,11 +325,7 @@ def process_content_expansion_request(request_id: str) -> dict:
                             "explanations": card["explanations"],
                             "difficulty_code": req.difficulty_code,
                             "age_range_id": req.age_range_id,
-                            "tags": (
-                                card.get("tags")
-                                if isinstance(card.get("tags"), list) and len(card.get("tags") or []) > 0
-                                else ["auto"]
-                            ),
+                            "tags": (card.get("tags") if isinstance(card.get("tags"), list) else []),
                         }
                     )
 

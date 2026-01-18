@@ -8,10 +8,6 @@ import {
   ViewToken,
   NativeSyntheticEvent,
   NativeScrollEvent,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
-  TextInput,
 } from "react-native";
 
 type RafThrottleFn<T extends (...args: any[]) => void> = {
@@ -48,12 +44,11 @@ import { ThemedText } from "@/components/ThemedText";
 import { IconButton } from "@/components/IconButton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboard } from "@/contexts/DashboardContext";
-import { BorderRadius, Spacing, Typography } from "@/constants/theme";
+import { Spacing, Typography } from "@/constants/theme";
 import { getAffirmations } from "@/services/affirmationsService";
 import { Affirmation } from "@/types/models";
 import { useCurrentChildId } from "@/contexts/ChildContext";
-import { ShareMenu } from "@/components/ShareMenu"; // Assuming you created this file as per previous instructions
-import { useTheme } from "@react-navigation/native";
+import { ShareMenu } from "@/components/ShareMenu";
 import { CreateAffirmationModal } from "@/components/CreateAffirmationModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -62,24 +57,27 @@ export default function AffirmationsScreen() {
   const insets = useSafeAreaInsets();
   const { data: dashboard, postEvent } = useDashboard();
   const { childId } = useCurrentChildId();
+
   const [favorites, setFavorites] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
   const affirmationsRef = useRef<Affirmation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
   const flatListRef = useRef<FlatList>(null);
+
   const [showShareMenu, setShowShareMenu] = useState(false);
-  const [selectedAffirmationText, setSelectedAffirmationText] = useState('');
+  const [selectedAffirmationText, setSelectedAffirmationText] = useState("");
+
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [customAffirmationText, setCustomAffirmationText] = useState('');
+  const [customAffirmationText, setCustomAffirmationText] = useState("");
 
   const debugApiEnabled =
     typeof process !== "undefined" &&
     typeof process.env !== "undefined" &&
     ["1", "true", "yes"].includes(
-      String(process.env.EXPO_PUBLIC_DEBUG_API ?? "")
-        .trim()
-        .toLowerCase(),
+      String(process.env.EXPO_PUBLIC_DEBUG_API ?? "").trim().toLowerCase(),
     );
 
   const debug = useCallback(
@@ -91,25 +89,23 @@ export default function AffirmationsScreen() {
     [debugApiEnabled],
   );
 
-  const lastViewedIndexRef = useRef<number>(-1);
-
-  // Track which affirmationIds have been posted as viewed during this session.
-  // (Set is stored in a ref to avoid stale-closure issues in viewability callbacks.)
-  const postedViewedIdsRef = useRef<Set<string>>(new Set());
-
   const affirmationsToday = dashboard?.today?.affirmationsViewed ?? 0;
+
   const toggleFavorite = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((fav) => fav !== id) : [...prev, id]
-    );
+    setFavorites((prev) => (prev.includes(id) ? prev.filter((fav) => fav !== id) : [...prev, id]));
   };
+
+  // -----------------------------
+  // Viewed tracking (deduped)
+  // -----------------------------
+  const lastViewedIndexRef = useRef<number>(-1);
+  const postedViewedIdsRef = useRef<Set<string>>(new Set());
 
   const markViewed = useCallback(
     (affirmationId: string) => {
       if (!affirmationId) return;
 
-      // Exactly-once-per-session semantics.
       if (postedViewedIdsRef.current.has(affirmationId)) {
         debug("markViewed: deduped", { affirmationId });
         return;
@@ -118,81 +114,29 @@ export default function AffirmationsScreen() {
 
       debug("markViewed: posting", { childId, affirmationId });
 
-
-      if (childId) {
-        postEvent({
-          kind: "affirmation",
-          body: { affirmationId },
-        }).catch((err) => {
-          debug("markViewed: postEvent failed", {
-            affirmationId,
-            err: String(err),
-          });
-        });
-      } else {
+      if (!childId) {
         debug("markViewed: skipped (missing childId)", { affirmationId });
+        return;
       }
+
+      postEvent({
+        kind: "affirmation",
+        body: { affirmationId },
+      }).catch((err) => {
+        debug("markViewed: postEvent failed", { affirmationId, err: String(err) });
+      });
     },
     [childId, postEvent, debug],
   );
 
-  // Keep FlatList callback stable while always using the latest markViewed.
+  // Keep a stable ref so scroll/viewability callbacks never go stale.
   const markViewedRef = useRef<(id: string) => void>(() => {});
   useEffect(() => {
     markViewedRef.current = markViewed;
   }, [markViewed]);
 
-  useEffect(() => {
-    return () => {
-      onScrollRafThrottledRef.current?.cancel?.();
-    };
-  }, []);
-
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      const first = viewableItems[0];
-      if (!first || first.index == null) return;
-
-      debug("onViewableItemsChanged", {
-        childId,
-        affirmations_len: affirmationsRef.current.length,
-        index: first.index,
-        id: (first.item as any)?.id,
-      });
-
-      setCurrentIndex(first.index);
-
-      const viewedItem = first.item as Affirmation | undefined;
-      if (!viewedItem) return;
-
-      // Secondary signal (e.g. native). Dedupe is handled inside markViewed.
-      markViewedRef.current(viewedItem.id);
-    },
-  ).current;
-
-  const handleScrollEnd = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const offsetY = e?.nativeEvent?.contentOffset?.y ?? 0;
-      const index = Math.round(offsetY / SCREEN_HEIGHT);
-      const item = affirmationsRef.current[index];
-
-      debug("handleScrollEnd", {
-        offsetY,
-        index,
-        id: item?.id,
-        childId,
-        affirmations_len: affirmationsRef.current.length,
-      });
-
-      setCurrentIndex(index);
-      if (item) markViewedRef.current(item.id);
-    },
-    [debug, childId],
-  );
-
   const handleScrollIndexChanged = useCallback(
     (index: number, source: string, offsetY?: number) => {
-      if (index < 0) return;
       const items = affirmationsRef.current;
       if (!items || items.length === 0) {
         debug("scrollIndexChanged: no items", { source, index, offsetY });
@@ -204,12 +148,7 @@ export default function AffirmationsScreen() {
       lastViewedIndexRef.current = boundedIndex;
 
       const item = items[boundedIndex];
-      debug("scrollIndexChanged", {
-        source,
-        offsetY,
-        index: boundedIndex,
-        id: item?.id,
-      });
+      debug("scrollIndexChanged", { source, offsetY, index: boundedIndex, id: item?.id });
 
       setCurrentIndex(boundedIndex);
       if (item?.id) markViewedRef.current(item.id);
@@ -217,10 +156,8 @@ export default function AffirmationsScreen() {
     [debug],
   );
 
-  const onScrollRafThrottledRef = useRef<
-    RafThrottleFn<(offsetY: number) => void> | undefined
-  >(undefined);
-
+  // ONE throttled scroll handler for the lifetime of the component.
+  const onScrollRafThrottledRef = useRef<RafThrottleFn<(offsetY: number) => void> | null>(null);
   if (!onScrollRafThrottledRef.current) {
     onScrollRafThrottledRef.current = rafThrottle((offsetY: number) => {
       if (!Number.isFinite(offsetY) || SCREEN_HEIGHT <= 0) return;
@@ -229,25 +166,51 @@ export default function AffirmationsScreen() {
     });
   }
 
+  useEffect(() => {
+    return () => {
+      onScrollRafThrottledRef.current?.cancel?.();
+    };
+  }, []);
+
   const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    // Extract primitive synchronously to avoid RN synthetic event pooling issues.
     const offsetY = e?.nativeEvent?.contentOffset?.y;
     if (typeof offsetY !== "number") return;
     onScrollRafThrottledRef.current?.(offsetY);
   }, []);
 
-  useEffect(() => {
-    const throttled = rafThrottle(handleScroll);
-    onScrollRafThrottledRef.current = throttled;
-    return () => throttled.cancel();
-  }, [currentIndex]);
+  // ONE handleScrollEnd (used for both momentum + drag end)
+  const handleScrollEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetY = e?.nativeEvent?.contentOffset?.y ?? 0;
+      const index = Math.round(offsetY / SCREEN_HEIGHT);
+      handleScrollIndexChanged(index, "scrollEnd", offsetY);
+    },
+    [handleScrollIndexChanged],
+  );
 
-  const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const y = event.nativeEvent.contentOffset.y;
-    const index = Math.round(y / SCREEN_HEIGHT);
-    setCurrentIndex(index);
-  };
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      const first = viewableItems[0];
+      if (!first || first.index == null) return;
 
+      setCurrentIndex(first.index);
+
+      const viewedItem = first.item as Affirmation | undefined;
+      if (!viewedItem?.id) return;
+
+      debug("onViewableItemsChanged", {
+        index: first.index,
+        id: viewedItem.id,
+        affirmations_len: affirmationsRef.current.length,
+      });
+
+      markViewedRef.current(viewedItem.id);
+    },
+  );
+
+  // -----------------------------
+  // Load affirmations
+  // -----------------------------
   useEffect(() => {
     if (!childId) return;
     let cancelled = false;
@@ -269,9 +232,12 @@ export default function AffirmationsScreen() {
     };
   }, [childId]);
 
+  // -----------------------------
+  // Render
+  // -----------------------------
   const renderItem = ({ item }: { item: Affirmation }) => {
     const isFavorite = favorites.includes(item.id);
-    const gradient = item.gradient || ["#8B5CF6", "#6366F1"]; // Primary purple
+    const gradient = item.gradient || ["#8B5CF6", "#6366F1"];
 
     const handleSharePress = () => {
       setSelectedAffirmationText(item.text);
@@ -282,16 +248,11 @@ export default function AffirmationsScreen() {
       <View style={styles.itemContainer}>
         <LinearGradient colors={gradient} style={styles.gradient}>
           <View style={styles.content}>
-            <ThemedText
-              style={[
-                styles.affirmationText,
-                { textShadowColor: "rgba(0,0,0,0.3)" },
-              ]}
-            >
+            <ThemedText style={[styles.affirmationText, { textShadowColor: "rgba(0,0,0,0.3)" }]}>
               {item.text}
             </ThemedText>
           </View>
-          
+
           <View
             style={[
               styles.bottomOverlay,
@@ -301,35 +262,33 @@ export default function AffirmationsScreen() {
             <View style={styles.statsContainer}>
               <View style={styles.statBadge}>
                 <Feather name="heart" size={14} color="white" />
-                <ThemedText style={styles.statText}>
-                  {affirmationsToday} today
-                </ThemedText>
+                <ThemedText style={styles.statText}>{affirmationsToday} today</ThemedText>
               </View>
               <View style={styles.statBadge}>
                 <Feather name="zap" size={14} color="white" />
-                <ThemedText style={styles.statText}>
-                  +{affirmationsToday * 5} pts
-                </ThemedText>
+                <ThemedText style={styles.statText}>+{affirmationsToday * 5} pts</ThemedText>
               </View>
             </View>
+
             <View style={styles.actionsRow}>
-              <Pressable
-                onPress={() => toggleFavorite(item.id)}
-                style={styles.actionButton}
-              >
+              <Pressable onPress={() => toggleFavorite(item.id)} style={styles.actionButton}>
                 <Feather
-                  name={isFavorite ? "heart" : "heart"}
+                  name="heart"
                   size={28}
                   color={isFavorite ? "#EC4899" : "white"}
+                  // @ts-ignore (Feather doesn't type fill, but RN supports it)
                   fill={isFavorite ? "#EC4899" : "none"}
                 />
               </Pressable>
+
               <Pressable style={styles.actionButton} onPress={handleSharePress}>
                 <Feather name="share-2" size={28} color="white" />
               </Pressable>
-              <Pressable style={styles.actionButton}
+
+              <Pressable
+                style={styles.actionButton}
                 onPress={() => {
-                  setCustomAffirmationText('');
+                  setCustomAffirmationText("");
                   setShowCreateModal(true);
                 }}
               >
@@ -338,18 +297,8 @@ export default function AffirmationsScreen() {
             </View>
           </View>
 
-          <View
-            style={[
-              styles.topOverlay,
-              { paddingTop: insets.top + Spacing.lg },
-            ]}
-          >
-            <IconButton
-              name="settings"
-              color="white"
-              size={24}
-              style={styles.settingsButton}
-            />
+          <View style={[styles.topOverlay, { paddingTop: insets.top + Spacing.lg }]}>
+            <IconButton name="settings" color="white" size={24} style={styles.settingsButton} />
           </View>
         </LinearGradient>
       </View>
@@ -374,9 +323,7 @@ export default function AffirmationsScreen() {
         onMomentumScrollEnd={handleScrollEnd}
         onScrollEndDrag={handleScrollEnd}
         onViewableItemsChanged={onViewableItemsChanged.current}
-        viewabilityConfig={{
-          itemVisiblePercentThreshold: 50,
-        }}
+        viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
       />
 
       <ShareMenu
@@ -394,21 +341,23 @@ export default function AffirmationsScreen() {
           if (!customAffirmationText.trim()) return;
 
           // TODO: Call your backend API here to save the custom affirmation
-          console.log('Saving custom affirmation:', customAffirmationText);
+          // eslint-disable-next-line no-console
+          console.log("Saving custom affirmation:", customAffirmationText);
 
-          // Temporary local add
           const newCustom: Affirmation = {
             id: `custom-${Date.now()}`,
             text: customAffirmationText,
             image: null,
-            gradient: ["#4ADE80", "#22C55E"], // green for custom
+            gradient: ["#4ADE80", "#22C55E"],
             tags: ["custom"],
             ageRangeId: null,
           };
 
-          setAffirmations((prev) => [newCustom, ...prev]); // add at top
+          setAffirmations((prev) => [newCustom, ...prev]);
+          affirmationsRef.current = [newCustom, ...affirmationsRef.current];
+
           setShowCreateModal(false);
-          setCustomAffirmationText('');
+          setCustomAffirmationText("");
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }}
       />
@@ -417,20 +366,9 @@ export default function AffirmationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  itemContainer: {
-    height: SCREEN_HEIGHT,
-  },
-  gradient: {
-    flex: 1,
-  },
-  centerContent: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#8B5CF6", // Using primary color as background for loading
-  },
+  container: { flex: 1 },
+  itemContainer: { height: SCREEN_HEIGHT },
+  gradient: { flex: 1 },
   content: {
     flex: 1,
     justifyContent: "center",
@@ -467,29 +405,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: Spacing.xs,
   },
-  statText: {
-    color: "white",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  actionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  actionButton: {
-    width: 56,
-    height: 56,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  topOverlay: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    paddingRight: Spacing.lg,
-  },
-  settingsButton: {
-    backgroundColor: "rgba(0,0,0,0.2)",
-    borderRadius: 22,
-  },
+  statText: { color: "white", fontSize: 13, fontWeight: "600" },
+  actionsRow: { flexDirection: "row", justifyContent: "space-around" },
+  actionButton: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
+  topOverlay: { position: "absolute", top: 0, right: 0, paddingRight: Spacing.lg },
+  settingsButton: { backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 22 },
 });

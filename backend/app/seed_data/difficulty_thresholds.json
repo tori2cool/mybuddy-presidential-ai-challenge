@@ -1,5 +1,6 @@
 [
   { "code": "easy", "name": "Beginner", "threshold": 0, "label": "Beginner", "icon": "smile", "color": "#10B981" },
-  { "code": "medium", "name": "Intermediate", "threshold": 20, "label": "Intermediate", "icon": "zap", "color": "#F59E0B" },
-  { "code": "hard", "name": "Advanced", "threshold": 40, "label": "Advanced", "icon": "award", "color": "#EF4444" }
+  { "code": "medium", "name": "Intermediate", "threshold": 25, "label": "Intermediate", "icon": "zap", "color": "#F59E0B" },
+  { "code": "hard", "name": "Advanced", "threshold": 50, "label": "Advanced", "icon": "award", "color": "#EF4444" },
+  { "code": "impossible", "name": "Impossible", "threshold": 100, "label": "Impossible", "icon": "skull", "color": "#7C3AED" }
 ]

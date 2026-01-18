@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 # backend/app/flashcard_seed.py
 import asyncio
+import hashlib
 import json
 import logging
-import hashlib
 import random
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,12 +15,16 @@ from typing import Any, Iterable
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 
+import redis
+from openai import AsyncOpenAI
+
+from app.config import settings
 from app.db import get_engine
-from app.models import AgeRange, Flashcard, Interest, Subject, SubjectAgeRange
+from app.models import AgeRange, Flashcard, Subject, SubjectAgeRange
 from app.services.ai_flashcard_generator import FlashcardGenerator
+from app.services.topic_catalog import get_or_create_topic_catalog, select_topics_for_batch
 
 logger = logging.getLogger(__name__)
-
 
 # Where your seed loader reads from:
 # backend/app/seed_data/flashcards/*.json
@@ -59,7 +65,6 @@ def _read_existing(path: Path) -> list[dict[str, Any]]:
 
 
 def _write_json_list(path: Path, rows: list[dict[str, Any]]) -> None:
-    # Focused logging to confirm canonical seed files are being updated.
     logger.info("Writing seed JSON: %s rows -> %s", len(rows), path.resolve())
     with path.open("w", encoding="utf-8") as f:
         json.dump(rows, f, ensure_ascii=False, indent=2)
@@ -89,7 +94,6 @@ def _dedupe(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
         q = str(r.get("question", "")).strip()
         key = (subj.casefold(), age.casefold(), diff.casefold(), q.casefold())
         if not subj or not age or not diff or not q:
-            # If something malformed slips in, keep it (so you notice), but don't dedupe it.
             out.append(r)
             continue
         if key in seen:
@@ -143,24 +147,14 @@ def _is_valid_mcq_row(row: Any) -> bool:
 
 
 def _stable_shuffle_seed(*parts: Any) -> int:
-    """
-    Deterministic seed based on stable text inputs.
-    Keeps shuffles stable across runs given the same card content.
-    """
-    joined = "||".join(p.strip() for p in parts if p is not None)
+    joined = "||".join(str(p).strip() for p in parts if p is not None)
     digest = hashlib.sha256(joined.encode("utf-8")).digest()
-    # use first 8 bytes as int seed
     return int.from_bytes(digest[:8], "big", signed=False)
 
 
 def _shuffle_mcq_in_place(row: dict[str, Any], *, deterministic: bool = True) -> dict[str, Any]:
     """
     Shuffle choices+explanations together and update correct_index accordingly.
-
-    Assumes:
-      - choices is list[str] length 4
-      - explanations is list[str] length 4
-      - correct_index in 0..3
 
     If deterministic=True, shuffle order is stable based on question+subject+age_range+difficulty.
     """
@@ -189,8 +183,6 @@ def _shuffle_mcq_in_place(row: dict[str, Any], *, deterministic: bool = True) ->
     else:
         rng.seed()
 
-    # Shuffle until the correct answer is not always first (if possible)
-    # This avoids the "always index 0" pattern even when deterministic.
     for _ in range(6):
         rng.shuffle(paired)
         new_choices = [c for (c, _e) in paired]
@@ -201,18 +193,13 @@ def _shuffle_mcq_in_place(row: dict[str, Any], *, deterministic: bool = True) ->
     new_choices = list(new_choices)
     new_explanations = list(new_explanations)
 
-    # Recompute correct_index
     new_correct_index = new_choices.index(correct_choice)
 
-    # Sanity: correct explanation should still match the correct choice
     if new_explanations[new_correct_index] != correct_expl:
-        # This should never happen with paired shuffle, but keep it safe.
-        # Realign by value if needed.
         try:
             idx = [(c, e) for (c, e) in zip(new_choices, new_explanations)].index((correct_choice, correct_expl))
             new_correct_index = idx
         except ValueError:
-            # Fall back: keep computed index
             pass
 
     row["choices"] = new_choices
@@ -241,12 +228,6 @@ def _count_valid_matching_rows(
     age_range_name: str,
     difficulty: str,
 ) -> int:
-    """
-    Count rows that are (1) valid MCQ rows and (2) match the given
-    subject/age_range/difficulty.
-
-    Matching is case-insensitive and trims whitespace to be tolerant of seed edits.
-    """
     subj_cf = subject_name.strip().casefold()
     age_cf = age_range_name.strip().casefold()
     diff_cf = difficulty.strip().casefold()
@@ -329,21 +310,21 @@ async def insert_flashcards_from_seed_json() -> int:
         stmt = (
             insert(Flashcard)
             .values(rows)
-            .on_conflict_do_nothing(
-                index_elements=["subject_id", "question", "difficulty_code", "age_range_id"]
-            )
+            .on_conflict_do_nothing(index_elements=["subject_id", "question", "difficulty_code", "age_range_id"])
         )
         await conn.execute(stmt)
         logger.info("Flashcards: attempted %s inserts (ON CONFLICT DO NOTHING).", len(rows))
         return len(rows)
 
 
-async def _fetch_subjects_age_ranges_interests() -> tuple[list[tuple[str, str]], list[str], list[str]]:
+async def _fetch_subjects_age_ranges() -> tuple[
+    list[tuple[str, str]],
+    list[tuple[str, str, int | None, int | None]],
+]:
     """
     Returns:
     - subjects: list of (subject_code, subject_name)
-    - age_ranges: list of age range names
-    - interests: list of allowed interest names
+    - age_ranges: list of (age_range_code, age_range_name, min_age, max_age)
 
     NOTE: This does *not* apply SubjectAgeRange constraints. Callers that need
     allowed (subject, age_range) pairs should query SubjectAgeRange.
@@ -351,19 +332,57 @@ async def _fetch_subjects_age_ranges_interests() -> tuple[list[tuple[str, str]],
     engine = get_engine()
     async with engine.begin() as conn:
         subjects = (await conn.execute(select(Subject.code, Subject.name).order_by(Subject.name))).all()
-        age_ranges = (await conn.execute(select(AgeRange.name).order_by(AgeRange.min_age))).scalars().all()
-        interests = (
-            await conn.execute(select(Interest.name).where(Interest.is_active == True).order_by(Interest.name))
-        ).scalars().all()
+        age_ranges = (
+            await conn.execute(
+                select(AgeRange.code, AgeRange.name, AgeRange.min_age, AgeRange.max_age).order_by(AgeRange.min_age)
+            )
+        ).all()
+    return list(subjects), list(age_ranges)
 
-    return list(subjects), list(age_ranges), list(interests)
+
+def _compact_topic_pool(selected: list[Any]) -> list[dict[str, Any]]:
+    """
+    Build a compact topic pool payload for the MCQ generator.
+
+    This expects the NEW topic catalog shape:
+      - topic
+      - stem_templates
+      - anchor_facts
+      - misconceptions
+      - keywords
+    """
+    pool: list[dict[str, Any]] = []
+    for t in selected:
+        # TopicItem is a dataclass in topic_catalog; we treat it duck-typed here.
+        topic = getattr(t, "topic", None)
+        if not isinstance(topic, str) or not topic.strip():
+            continue
+
+        stem_templates = getattr(t, "stem_templates", None)
+        anchor_facts = getattr(t, "anchor_facts", None)
+        misconceptions = getattr(t, "misconceptions", None)
+        keywords = getattr(t, "keywords", None)
+
+        # Keep it small but useful; MCQ generator uses these for grounding/distractors.
+        pool.append(
+            {
+                "topic": topic.strip(),
+                "stem_templates": list(stem_templates or [])[:3],
+                "anchor_facts": list(anchor_facts or [])[:6],
+                "misconceptions": list(misconceptions or [])[:4],
+                "keywords": list(keywords or [])[:8],
+            }
+        )
+    return pool
 
 
 async def _generate_one(
     gen: FlashcardGenerator,
     spec: GenSpec,
-    allowed_interests: list[str],
+    topic_tags: list[str],
+    topic_pool: list[dict[str, Any]],
     *,
+    age_range_code: str,
     max_attempts: int = 4,
 ) -> list[dict[str, Any]]:
     """
@@ -372,18 +391,23 @@ async def _generate_one(
     """
     delay = 1.0
     last_err: Exception | None = None
+
     for attempt in range(1, max_attempts + 1):
         try:
             cards = await gen.generate_flashcards(
                 subject=spec.subject_name,
-                age_range=spec.age_range_name,
+                
                 difficulty=spec.difficulty,
-                interests=allowed_interests,
+                topic_tags=topic_tags,
+                topic_pool=topic_pool,
                 count=spec.count,
                 requested_difficulty=spec.difficulty,
-                enforce_exact_count=True,
+                age_range_code=age_range_code,
+                
+                # Allow shortfalls; seed process will append what it got and a future run can fill gaps.
+                enforce_exact_count=False,
             )
-            # Convert model output to seed row format (what your seed script expects)
+
             seed_rows: list[dict[str, Any]] = []
             for c in cards:
                 row = {
@@ -394,31 +418,28 @@ async def _generate_one(
                     "choices": c["choices"],
                     "correct_index": c["correct_index"],
                     "explanations": c["explanations"],
-                    "tags": c.get("tags") or ["auto"],
+                    "tags": c.get("tags") or [],
                 }
 
-                # Fix "correct answer always first" by shuffling and recomputing correct_index.
+                # Deterministic shuffle normalization (keeps seeds stable while avoiding bias)
                 row = _shuffle_mcq_in_place(row, deterministic=True)
-
                 seed_rows.append(row)
+
             return seed_rows
+
         except Exception as exc:
-            last_err = exc
+            # In seed runs we call the generator with enforce_exact_count=False; failures should not
+            # burn retries here (generator will best-effort salvage or return []).
             logger.warning(
-                "Flashcard gen failed (attempt %s/%s) subject=%r age_range=%r: %s",
-                attempt,
-                max_attempts,
+                "Flashcard gen failed (non-fatal; returning []) subject=%r age_range=%r: %s",
                 spec.subject_name,
                 spec.age_range_name,
                 exc,
             )
-            if attempt < max_attempts:
-                await asyncio.sleep(delay)
-                delay *= 2
+            return []
 
-    raise RuntimeError(
-        f"Failed after {max_attempts} attempts: subject={spec.subject_name!r} age_range={spec.age_range_name!r}"
-    ) from last_err
+    # Unreachable, but keeps type-checkers happy.
+    return []
 
 
 async def generate_all_easy_flashcards(*, per_pair: int = 5) -> None:
@@ -429,7 +450,7 @@ async def generate_all_easy_flashcards(*, per_pair: int = 5) -> None:
       - count VALID rows for that subject+age_range+difficulty
       - if count >= per_pair: skip OpenAI
       - else generate only the missing number
-      - append, dedupe, and write back to same canonical file
+      - append, dedupe, normalize shuffle, and write back to same canonical file
 
     SubjectAgeRange is the source of truth for which (subject, age_range) pairs are valid.
     """
@@ -437,7 +458,7 @@ async def generate_all_easy_flashcards(*, per_pair: int = 5) -> None:
 
     _ensure_dir(FLASHCARDS_DIR)
 
-    subjects, age_ranges, interests = await _fetch_subjects_age_ranges_interests()
+    subjects, age_ranges = await _fetch_subjects_age_ranges()
     if not subjects or not age_ranges:
         raise RuntimeError("No subjects or age ranges found in DB. Seed baseline first.")
 
@@ -446,7 +467,14 @@ async def generate_all_easy_flashcards(*, per_pair: int = 5) -> None:
     async with engine.begin() as conn:
         sar_rows = (
             await conn.execute(
-                select(Subject.code, AgeRange.name)
+                select(
+                    Subject.code,
+                    Subject.name,
+                    AgeRange.code,
+                    AgeRange.name,
+                    AgeRange.min_age,
+                    AgeRange.max_age,
+                )
                 .select_from(SubjectAgeRange)
                 .join(Subject, Subject.id == SubjectAgeRange.subject_id)
                 .join(AgeRange, AgeRange.id == SubjectAgeRange.age_range_id)
@@ -457,19 +485,29 @@ async def generate_all_easy_flashcards(*, per_pair: int = 5) -> None:
         logger.warning("No SubjectAgeRange rows found; no flashcards will be generated.")
         return
 
-    allowed_by_subject_code: dict[str, set[str]] = defaultdict(set)
-    for subject_code, age_range_name in sar_rows:
-        allowed_by_subject_code[str(subject_code)].add(str(age_range_name))
+    # Allowed pairs from SubjectAgeRange, indexed by subject_code for deterministic iteration.
+    # Store complete age range metadata so workers do not need to re-query AgeRange.
+    allowed_meta_by_subject_code: dict[str, dict[str, tuple[str, int | None, int | None]]] = defaultdict(dict)
+    for subject_code, _subject_name, age_range_code, age_range_name, min_age, max_age in sar_rows:
+        allowed_meta_by_subject_code[str(subject_code)][str(age_range_name)] = (
+            str(age_range_code),
+            (int(min_age) if min_age is not None else None),
+            (int(max_age) if max_age is not None else None),
+        )
 
     # Preserve deterministic ordering based on the subjects/age_ranges ordering above
-    allowed_pairs: list[tuple[str, str, str]] = []  # (subject_code, subject_name, age_range_name)
+    allowed_pairs: list[tuple[str, str, str, str, int | None, int | None]] = []
+    # (subject_code, subject_name, age_range_name, age_range_code, min_age, max_age)
     for subject_code, subject_name in subjects:
-        allowed_ages = allowed_by_subject_code.get(subject_code, set())
-        if not allowed_ages:
+        allowed_by_name = allowed_meta_by_subject_code.get(subject_code, {})
+        if not allowed_by_name:
             continue
-        for age_range_name in age_ranges:
-            if age_range_name in allowed_ages:
-                allowed_pairs.append((subject_code, subject_name, age_range_name))
+        for age_range_code, age_range_name, min_age, max_age in age_ranges:
+            meta = allowed_by_name.get(age_range_name)
+            if meta is None:
+                continue
+            ar_code, ar_min, ar_max = meta
+            allowed_pairs.append((subject_code, subject_name, age_range_name, ar_code, ar_min, ar_max))
 
     if not allowed_pairs:
         logger.warning("No allowed subject/age_range pairs found to generate.")
@@ -477,12 +515,26 @@ async def generate_all_easy_flashcards(*, per_pair: int = 5) -> None:
 
     gen = FlashcardGenerator()
 
-    # Concurrency control (avoid unnecessary concurrent calls)
+    # Sync Redis client for topic catalog caching (redis-py is sync; topic_catalog uses asyncio.to_thread).
+    redis_client = redis.Redis.from_url(settings.redis_url)
+
+    # Cache topic catalogs in-memory per run to avoid repeated generation for the same
+    # (subject, age_range, difficulty) combination.
+    catalog_cache: dict[tuple[str, str, str], list[Any]] = {}
+
+    # Concurrency control
     sem = asyncio.Semaphore(3)
 
     results_by_subject_code: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
-    async def worker(subject_code: str, subject_name: str, age_range_name: str) -> None:
+    async def worker(
+        subject_code: str,
+        subject_name: str,
+        age_range_name: str,
+        age_range_code: str | None,
+        min_age: int | None,
+        max_age: int | None,
+    ) -> None:
         out_path = _subject_seed_path(subject_code)
         logger.info(
             "Seed out_path selected: subject_code=%s path=%s exists=%s",
@@ -496,13 +548,14 @@ async def generate_all_easy_flashcards(*, per_pair: int = 5) -> None:
             )
 
         existing = _read_existing(out_path)
-        # Log summary of loaded canonical file without including any card text.
+
         age_counts: dict[str, int] = defaultdict(int)
         for r in existing:
             try:
                 age_counts[str(r.get("age_range", ""))] += 1
             except Exception:
                 age_counts["<unknown>"] += 1
+
         logger.info(
             "Loaded existing seed JSON: subject_code=%s rows=%s age_range_counts=%s",
             subject_code,
@@ -530,12 +583,93 @@ async def generate_all_easy_flashcards(*, per_pair: int = 5) -> None:
         missing = per_pair - existing_count
         spec = GenSpec(subject_name=subject_name, age_range_name=age_range_name, difficulty="easy", count=missing)
 
+        # Deterministic seed for topic selection for stable outputs across runs.
+        # NOTE: Use age_range_code (not name) to keep consistent with the topic catalog cache keying.
+        topic_seed = f"seed:{subject_code}:{subject_name}:{age_range_code}:{spec.difficulty}"
+
+        cache_key = (subject_name, age_range_code, spec.difficulty)
+        catalog = catalog_cache.get(cache_key)
+
+        if catalog is None:
+            topic_client: AsyncOpenAI | None = None
+            try:
+                topic_client = AsyncOpenAI(
+                    api_key=settings.flashcard_api_key,
+                    base_url=settings.flashcard_api_base,
+                )
+
+                helper_model = settings.topic_helper_model or gen.model
+
+                delays = [0.0, 0.5, 1.5]
+                last_exc: Exception | None = None
+                for d in delays:
+                    if d:
+                        await asyncio.sleep(d)
+                    try:
+                        catalog = await get_or_create_topic_catalog(
+                            redis_sync_client=redis_client,
+                            openai_client=topic_client,
+                            model=helper_model,
+                            version=settings.topic_catalog_version,
+                            subject=subject_name,
+                            age_range_code=(age_range_code or "all"),
+                            difficulty=spec.difficulty,
+                            rotate=settings.topic_catalog_rotate,
+                            count=settings.topic_catalog_count,
+                            ttl_seconds=settings.topic_catalog_ttl_seconds,
+                        )
+                        if catalog:
+                            break
+                    except Exception as exc:
+                        last_exc = exc
+                        logger.warning(
+                            "Topic catalog attempt failed (subject=%r age_range_code=%r difficulty=%r) err=%s",
+                            subject_name,
+                            (age_range_code or "all"),
+                            spec.difficulty,
+                            exc,
+                        )
+                        catalog = None
+
+                if not catalog:
+                    raise RuntimeError(
+                        f"Failed to obtain non-empty topic catalog subject={subject_name!r} age_range_code={(age_range_code or 'all')!r} difficulty={spec.difficulty!r}"
+                    ) from last_exc
+
+                catalog_cache[cache_key] = catalog
+
+            finally:
+                if topic_client is not None:
+                    close_fn = getattr(topic_client, "close", None) or getattr(topic_client, "aclose", None)
+                    if close_fn is not None:
+                        try:
+                            res = close_fn()
+                            if res is not None:
+                                await res
+                        except Exception:
+                            logger.exception("Failed to close topic helper client")
+
+        # Select a pool for this subject/age_range/difficulty.
+        # NOTE: since the generator now requests count+EXTRA internally, give it enough topics
+        # so it can keep unique tags when possible.
+        desired_pool = max(int(getattr(settings, "topic_pool_size", 0) or 0), per_pair + 6, 12)
+        n_pool = min(desired_pool, len(catalog))
+        selected = select_topics_for_batch(catalog, count=n_pool, deterministic_seed=topic_seed)
+
+        topic_tags = [getattr(t, "topic") for t in selected if isinstance(getattr(t, "topic", None), str)]
+        topic_pool = _compact_topic_pool(selected)
+
         async with sem:
-            new_rows = await _generate_one(gen, spec, interests)
+            new_rows = await _generate_one(
+                gen,
+                spec,
+                topic_tags,
+                topic_pool,
+                age_range_code=(age_range_code or "all"),
+            )
 
         results_by_subject_code[subject_code].extend(new_rows)
 
-        # Focused logging: how many new rows we accumulated per canonical file.
         logger.info(
             "Accumulated new rows: subject_code=%s new_total=%s",
             subject_code,
@@ -552,12 +686,26 @@ async def generate_all_easy_flashcards(*, per_pair: int = 5) -> None:
             final_after,
         )
 
-    await asyncio.gather(*(worker(code, name, a) for (code, name, a) in allowed_pairs))
+    worker_results = await asyncio.gather(
+        *(
+            worker(code, name, a_name, a_code, a_min, a_max)
+            for (code, name, a_name, a_code, a_min, a_max) in allowed_pairs
+        ),
+        return_exceptions=True,
+    )
+
+    failures: list[Exception] = [r for r in worker_results if isinstance(r, Exception)]
+    if failures:
+        logger.error("generate_all_easy_flashcards: %s/%s workers failed", len(failures), len(worker_results))
+        for i, exc in enumerate(failures, start=1):
+            logger.exception("generate_all_easy_flashcards worker failure %s/%s", i, len(failures), exc_info=exc)
+    else:
+        logger.info("generate_all_easy_flashcards: all %s workers completed successfully", len(worker_results))
 
     if not results_by_subject_code:
         logger.info("No seed files to write (nothing generated; results_by_subject_code empty).")
 
-    # Write per-subject JSON files (append + dedupe)
+    # Write per-subject JSON files (append + dedupe + normalize)
     for subject_code, new_rows in results_by_subject_code.items():
         out_path = _subject_seed_path(subject_code)
         logger.info(
@@ -569,15 +717,15 @@ async def generate_all_easy_flashcards(*, per_pair: int = 5) -> None:
         existing = _read_existing(out_path)
         combined = _dedupe([*existing, *new_rows])
         combined = _normalize_seed_rows(combined)
+
         dist = {0: 0, 1: 0, 2: 0, 3: 0}
         for r in combined:
             if isinstance(r, dict) and _is_valid_mcq_row(r):
                 dist[int(r["correct_index"])] += 1
         logger.info("correct_index distribution subject_code=%s dist=%s", subject_code, dist)
+
         _write_json_list(out_path, combined)
         logger.info("Wrote %s total rows to %s", len(combined), out_path.resolve())
-
-        # Per subject file total
         logger.info("Seed file total for %s: %s rows", subject_code, len(combined))
 
     logger.info("Done. Seed files updated under: %s", FLASHCARDS_DIR)

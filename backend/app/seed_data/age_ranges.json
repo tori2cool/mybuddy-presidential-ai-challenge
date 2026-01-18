@@ -1,6 +1,11 @@
 [
-  { "name": "Preschool", "min_age": 3, "max_age": 5 },
-  { "name": "Early Elementary", "min_age": 6, "max_age": 8 },
-  { "name": "Late Elementary", "min_age": 9, "max_age": 12 },
-  { "name": "Teen", "min_age": 13, "max_age": null }
+  { "name": "Preschool", "code": "grades-K-1", "min_age": 3, "max_age": 5 },
+
+  { "name": "Early Elementary", "code": "grades-2-4", "min_age": 6, "max_age": 7 },
+
+  { "name": "Upper Elementary", "code": "grades-5-6", "min_age": 8, "max_age": 10 },
+
+  { "name": "Middle School", "code": "grades-7-8", "min_age": 11, "max_age": 13 },
+
+  { "name": "High School", "code": "grades-9-12", "min_age": 14, "max_age": null }
 ]

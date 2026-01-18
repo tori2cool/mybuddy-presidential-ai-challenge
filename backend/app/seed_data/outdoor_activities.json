@@ -10,13 +10,18 @@
   { "name": "Build a fort", "category": "Creative", "icon": "home", "time": "30 min", "points": 20, "is_daily": false, "tags": ["creative"], "age_range": "Early Elementary" },
   { "name": "Garden with family", "category": "Nature Explorer", "icon": "sun", "time": "25 min", "points": 20, "is_daily": false, "tags": ["nature"], "age_range": "Early Elementary" },
 
-  { "name": "Play basketball", "category": "Sports & Games", "icon": "target", "time": "30 min", "points": 20, "is_daily": false, "tags": ["sports"], "age_range": "Late Elementary" },
-  { "name": "Go for a bike ride", "category": "Active Play", "icon": "activity", "time": "20 min", "points": 20, "is_daily": false, "tags": ["active-play"], "age_range": "Late Elementary" },
-  { "name": "Play soccer with friends", "category": "Sports & Games", "icon": "circle", "time": "45 min", "points": 20, "is_daily": false, "tags": ["sports"], "age_range": "Late Elementary" },
-  { "name": "Do a scavenger hunt", "category": "Creative", "icon": "compass", "time": "40 min", "points": 20, "is_daily": false, "tags": ["creative"], "age_range": "Late Elementary" },
+  { "name": "Play basketball", "category": "Sports & Games", "icon": "target", "time": "30 min", "points": 20, "is_daily": false, "tags": ["sports"], "age_range": "Upper Elementary" },
+  { "name": "Go for a bike ride", "category": "Active Play", "icon": "activity", "time": "20 min", "points": 20, "is_daily": false, "tags": ["active-play"], "age_range": "Upper Elementary" },
+  { "name": "Play soccer with friends", "category": "Sports & Games", "icon": "circle", "time": "45 min", "points": 20, "is_daily": false, "tags": ["sports"], "age_range": "Upper Elementary" },
+  { "name": "Do a scavenger hunt", "category": "Creative", "icon": "compass", "time": "40 min", "points": 20, "is_daily": false, "tags": ["creative"], "age_range": "Upper Elementary" },
 
-  { "name": "Go for a run/jog", "category": "Active Play", "icon": "wind", "time": "30 min", "points": 25, "is_daily": false, "tags": ["active-play"], "age_range": "Teen" },
-  { "name": "Play tennis", "category": "Sports & Games", "icon": "target", "time": "45 min", "points": 25, "is_daily": false, "tags": ["sports"], "age_range": "Teen" },
-  { "name": "Go hiking", "category": "Nature Explorer", "icon": "compass", "time": "60 min", "points": 25, "is_daily": false, "tags": ["nature"], "age_range": "Teen" },
-  { "name": "Take photos outside", "category": "Creative", "icon": "camera", "time": "45 min", "points": 25, "is_daily": false, "tags": ["creative"], "age_range": "Teen" }
+  { "name": "Go for a jog", "category": "Active Play", "icon": "wind", "time": "25 min", "points": 25, "is_daily": false, "tags": ["active-play"], "age_range": "Middle School" },
+  { "name": "Play tennis", "category": "Sports & Games", "icon": "target", "time": "45 min", "points": 25, "is_daily": false, "tags": ["sports"], "age_range": "Middle School" },
+  { "name": "Go hiking", "category": "Nature Explorer", "icon": "compass", "time": "60 min", "points": 25, "is_daily": false, "tags": ["nature"], "age_range": "Middle School" },
+  { "name": "Take photos outside", "category": "Creative", "icon": "camera", "time": "45 min", "points": 25, "is_daily": false, "tags": ["creative"], "age_range": "Middle School" },
+
+  { "name": "Go for a run", "category": "Active Play", "icon": "wind", "time": "30 min", "points": 25, "is_daily": false, "tags": ["active-play"], "age_range": "High School" },
+  { "name": "Play tennis", "category": "Sports & Games", "icon": "target", "time": "45 min", "points": 25, "is_daily": false, "tags": ["sports"], "age_range": "High School" },
+  { "name": "Go hiking", "category": "Nature Explorer", "icon": "compass", "time": "60 min", "points": 25, "is_daily": false, "tags": ["nature"], "age_range": "High School" },
+  { "name": "Take photos outside", "category": "Creative", "icon": "camera", "time": "45 min", "points": 25, "is_daily": false, "tags": ["creative"], "age_range": "High School" }
 ]

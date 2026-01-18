@@ -103,11 +103,6 @@ def slugify(text_: str, *, max_len: int = 80, fallback: str = "item") -> str:
     return s[:max_len].rstrip("-")
 
 
-def age_range_code(min_age: int, max_age: int | None) -> str:
-    # stable, readable codes
-    if max_age is None:
-        return f"age_{min_age}_plus"
-    return f"age_{min_age}_{max_age}"
 
 
 async def _seed_bulk(
@@ -245,7 +240,30 @@ async def seed() -> None:
     engine = get_engine()
     async with engine.begin() as conn:
         if not await db_looks_empty(conn):
-            logger.info("Seed skipped (database not empty)")
+            # Seed is intentionally one-time. If age range codes changed in seed_data,
+            # existing DB rows will *not* be updated automatically.
+            try:
+                existing_codes = set((await conn.execute(select(AgeRange.code))).scalars().all())
+                desired_codes = {
+                    (r.get("code") or "").strip()
+                    for r in AGE_RANGES_SEED
+                    if isinstance(r.get("code"), str)
+                }
+                desired_codes.discard("")
+
+                if existing_codes and desired_codes and existing_codes != desired_codes:
+                    logger.warning(
+                        "Seed skipped (database not empty). AgeRange.code values in DB differ from "
+                        "seed_data/age_ranges.json. If you previously seeded legacy age_* codes, "
+                        "run a migration or clear the age_ranges table to re-seed. Existing=%s Desired=%s",
+                        sorted(existing_codes),
+                        sorted(desired_codes),
+                    )
+                else:
+                    logger.info("Seed skipped (database not empty)")
+            except Exception as exc:
+                logger.info("Seed skipped (database not empty)")
+                logger.debug("Could not compare existing AgeRange codes", exc_info=exc)
             return
 
         # --- Avatars ---
@@ -257,17 +275,22 @@ async def seed() -> None:
         await _seed_bulk(conn, Interest, interests, "Interests", conflict_cols=["name"])
 
         # --- Age ranges ---
-        age_ranges_rows = []
+        age_ranges_rows: list[dict[str, Any]] = []
         for row in AGE_RANGES_SEED:
+            code = row.get("code")
+            if not isinstance(code, str) or not code.strip():
+                raise ValueError(f"age_ranges seed row must include non-empty 'code': {row}")
+
             age_ranges_rows.append(
                 {
-                    "code": age_range_code(row["min_age"], row["max_age"]),
+                    "code": code.strip(),
                     "name": row["name"],
                     "min_age": row["min_age"],
                     "max_age": row["max_age"],
                     "is_active": True,
                 }
             )
+
         await _seed_bulk(conn, AgeRange, age_ranges_rows, "Age ranges", conflict_cols=["code"])
 
         # Build age range maps

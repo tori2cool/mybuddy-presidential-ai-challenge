@@ -1,19 +1,24 @@
 [
-  { "subject_name": "Math", "age_range": "Preschool" },
-  { "subject_name": "Math", "age_range": "Early Elementary" },
-  { "subject_name": "Math", "age_range": "Late Elementary" },
-  { "subject_name": "Math", "age_range": "Teen" },
-
+  { "subject_name": "Math",    "age_range": "Preschool" },
   { "subject_name": "Science", "age_range": "Preschool" },
+
+  { "subject_name": "Math",    "age_range": "Early Elementary" },
   { "subject_name": "Science", "age_range": "Early Elementary" },
-  { "subject_name": "Science", "age_range": "Late Elementary" },
-  { "subject_name": "Science", "age_range": "Teen" },
-
   { "subject_name": "Reading", "age_range": "Early Elementary" },
-  { "subject_name": "Reading", "age_range": "Late Elementary" },
-  { "subject_name": "Reading", "age_range": "Teen" },
-
   { "subject_name": "History", "age_range": "Early Elementary" },
-  { "subject_name": "History", "age_range": "Late Elementary" },
-  { "subject_name": "History", "age_range": "Teen" }
+
+  { "subject_name": "Math",    "age_range": "Upper Elementary" },
+  { "subject_name": "Science", "age_range": "Upper Elementary" },
+  { "subject_name": "Reading", "age_range": "Upper Elementary" },
+  { "subject_name": "History", "age_range": "Upper Elementary" },
+
+  { "subject_name": "Math",    "age_range": "Middle School" },
+  { "subject_name": "Science", "age_range": "Middle School" },
+  { "subject_name": "Reading", "age_range": "Middle School" },
+  { "subject_name": "History", "age_range": "Middle School" },
+
+  { "subject_name": "Math",    "age_range": "High School" },
+  { "subject_name": "Science", "age_range": "High School" },
+  { "subject_name": "Reading", "age_range": "High School" },
+  { "subject_name": "History", "age_range": "High School" }
 ]

@@ -86,6 +86,22 @@ class Settings(BaseModel):
         os.getenv("FLASHCARD_MODEL", "gpt-5-mini"),
     )
 
+    # ---- Topic helper / topic catalog ----
+    # Model to use for topic helper; if unset, fall back to flashcard_model.
+    topic_helper_model: str | None = os.getenv("TOPIC_HELPER_MODEL", None)
+    # Version namespace for topic catalog keys / behavior.
+    topic_catalog_version: str = os.getenv("TOPIC_CATALOG_VERSION", "v1")
+    # Rotation bucket for caching topic catalogs: static|daily|weekly|monthly
+    topic_catalog_rotate: str = os.getenv("TOPIC_CATALOG_ROTATE", "weekly")
+    topic_catalog_count: int = int(os.getenv("TOPIC_CATALOG_COUNT", "30"))
+    # TTL for cached catalog in Redis (seconds). If unset/empty, store without TTL.
+    _topic_catalog_ttl_seconds_raw: str = os.getenv("TOPIC_CATALOG_TTL_SECONDS", "")
+    topic_catalog_ttl_seconds: int | None = (
+        int(_topic_catalog_ttl_seconds_raw) if _topic_catalog_ttl_seconds_raw.strip() else None
+    )
+    # How many topics to pass into the flashcard prompt for one batch.
+    topic_pool_size: int = int(os.getenv("TOPIC_POOL_SIZE", "12"))
+
     # ---- Keycloak (this is what security.py uses) ----
     keycloak: KeycloakSettings = KeycloakSettings()
 

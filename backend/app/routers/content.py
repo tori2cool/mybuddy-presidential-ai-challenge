@@ -166,24 +166,22 @@ async def _maybe_enqueue_targeted_flashcard_generation(
             enqueue_content_expansion_request_after_commit(create_res.request.id)
 
             logger.warning(
-                "flashcards_empty: enqueued child_id=%s subject_id=%s age_range_id=%s difficulty=%s trigger=%s req_id=%s interests=%s",
+                "flashcards_empty: enqueued child_id=%s subject_id=%s age_range_id=%s difficulty=%s trigger=%s req_id=%s",
                 str(child.id),
                 str(subject_id),
                 str(age_range_id),
                 difficulty_code,
                 trigger,
                 str(create_res.request.id),
-                child.interests,
             )
         else:
             logger.info(
-                "flashcards_empty: request_deduped child_id=%s subject_id=%s age_range_id=%s difficulty=%s trigger=%s interests=%s",
+                "flashcards_empty: request_deduped child_id=%s subject_id=%s age_range_id=%s difficulty=%s trigger=%s",
                 str(child.id),
                 str(subject_id),
                 str(age_range_id),
                 difficulty_code,
                 trigger,
-                child.interests,
             )
     except Exception:
         logger.exception(
@@ -479,9 +477,8 @@ async def list_flashcards(
 
     age_range: Optional[AgeRange] = await get_age_range_for_child(child, session)
     logger.info(
-        "list_flashcards: resolved age_range_id=%s interests=%s child_id=%s",
+        "list_flashcards: resolved age_range_id=%s child_id=%s",
         (str(age_range.id) if age_range else None),
-        child.interests,
         str(child.id),
     )
 
@@ -550,61 +547,31 @@ async def list_flashcards(
         else_=ChildFlashcardPerformance.correct_count,
     )
 
-    interest_order = _build_interest_boost_order(Flashcard, child.interests)
-
-    # Boost newly auto-generated flashcards (tagged with 'auto') ahead of other cards.
-    auto_score = case(
-        (func.coalesce(Flashcard.tags, text("'[]'::jsonb")).op("?")("auto"), 0),
-        else_=1,
-    )
-
     # Random tie-breaker to avoid returning the same cards when scores are equal.
     rnd = func.random()
 
     base_query = base_query.add_columns(
         wrong_score.label("wrong_score"),
         correct_score.label("correct_score"),
-        auto_score.label("auto_score"),
         rnd.label("rnd"),
     )
 
-    if interest_order is not None:
-        base_query = base_query.add_columns(interest_order.label("interest_score"))
-        base_query = base_query.order_by(
-            wrong_score.desc(),
-            correct_score.asc(),
-            auto_score.asc(),
-            interest_order.asc(),
-            rnd,
-        )
-    else:
-        base_query = base_query.order_by(
-            wrong_score.desc(),
-            correct_score.asc(),
-            auto_score.asc(),
-            rnd,
-        )
+    base_query = base_query.order_by(
+        wrong_score.desc(),
+        correct_score.asc(),
+        rnd,
+    )
 
     ordered_ids_subq = base_query.subquery()
 
     # Step 2: Fetch full Flashcard objects using the ordered IDs and preserve order
     stmt = select(Flashcard).join(ordered_ids_subq, Flashcard.id == ordered_ids_subq.c.fc_id)
 
-    if "interest_score" in ordered_ids_subq.c:
-        stmt = stmt.order_by(
-            ordered_ids_subq.c.wrong_score.desc(),
-            ordered_ids_subq.c.correct_score.asc(),
-            ordered_ids_subq.c.auto_score.asc(),
-            ordered_ids_subq.c.interest_score.asc(),
-            ordered_ids_subq.c.rnd.asc(),
-        )
-    else:
-        stmt = stmt.order_by(
-            ordered_ids_subq.c.wrong_score.desc(),
-            ordered_ids_subq.c.correct_score.asc(),
-            ordered_ids_subq.c.auto_score.asc(),
-            ordered_ids_subq.c.rnd.asc(),
-        )
+    stmt = stmt.order_by(
+        ordered_ids_subq.c.wrong_score.desc(),
+        ordered_ids_subq.c.correct_score.asc(),
+        ordered_ids_subq.c.rnd.asc(),
+    )
 
     result = await session.execute(stmt.limit(limit))
     rows = result.scalars().all()
@@ -655,7 +622,6 @@ async def list_flashcards(
                 "wrong_cnt": row[2],
                 "correct_cnt": row[3],
                 "tags": list(row[1] or []),
-                "auto": ("auto" in (row[1] or [])),
             }
             for row in perf_rows
         }
@@ -669,7 +635,6 @@ async def list_flashcards(
                     "id": str(fc_id),
                     "wrong_cnt": sig.get("wrong_cnt"),
                     "correct_cnt": sig.get("correct_cnt"),
-                    "auto": sig.get("auto"),
                     "tags": sig.get("tags"),
                 }
             )

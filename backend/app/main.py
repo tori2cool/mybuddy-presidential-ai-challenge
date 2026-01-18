@@ -26,10 +26,10 @@ async def lifespan(app: FastAPI):
         await verify_uuid_support()
         await init_db()
         await seed()
-        await generate_all_easy_flashcards(per_pair=5)
-        await insert_flashcards_from_seed_json()
     else:
         await verify_uuid_support()
+    await generate_all_easy_flashcards(per_pair=5)
+    await insert_flashcards_from_seed_json()
     yield
 
 app = FastAPI(title="MyBuddy Backend", lifespan=lifespan)
