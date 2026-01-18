@@ -124,10 +124,9 @@ export default function AffirmationsScreen() {
     try {
       const updatedIds = await toggleFavorite(id, favorites);
       setFavorites(updatedIds);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // or keep Medium if you prefer
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (err) {
       console.error('Failed to toggle favorite', err);
-      // Optional: show a toast "Couldn't save favorite"
     }
   };
 
@@ -234,11 +233,6 @@ export default function AffirmationsScreen() {
   );
 
   const affirmationsToday = dashboard?.today?.affirmationsViewed ?? 0;
-
-  const toggleFavorite = (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((fav) => fav !== id) : [...prev, id]));
-  };
 
   // -----------------------------
   // Viewed tracking (deduped)
@@ -556,9 +550,6 @@ export default function AffirmationsScreen() {
               <Pressable style={styles.actionButton} onPress={() => handleSharePress()}>
                 <Feather name="share-2" size={28} color="white" />
               </Pressable>
-
-              <Pressable
-                style={styles.actionButton}
 
               <Pressable
                 style={styles.actionButton}
