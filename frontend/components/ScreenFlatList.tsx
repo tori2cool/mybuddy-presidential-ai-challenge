@@ -1,5 +1,5 @@
 import React from "react";
-import { FlatList, FlatListProps, StyleSheet } from "react-native";
+import { FlatList, FlatListProps, Platform, StyleSheet } from "react-native";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useScreenInsets } from "@/hooks/useScreenInsets";
@@ -26,6 +26,7 @@ export function ScreenFlatList<T>({
           paddingBottom,
         },
         styles.contentContainer,
+        Platform.OS === "web" && styles.contentContainerWeb,
         contentContainerStyle,
       ]}
       scrollIndicatorInsets={{ bottom: scrollInsetBottom }}
@@ -40,5 +41,8 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: Spacing.xl,
+  },
+  contentContainerWeb: {
+    alignItems: "center",
   },
 });

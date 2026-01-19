@@ -1,4 +1,4 @@
-import { ScrollView, ScrollViewProps, StyleSheet } from "react-native";
+import { Platform, ScrollView, ScrollViewProps, StyleSheet, View } from "react-native";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useScreenInsets } from "@/hooks/useScreenInsets";
@@ -31,7 +31,9 @@ export function ScreenScrollView({
       scrollIndicatorInsets={{ bottom: scrollInsetBottom }}
       {...scrollViewProps}
     >
-      {children}
+      <View style={[styles.inner, Platform.OS === "web" && styles.innerWeb]}>
+        {children}
+      </View>
     </ScrollView>
   );
 }
@@ -42,5 +44,12 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: Spacing.xl,
+  },
+  inner: {
+    width: "100%",
+  },
+  innerWeb: {
+    maxWidth: 960,
+    alignSelf: "center",
   },
 });

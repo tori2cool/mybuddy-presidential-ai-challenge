@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, StyleSheet, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ThemedText } from "@/components/ThemedText";
@@ -11,6 +11,7 @@ import { Spacing, Typography, BorderRadius } from "@/constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/hooks/useTheme";
 import { ProgressBar } from "@/components/ProgressBar";
+import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { getInterests } from "@/services/interestsService";
 import type { Interest, UUID } from "@/types/models";
 
@@ -91,12 +92,9 @@ export default function OnboardingQuizScreen() {
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + Spacing.xl },
-        ]}
+      <ScreenScrollView
+        style={[styles.scrollView, { backgroundColor: "transparent" }]}
+        contentContainerStyle={[styles.content, { paddingBottom: Spacing.xl }]}
       >
         <ThemedText style={styles.question}>
           Pick your favorites! (Choose as many as you like)
@@ -143,7 +141,7 @@ export default function OnboardingQuizScreen() {
             })}
           </View>
         )}
-      </ScrollView>
+      </ScreenScrollView>
 
       <View
         style={[

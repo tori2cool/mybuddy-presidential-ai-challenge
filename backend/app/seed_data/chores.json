@@ -13,7 +13,7 @@
   { "label": "Walk the dog with permission", "icon": "activity", "is_extra": false, "tags": ["pets"], "age_range": "Upper Elementary" },
   { "label": "Vacuum the living room", "icon": "wind", "is_extra": false, "tags": ["responsibility"], "age_range": "Upper Elementary" },
   { "label": "Fold and put away laundry", "icon": "list", "is_extra": false, "tags": ["responsibility"], "age_range": "Upper Elementary" },
-  { "label": "Clean the bathroom sink", "icon": "droplets", "is_extra": false, "tags": ["cleaning"], "age_range": "Upper Elementary" },
+  { "label": "Clean the bathroom", "icon": "trash-2", "is_extra": false, "tags": ["cleaning"], "age_range": "Upper Elementary" },
 
   { "label": "Help with laundry", "icon": "rotate-ccw", "is_extra": false, "tags": ["responsibility"], "age_range": "Middle School" },
   { "label": "Wash the car with supervision", "icon": "truck", "is_extra": false, "tags": ["responsibility"], "age_range": "Middle School" },

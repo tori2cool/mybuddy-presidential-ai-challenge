@@ -1,4 +1,4 @@
-import { View, StyleSheet, Image } from "react-native";
+import { View, StyleSheet, Image, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
@@ -6,9 +6,9 @@ import { ThemedText } from "@/components/ThemedText";
 import { CancelXButton } from "@/components/CancelXButton";
 import { Button } from "@/components/Button";
 import { OnboardingParamList } from "@/navigation/OnboardingNavigator";
-import { Spacing, Typography } from "@/constants/theme";
+import { Spacing, Typography, Gradients } from "@/constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Gradients } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 
 type WelcomeScreenNavigationProp = NativeStackNavigationProp<
   OnboardingParamList,
@@ -18,6 +18,7 @@ type WelcomeScreenNavigationProp = NativeStackNavigationProp<
 export default function OnboardingWelcomeScreen() {
   const navigation = useNavigation<WelcomeScreenNavigationProp>();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
 
   const handleCancel = () => {
     const parent = navigation.getParent();
@@ -31,14 +32,15 @@ export default function OnboardingWelcomeScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={[...Gradients.sky] as any}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    >
-      <CancelXButton onPress={handleCancel} />
-      <View
+    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
+      <LinearGradient
+        colors={[...Gradients.sky] as any}
+        style={[styles.gradient, Platform.OS === "web" && styles.gradientWeb]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      >
+        <CancelXButton onPress={handleCancel} />
+        <View
         style={[
           styles.content,
           {
@@ -75,13 +77,22 @@ export default function OnboardingWelcomeScreen() {
           </Button>
         </View>
       </View>
-    </LinearGradient>
+      </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  gradient: {
+    flex: 1,
+  },
+  gradientWeb: {
+    maxWidth: 960,
+    width: "100%",
+    alignSelf: "center",
   },
   content: {
     flex: 1,

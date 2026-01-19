@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Pressable } from "react-native";
+import { Platform, Pressable, StyleSheet } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -70,6 +70,7 @@ export function Card({ elevation, onPress }: CardProps) {
         {
           backgroundColor: cardBackgroundColor,
         },
+        Platform.OS === "web" && styles.cardWeb,
         animatedStyle,
       ]}
     >
@@ -85,8 +86,13 @@ export function Card({ elevation, onPress }: CardProps) {
 
 const styles = StyleSheet.create({
   card: {
+    width: "100%",
     padding: Spacing.xl,
     borderRadius: BorderRadius["2xl"],
+  },
+  cardWeb: {
+    maxWidth: 960,
+    alignSelf: "center",
   },
   cardTitle: {
     marginBottom: Spacing.sm,

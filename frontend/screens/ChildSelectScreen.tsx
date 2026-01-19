@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { ThemedText } from "@/components/ThemedText";
@@ -176,12 +176,13 @@ export default function ChildSelectScreen({ navigation }: Props) {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText type="title">Who is using MyBuddy?</ThemedText>
-        <ThemedText style={{ color: theme.textSecondary, marginTop: 8 }}>
-          Please select a child to continue.
-        </ThemedText>
-      </View>
+      <View style={[styles.inner, Platform.OS === "web" && styles.innerWeb]}>
+        <View style={styles.header}>
+          <ThemedText type="title">Who is using MyBuddy?</ThemedText>
+          <ThemedText style={{ color: theme.textSecondary, marginTop: 8 }}>
+            Please select a child to continue.
+          </ThemedText>
+        </View>
 
       {loading ? (
         <View style={styles.center}>
@@ -256,6 +257,7 @@ export default function ChildSelectScreen({ navigation }: Props) {
           </View>
         </View>
       )}
+      </View>
     </ThemedView>
   );
 }
@@ -264,10 +266,13 @@ export default function ChildSelectScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: Spacing.lg },
+  inner: { width: "100%" },
+  innerWeb: { maxWidth: 960, alignSelf: "center" },
   header: { marginTop: Spacing.xl, marginBottom: Spacing.xl },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   list: { gap: Spacing.md },
   card: {
+    width: "100%",
     padding: Spacing.lg,
     borderRadius: BorderRadius.md,
     borderWidth: 2,
@@ -286,6 +291,7 @@ const styles = StyleSheet.create({
   },
   addKidButtonWrap: {
     marginTop: Spacing.lg,
+    width: "100%",
   },
   addKidButton: {
     // Secondary-like style using theme border/background while keeping existing Button component.

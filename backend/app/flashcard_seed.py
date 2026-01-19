@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 SEED_DATA_DIR = Path(__file__).resolve().parent / "seed_data"
 FLASHCARDS_DIR = SEED_DATA_DIR / "flashcards"
 
-
+# Trying not to hard code values like "easy", but for now it's okay.
 @dataclass(frozen=True)
 class GenSpec:
     subject_name: str

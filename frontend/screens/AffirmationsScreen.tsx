@@ -8,6 +8,7 @@ import {
   ViewToken,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Platform,
 } from "react-native";
 
 type RafThrottleFn<T extends (...args: any[]) => void> = {
@@ -50,10 +51,12 @@ import { Affirmation } from "@/types/models";
 import { useCurrentChildId } from "@/contexts/ChildContext";
 import { ShareMenu } from "@/components/ShareMenu";
 import { CreateAffirmationModal } from "@/components/CreateAffirmationModal";
+import { useTheme } from "@/hooks/useTheme";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function AffirmationsScreen() {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { data: dashboard, postEvent } = useDashboard();
   const { childId } = useCurrentChildId();
@@ -245,12 +248,15 @@ export default function AffirmationsScreen() {
     };
 
     return (
-      <View style={styles.itemContainer}>
-        <LinearGradient colors={gradient} style={styles.gradient}>
-          <View style={styles.content}>
-            <ThemedText style={[styles.affirmationText, { textShadowColor: "rgba(0,0,0,0.3)" }]}>
-              {item.text}
-            </ThemedText>
+      <View style={[styles.itemOuter, { backgroundColor: theme.backgroundRoot }]}>
+        <View style={[styles.itemInner, Platform.OS === "web" && styles.itemInnerWeb]}>
+          <LinearGradient colors={gradient} style={styles.gradient}>
+            <View style={styles.contentColumn}>
+            <View style={styles.content}>
+              <ThemedText style={[styles.affirmationText, { textShadowColor: "rgba(0,0,0,0.3)" }]}>
+                {item.text}
+              </ThemedText>
+            </View>
           </View>
 
           <View
@@ -259,48 +265,53 @@ export default function AffirmationsScreen() {
               { paddingBottom: insets.bottom + Spacing.tabBarHeight + Spacing.lg },
             ]}
           >
-            <View style={styles.statsContainer}>
-              <View style={styles.statBadge}>
-                <Feather name="heart" size={14} color="white" />
-                <ThemedText style={styles.statText}>{affirmationsToday} today</ThemedText>
+            <View style={styles.contentColumn}>
+              <View style={styles.statsContainer}>
+                <View style={styles.statBadge}>
+                  <Feather name="heart" size={14} color="white" />
+                  <ThemedText style={styles.statText}>{affirmationsToday} today</ThemedText>
+                </View>
+                <View style={styles.statBadge}>
+                  <Feather name="zap" size={14} color="white" />
+                  <ThemedText style={styles.statText}>+{affirmationsToday * 5} pts</ThemedText>
+                </View>
               </View>
-              <View style={styles.statBadge}>
-                <Feather name="zap" size={14} color="white" />
-                <ThemedText style={styles.statText}>+{affirmationsToday * 5} pts</ThemedText>
+
+              <View style={styles.actionsRow}>
+                <Pressable onPress={() => toggleFavorite(item.id)} style={styles.actionButton}>
+                  <Feather
+                    name="heart"
+                    size={28}
+                    color={isFavorite ? "#EC4899" : "white"}
+                    // @ts-ignore (Feather doesn't type fill, but RN supports it)
+                    fill={isFavorite ? "#EC4899" : "none"}
+                  />
+                </Pressable>
+
+                <Pressable style={styles.actionButton} onPress={handleSharePress}>
+                  <Feather name="share-2" size={28} color="white" />
+                </Pressable>
+
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={() => {
+                    setCustomAffirmationText("");
+                    setShowCreateModal(true);
+                  }}
+                >
+                  <Feather name="edit" size={28} color="white" />
+                </Pressable>
               </View>
-            </View>
-
-            <View style={styles.actionsRow}>
-              <Pressable onPress={() => toggleFavorite(item.id)} style={styles.actionButton}>
-                <Feather
-                  name="heart"
-                  size={28}
-                  color={isFavorite ? "#EC4899" : "white"}
-                  // @ts-ignore (Feather doesn't type fill, but RN supports it)
-                  fill={isFavorite ? "#EC4899" : "none"}
-                />
-              </Pressable>
-
-              <Pressable style={styles.actionButton} onPress={handleSharePress}>
-                <Feather name="share-2" size={28} color="white" />
-              </Pressable>
-
-              <Pressable
-                style={styles.actionButton}
-                onPress={() => {
-                  setCustomAffirmationText("");
-                  setShowCreateModal(true);
-                }}
-              >
-                <Feather name="edit" size={28} color="white" />
-              </Pressable>
             </View>
           </View>
 
           <View style={[styles.topOverlay, { paddingTop: insets.top + Spacing.lg }]}>
-            <IconButton name="settings" color="white" size={24} style={styles.settingsButton} />
+            <View style={styles.contentColumn}>
+              <IconButton name="settings" color="white" size={24} style={styles.settingsButton} />
+            </View>
           </View>
-        </LinearGradient>
+                  </LinearGradient>
+        </View>
       </View>
     );
   };
@@ -367,8 +378,25 @@ export default function AffirmationsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  itemContainer: { height: SCREEN_HEIGHT },
+  itemOuter: {
+    height: SCREEN_HEIGHT,
+    justifyContent: "center",
+    paddingHorizontal: Spacing.xl,
+  },
+  itemInner: {
+    width: "100%",
+    height: "100%",
+  },
+  itemInnerWeb: {
+    maxWidth: 960,
+    alignSelf: "center",
+  },
   gradient: { flex: 1 },
+  contentColumn: {
+    width: "100%",
+    flex: 1,
+  },
+  
   content: {
     flex: 1,
     justifyContent: "center",
@@ -408,6 +436,6 @@ const styles = StyleSheet.create({
   statText: { color: "white", fontSize: 13, fontWeight: "600" },
   actionsRow: { flexDirection: "row", justifyContent: "space-around" },
   actionButton: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
-  topOverlay: { position: "absolute", top: 0, right: 0, paddingRight: Spacing.lg },
+  topOverlay: { position: "absolute", top: 0, left: 0, right: 0, paddingHorizontal: Spacing.lg },
   settingsButton: { backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 22 },
 });
