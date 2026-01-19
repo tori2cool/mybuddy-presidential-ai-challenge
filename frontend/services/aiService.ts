@@ -7,7 +7,6 @@ interface ProgressInfo {
   choresCompleted: number;
   outdoorActivities: number;
   currentStreak: number;
-  currentGrade: string;
   currentLevel: number;
 }
 
@@ -43,7 +42,7 @@ function buildSystemPrompt(
     : '';
 
   const progress = progressInfo
-    ? `Today they've completed ${progressInfo.flashcardsCompleted} flashcards, ${progressInfo.choresCompleted} chores, and ${progressInfo.outdoorActivities} outdoor activities. They have a ${progressInfo.currentStreak} day streak. They're at ${progressInfo.currentGrade} grade, level ${progressInfo.currentLevel}.`
+    ? `Today they've completed ${progressInfo.flashcardsCompleted} flashcards, ${progressInfo.choresCompleted} chores, and ${progressInfo.outdoorActivities} outdoor activities. They have a ${progressInfo.currentStreak} day streak. They're at level ${progressInfo.currentLevel}.`
     : '';
 
   return `You are ${buddyName}, a friendly, encouraging, and supportive AI buddy for children in an educational app called MyBuddy. You help kids with PreK-12 learning, life skills, and personal growth.

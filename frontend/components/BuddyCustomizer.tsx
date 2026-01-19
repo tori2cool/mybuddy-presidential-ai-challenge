@@ -10,7 +10,6 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
-import { BuddyPreview } from '@/components/BuddyPreview';
 import { BuddySVGCustomization } from './BuddySVGCustomization';
 import { useBuddy } from '@/contexts/BuddyContext';
 import { useTheme } from '@/hooks/useTheme';

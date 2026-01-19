@@ -18,8 +18,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBuddy } from '@/contexts/BuddyContext';
 import { useTheme } from '@/hooks/useTheme';
 import { Spacing, BorderRadius } from '@/constants/theme';
-import { BuddyAppearance } from '@/constants/buddyCustomization';
-import { BuddyPreview } from '@/components/BuddyPreview';
 import { BuddySVGCustomization } from './BuddySVGCustomization'; 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');

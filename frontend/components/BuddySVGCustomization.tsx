@@ -1,10 +1,7 @@
 // src/components/BuddySVGCustomization.tsx
-// Updated to use your latest base SVG with labeled layers
-// Main body color comes from appearance.skinColor (hex)
-// Other colors can be made dynamic later as needed
 
 import React from 'react';
-import Svg, { SvgProps, Defs, ClipPath, Rect, G, Path, LinearGradient, Stop } from 'react-native-svg';  // Added LinearGradient and Stop
+import Svg, { Defs, ClipPath, Rect, G, Path, LinearGradient, Stop } from 'react-native-svg';  // Added LinearGradient and Stop
 import { BuddyAppearance } from '@/constants/buddyCustomization';
 
 interface BuddyPreviewProps {
@@ -18,65 +15,33 @@ export function BuddySVGCustomization({
   size = 100,
   showFullBody = true,
 }: BuddyPreviewProps) {
-  // Use skinColor from appearance for the main body (this should change when user picks a new color)
-  const mainBodyColor = appearance.skinColor || '#FEC2C6'; // fallback to original
+  const mainBodyColor = appearance.skinColor || '#FEC2C6'; 
 
   // Small lookup: when main body is this color → use these for belly/hands/feet
   const shadeVariants: Record<string, { bellyColor: string; handsFeetColor: string }> = {
-    // Peach family
     '#FFDBAC': { bellyColor: '#FFCC8A', handsFeetColor: '#FFCC8A' },
-
-    // Tan family - fix
     '#E0AC69': { bellyColor: '#D48B2B', handsFeetColor: '#D48B2B' },
-
-    // Brown family
     '#C68642': { bellyColor: '#A16A30', handsFeetColor: '#A16A30' },
-
-    // Dark Brown family
     '#8D5524': { bellyColor: '#5D3818', handsFeetColor: '#5D3818' },
-
-    // Espresso family
     '#5C3A21': { bellyColor: '#342113', handsFeetColor: '#342113' },
-
-    // Orange family - fix
     '#FFB347': { bellyColor: '#FF9500', handsFeetColor: '#FF9500' },
-
-    // Yellow family - fix
     '#FFE66D': { bellyColor: '#FFD500', handsFeetColor: '#FFD500' },
-
-    // Pink family
     '#FFB6C1': { bellyColor: '#FF8A9B', handsFeetColor: '#FF8A9B' },
-
-    // Purple family
     '#DDA0DD': { bellyColor: '#D487D4', handsFeetColor: '#D487D4' },
-
-    // Blue family - fix
     '#87CEEB': { bellyColor: '#4CB7E1', handsFeetColor: '#4CB7E1' },
-
-    // Green family - fix
     '#98FB98': { bellyColor: '#35F835', handsFeetColor: '#35F835' },
-
-    // Mint family - fix
     '#AAF0D1': { bellyColor: '#4DE09E', handsFeetColor: '#4DE09E' },
-
-    // Lavender family
     '#E6E6FA': { bellyColor: '#C0C0F2', handsFeetColor: '#C0C0F2' },
-
-    // Coral family
     '#FF7F7F': { bellyColor: '#FF5C5C', handsFeetColor: '#FF5C5C' },
-
-    // Gray family
     '#C0C0C0': { bellyColor: '#ADADAD', handsFeetColor: '#ADADAD' },
-
-    // Silver family
     '#E8E8E8': { bellyColor: '#D2D2D2', handsFeetColor: '#D2D2D2' }
 
   };
 
   // Look up the matching shades (fallback to original if not found)
   const variants = shadeVariants[mainBodyColor] || {
-    bellyColor: mainBodyColor,           // fallback: same as body
-    handsFeetColor: mainBodyColor, // or keep your original #FD8B93
+    bellyColor: mainBodyColor,   
+    handsFeetColor: mainBodyColor, 
   };
 
   const bellyColor = variants.bellyColor;
