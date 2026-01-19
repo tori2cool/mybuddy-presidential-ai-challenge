@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 
-const primary = "#8B5CF6";
-const primaryDark = "#7C3AED";
+const primary = "#079D8E";
+const primaryDark = "#057569";
 
 export const Colors = {
   light: {
@@ -15,14 +15,14 @@ export const Colors = {
     tabIconDefault: "#6B7280",
     tabIconSelected: primary,
     link: primary,
-    backgroundRoot: "#F9FAFB",
+    backgroundRoot: "#F0F2F5",     
     backgroundDefault: "#FFFFFF",
-    backgroundSecondary: "#F3F4F6",
-    backgroundTertiary: "#E5E7EB",
-    border: "#E5E7EB",
+    backgroundSecondary: "#E5E7EB", 
+    backgroundTertiary: "#D8DDE3",  
+    border: "#C8CED5",
   },
   dark: {
-    primary: primaryDark,
+    primary: primaryDark,          
     secondary: "#FB923C",
     success: "#10B981",
     error: "#EC4899",
@@ -32,11 +32,11 @@ export const Colors = {
     tabIconDefault: "#9CA3AF",
     tabIconSelected: primaryDark,
     link: primaryDark,
-    backgroundRoot: "#111827",
-    backgroundDefault: "#1F2937",
-    backgroundSecondary: "#374151",
-    backgroundTertiary: "#4B5563",
-    border: "#4B5563",
+    backgroundRoot: "#0A1F1E",     
+    backgroundDefault: "#112F2D",
+    backgroundSecondary: "#1A403E",
+    backgroundTertiary: "#24514F",
+    border: "#2E625F",
   },
 };
 

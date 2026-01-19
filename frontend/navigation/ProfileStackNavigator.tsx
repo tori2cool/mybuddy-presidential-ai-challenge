@@ -8,6 +8,8 @@ import { useCurrentChild } from "@/contexts/ChildContext";
 import { useTheme } from "@/hooks/useTheme";
 import { getCommonScreenOptions } from "@/navigation/screenOptions";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ThemedText } from "@/components/ThemedText";
+import { TabHeader } from "@/components/TabHeader";
 
 export type ProfileStackParamList = {
   Profile: undefined;
@@ -26,24 +28,17 @@ export default function ProfileStackNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          title: "My Profile",
-          headerRight: () => (
-            <Text
-              onPress={async () => {
+          headerShown: true,
+          header: () => (
+            <TabHeader
+              title="My Profile"
+              onLogoutPress={async () => {
                 await setChildId(null);
                 await logout();
                 await AsyncStorage.removeItem("selected_child_id");
                 await AsyncStorage.removeItem("child_session_active");
               }}
-              style={{
-                color: theme.text,
-                fontWeight: "600",
-                marginRight: Platform.OS === 'web' ? 8 : 0,
-                paddingRight: Platform.OS === 'web' ? 24 : 0,
-              }}
-            >
-              Logout
-            </Text>
+            />
           ),
         }}
       />

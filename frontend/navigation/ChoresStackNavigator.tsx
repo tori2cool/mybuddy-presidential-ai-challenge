@@ -4,8 +4,7 @@ import ChoresScreen from "@/screens/ChoresScreen";
 import { useTheme } from "@/hooks/useTheme";
 import { getCommonScreenOptions } from "./screenOptions";
 import { useProfileScroll } from "@/contexts/ProfileScrollContext";
-import { View } from "react-native";
-import { IconButton } from "@/components/IconButton";
+import { TabHeader } from "@/components/TabHeader";
 
 export type ChoresStackParamList = {
   Chores: undefined;
@@ -15,6 +14,7 @@ const Stack = createNativeStackNavigator<ChoresStackParamList>();
 
 export default function ChoresStackNavigator() {
   const { theme, isDark } = useTheme();
+  const { triggerScrollToBottom } = useProfileScroll();
 
   return (
     <Stack.Navigator
@@ -24,42 +24,26 @@ export default function ChoresStackNavigator() {
         name="Chores"
         component={ChoresScreen}
         options={({ navigation }) => ({
-          title: "My Chores",
-          headerRight: () => {
-            const { triggerScrollToBottom } = useProfileScroll();
-
-            return (
-              <View style={{ paddingRight: 0 }}>
-                <IconButton
-                  name="settings"
-                  color="white"
-                  size={24}
-                  style={{
-                    backgroundColor: "rgba(0,0,0,0.2)",
-                    borderRadius: 22,
-                    marginTop: -5,
-                  }}
-                  onPress={() => {
-                    console.log('Settings tapped - navigating to Profile tab');
-
-                    navigation.dispatch({
-                      type: 'NAVIGATE',
-                      payload: {
-                        name: 'Main',
-                        params: {
-                          screen: 'ProfileTab',
-                        },
-                      },
-                    });
-
-                    setTimeout(() => {
-                      triggerScrollToBottom();
-                    }, 400);
-                  }}
-                />
-              </View>
-            );
-          },
+          headerShown: true,
+          header: () => (
+            <TabHeader
+              title="My Chores"
+              onSettingsPress={() => {
+                navigation.dispatch({
+                  type: 'NAVIGATE',
+                  payload: {
+                    name: 'Main',
+                    params: {
+                      screen: 'ProfileTab',
+                    },
+                  },
+                });
+                setTimeout(() => {
+                  triggerScrollToBottom();
+                }, 400);
+              }}
+            />
+          ),
         })}
       />
     </Stack.Navigator>

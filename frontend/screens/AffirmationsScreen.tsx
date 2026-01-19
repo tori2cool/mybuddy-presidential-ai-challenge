@@ -26,10 +26,7 @@ import {
   ViewToken,
   NativeSyntheticEvent,
   NativeScrollEvent,
-  Modal,
-  KeyboardAvoidingView,
   Platform,
-  TextInput,
   ScrollView,
 } from "react-native";
 
@@ -75,11 +72,8 @@ import { ShareMenu } from "@/components/ShareMenu";
 import { NavigatorScreenParams, RouteProp, useNavigation, useRoute, useTheme } from "@react-navigation/native";
 import { CreateAffirmationModal } from "@/components/CreateAffirmationModal";
 import ViewShot from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import AffirmationSharePreview, { AffirmationSharePreviewRef } from '@/components/AffirmationSharePreview';
-import Share from 'react-native-share';
-import { inlineStyles } from "react-native-svg";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { RootStackParamList, TabParamList } from "@/navigation/RootNavigator";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -575,14 +569,12 @@ export default function AffirmationsScreen() {
               size={24}
               style={styles.settingsButton}
               onPress={() => {
-                console.log('Settings tapped - navigating to Profile tab');
                 navigation.navigate('Main', {
                   screen: 'ProfileTab',
                 } as NavigatorScreenParams<TabParamList>);
-                // Give ProfileScreen a moment to mount and register the scroll function
                 setTimeout(() => {
                   triggerScrollToBottom();
-                }, 400);  // 400ms usually works well; try 300 or 600 if needed
+                }, 400); 
               }}
             />
           </View>

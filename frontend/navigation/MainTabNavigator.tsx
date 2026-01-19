@@ -27,21 +27,25 @@ export default function MainTabNavigator() {
     <Tab.Navigator
       initialRouteName="AffirmationsTab"
       screenOptions={{
-        tabBarActiveTintColor: theme.tabIconSelected,
-        tabBarInactiveTintColor: theme.tabIconDefault,
+        tabBarActiveTintColor: isDark ? '#079D8E' : theme.tabIconSelected,
+        tabBarInactiveTintColor: isDark ? '#D1D5DB' : theme.tabIconDefault,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: Platform.select({
-            ios: "transparent",
-            android: theme.backgroundRoot,
+            web: theme.backgroundRoot,
+            ios: 'transparent',
+            android: isDark ? '#0F172A' : theme.backgroundDefault,
           }),
-          borderTopWidth: 0,
+          borderTopWidth: Platform.OS === 'web' ? 1 : 0, 
+          borderTopColor: Platform.OS === 'web'
+            ? theme.tabIconDefault
+            : 'transparent',
           elevation: 0,
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
             <BlurView
-              intensity={100}
+              intensity={isDark ? 80 : 100}
               tint={isDark ? "dark" : "light"}
               style={StyleSheet.absoluteFill}
             />

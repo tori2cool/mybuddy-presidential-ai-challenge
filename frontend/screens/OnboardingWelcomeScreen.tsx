@@ -8,7 +8,7 @@ import { Button } from "@/components/Button";
 import { OnboardingParamList } from "@/navigation/OnboardingNavigator";
 import { Spacing, Typography } from "@/constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Gradients } from "@/constants/theme";
+import { Colors } from "@/constants/theme";
 
 type WelcomeScreenNavigationProp = NativeStackNavigationProp<
   OnboardingParamList,
@@ -32,7 +32,7 @@ export default function OnboardingWelcomeScreen() {
 
   return (
     <LinearGradient
-      colors={[...Gradients.sky] as any}
+      colors={["#C4C4C4", "#079D8E"]}
       style={styles.container}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
@@ -49,7 +49,7 @@ export default function OnboardingWelcomeScreen() {
       >
         <View style={styles.iconContainer}>
           <Image
-            source={require("@/assets/images/icon.png")}
+            source={require("@/assets/images/logo.png")}
             style={styles.icon}
             resizeMode="contain"
           />
@@ -61,7 +61,7 @@ export default function OnboardingWelcomeScreen() {
           Welcome to MyBuddy!
         </ThemedText>
         <ThemedText
-          style={[styles.subtitle, { color: "rgba(255,255,255,0.9)" }]}
+          style={[styles.subtitle, { color: "white" }]}
           type="body"
         >
           Your fun learning companion
@@ -69,7 +69,10 @@ export default function OnboardingWelcomeScreen() {
         <View style={styles.buttonContainer}>
           <Button
             onPress={() => navigation.navigate("Quiz")}
-            style={styles.button}
+            style={{
+              width: "100%",
+              backgroundColor: Colors.light.secondary
+            }}
           >
             Let's Get Started
           </Button>

@@ -20,10 +20,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 type Props = NativeStackScreenProps<RootStackParamList, "ChildSelect">;
 
 export default function ChildSelectScreen({ navigation }: Props) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { setChildId } = useCurrentChildId();
   const { loading: authLoading, isAuthenticated } = useAuth();
-  const { theme } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +39,39 @@ export default function ChildSelectScreen({ navigation }: Props) {
   const interestsFetchInFlight = useRef(false);
   const avatarsFetchInFlight = useRef(false);
   const childrenFetchInFlight = useRef(false);
+
+  const styles = StyleSheet.create({
+    container: { flex: 1, padding: Spacing.lg },
+    header: { marginTop: Spacing.xl, marginBottom: Spacing.xl },
+    center: { flex: 1, alignItems: "center", justifyContent: "center" },
+    list: { gap: Spacing.md },
+    card: {
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.md,
+      borderWidth: 2,
+    },
+    cardRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: Spacing.md,
+    },
+    avatar: {
+      marginLeft: Spacing.md,
+    },
+    cardText: {
+      flex: 1,
+    },
+    addKidButtonWrap: {
+      marginTop: Spacing.lg,
+    },
+    addKidButton: {
+      backgroundColor: theme.backgroundDefault,     
+      borderColor: theme.backgroundSecondary,      
+      borderWidth: 2,
+      borderRadius: BorderRadius.md,                
+    },
+  });
 
   const loadChildren = useCallback(async () => {
     if (authLoading || !isAuthenticated) return;
@@ -177,7 +210,7 @@ export default function ChildSelectScreen({ navigation }: Props) {
   }, [avatarsError, interestsError, theme.textSecondary]);
 
   return (
-    <ThemedView style={[styles.container, {paddingTop: insets.top}]}>
+    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <ThemedText type="title">Who is using MyBuddy?</ThemedText>
         <ThemedText style={{ color: theme.textSecondary, marginTop: 8 }}>
@@ -242,56 +275,16 @@ export default function ChildSelectScreen({ navigation }: Props) {
             );
           })}
 
-          <View style={styles.addKidButtonWrap}>
-            <Button
-              onPress={handleAddNewKid}
-              style={[
-                styles.addKidButton,
-                {
-                  borderColor: theme.backgroundSecondary,
-                  backgroundColor: "transparent",
-                },
-              ]}
-            >
-              Add new kid
-            </Button>
-          </View>
+          <Button
+            onPress={handleAddNewKid}
+            style={styles.addKidButton}
+          >
+            <ThemedText type="body" style={{ color: theme.text }}>
+              Add New Kid
+            </ThemedText>
+          </Button>
         </View>
       )}
     </ThemedView>
   );
 }
-
-
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: Spacing.lg },
-  header: { marginTop: Spacing.xl, marginBottom: Spacing.xl },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  list: { gap: Spacing.md },
-  card: {
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.md,
-    borderWidth: 2,
-  },
-  cardRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.md,
-  },
-  avatar: {
-    marginLeft: Spacing.md,
-  },
-  cardText: {
-    flex: 1,
-  },
-  addKidButtonWrap: {
-    marginTop: Spacing.lg,
-  },
-  addKidButton: {
-    // Secondary-like style using theme border/background while keeping existing Button component.
-    backgroundColor: "transparent",
-    borderWidth: 2,
-  },
-});

@@ -4,12 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ImageBackground,
   ActivityIndicator,
 } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
-
-const backgroundImage = require("@/assets/images/android-icon-background.png");
+import { LinearGradient } from "expo-linear-gradient";
+import { Colors } from "@/constants/theme";
 
 export default function LoginScreen() {
   const { login, loading } = useAuth();
@@ -21,7 +20,12 @@ export default function LoginScreen() {
   };
 
   return (
-    <ImageBackground source={backgroundImage} style={styles.background}>
+    <LinearGradient
+      colors={["#C4C4C4", "#079D8E"]}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+    >
       <View style={styles.overlay}>
         <View style={styles.content}>
           <Text style={styles.title}>Welcome to MyBuddy!</Text>
@@ -31,24 +35,33 @@ export default function LoginScreen() {
           </Text>
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              loading && styles.buttonDisabled,
+              {
+                backgroundColor: Colors.light.secondary
+              },
+            ]}
             activeOpacity={0.8}
             onPress={handleLoginPress}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={Colors.light.secondary} />
             ) : (
               <Text style={styles.buttonText}>Sign in with MyBuddy</Text>
             )}
           </TouchableOpacity>
         </View>
       </View>
-    </ImageBackground>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   background: {
     flex: 1,
   },
