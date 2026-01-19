@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mybuddy.app"
+      "bundleIdentifier": "com.mybuddy.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.mybuddy.app",
@@ -45,6 +48,12 @@
     ],
     "experiments": {
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "cb0e1655-d26a-4414-80bb-9b6392d0fe9d"
+      }
+    },
+    "owner": "idanow"
   }
 }
