@@ -37,9 +37,9 @@ def setup_logging() -> None:
     # - file logs: INFO
     # - root logger: DEBUG
     # - console: WARNING (optional; enabled by default)
-    file_level = logging.INFO
-    root_level = logging.DEBUG
-    console_level = logging.WARNING
+    file_level = settings.log_level
+    root_level = settings.log_level
+    console_level = settings.log_level
 
     # Keep honoring existing MYBUDDY_LOG_LEVEL as a convenience override for app loggers
     log_level_str = (settings.log_level or "INFO").upper()

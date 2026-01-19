@@ -221,6 +221,381 @@ function FlashcardPracticeModal({
     }
   };
 
+  if (Platform.OS === "web") {
+    return (
+      <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
+        <View style={styles.webOverlay}>
+          <View style={[styles.webSheet, { backgroundColor: theme.backgroundRoot }]}>
+            <ScrollView
+              style={styles.webScroll}
+              contentContainerStyle={[styles.modalContent, { backgroundColor: theme.backgroundRoot }]}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.inner}>
+                {/* Header */}
+                <View
+                  style={[
+                    styles.modalHeader,
+                    {
+                      backgroundColor: theme.backgroundRoot,
+                      borderBottomColor:
+                        theme.border ??
+                        theme.backgroundTertiary ??
+                        (theme.textSecondary + "33"),
+                    },
+                  ]}
+                >
+                  <Pressable style={styles.closeButton} onPress={handleClose}>
+                    <Feather name="x" size={24} color={theme.text} />
+                  </Pressable>
+                  <View style={styles.modalTitleContainer}>
+                    <ThemedText type="headline" style={styles.modalTitle}>
+                      {subject?.name}
+                    </ThemedText>
+                    <View
+                      style={[
+                        styles.difficultyBadge,
+                        { backgroundColor: resolvedDifficultyInfo.color + "20" },
+                      ]}
+                    >
+                      <Feather
+                        name={resolvedDifficultyInfo.icon as any}
+                        size={12}
+                        color={resolvedDifficultyInfo.color}
+                      />
+                      <ThemedText
+                        style={[styles.difficultyText, { color: resolvedDifficultyInfo.color }]}
+                      >
+                        {resolvedDifficultyInfo.label}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={styles.cardCounter}>
+                    <ThemedText style={{ color: theme.textSecondary }}>
+                      {currentIndex + 1}/{cards.length}
+                    </ThemedText>
+                  </View>
+                </View>
+
+                {/* Loading State */}
+                {isLoading && (
+                  <View style={styles.loadingContainer}>
+                    <AsyncStatus loading={true} loadingMessage="Loading cards..." />
+                  </View>
+                )}
+
+                {/* Results Screen */}
+                {showResults && !isLoading && (
+                  <View style={styles.resultsContainer}>
+                    <View style={[styles.resultsCard, { backgroundColor: theme.backgroundDefault }]}>
+                      <Feather name={getResultIcon() as any} size={64} color={theme.primary} />
+                      <ThemedText type="title" style={styles.resultsTitle}>
+                        {getResultMessage()}
+                      </ThemedText>
+                      <View style={[styles.resultsScoreContainer, { borderColor: theme.primary }]}
+                      >
+                        <View style={styles.resultsScoreRow}>
+                          <ThemedText style={styles.resultsScoreLabel}>Correct</ThemedText>
+                          <ThemedText style={[styles.resultsScoreValue, { color: theme.success }]}>
+                            {correctCount}/{cards.length}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={styles.resultsButtons}>
+                        <Pressable
+                          style={[styles.resultButton, { backgroundColor: theme.primary }]}
+                          onPress={handleClose}
+                        >
+                          <Feather name="home" size={20} color="white" />
+                          <ThemedText
+                            style={[styles.resultButtonText, styles.resultButtonLabel]}
+                          >
+                            Done
+                          </ThemedText>
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {/* Flag Modal */}
+                <Modal
+                  visible={flagModalVisible}
+                  transparent
+                  animationType="fade"
+                  onRequestClose={() => setFlagModalVisible(false)}
+                >
+                  <View style={styles.flagModalOverlay}>
+                    <View style={[styles.flagModalCard, { backgroundColor: theme.backgroundDefault }]}>
+                      <ThemedText type="title" style={{ textAlign: "center" }}>
+                        Flag this card
+                      </ThemedText>
+
+                      <ThemedText style={{ color: theme.textSecondary, textAlign: "center" }}>
+                        Tell us what's wrong and we'll replace it.
+                      </ThemedText>
+
+                      <View style={{ gap: Spacing.sm, marginTop: Spacing.md }}>
+                        {[
+                          { code: "wrong", label: "Wrong Answer" },
+                          { code: "confusing", label: "Confusing or Unclear" },
+                          { code: "ambiguous", label: "Multiple Answers" },
+                          { code: "inappropriate", label: "Not Appropriate" },
+                          { code: "biased", label: "Biased" },
+                        ].map((r) => {
+                          const selected = flagReasonCode === r.code;
+                          return (
+                            <Pressable
+                              key={r.code}
+                              style={[
+                                styles.flagReasonRow,
+                                {
+                                  borderColor: selected ? theme.primary : theme.border,
+                                  backgroundColor: selected
+                                    ? theme.primary + "10"
+                                    : theme.backgroundDefault,
+                                },
+                              ]}
+                              onPress={() => setFlagReasonCode(r.code)}
+                              disabled={flagSubmitting}
+                            >
+                              <ThemedText style={{ color: theme.text, flex: 1 }}>{r.label}</ThemedText>
+                              {selected && <Feather name="check" size={16} color={theme.primary} />}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+
+                      <View style={{ flexDirection: "row", gap: Spacing.md, marginTop: Spacing.lg }}>
+                        <Pressable
+                          style={[
+                            styles.flagModalButton,
+                            {
+                              backgroundColor: theme.backgroundSecondary ?? theme.backgroundDefault,
+                              borderColor: theme.border,
+                            },
+                          ]}
+                          onPress={() => setFlagModalVisible(false)}
+                          disabled={flagSubmitting}
+                        >
+                          <ThemedText style={{ color: theme.text }}>Cancel</ThemedText>
+                        </Pressable>
+
+                        <Pressable
+                          style={[
+                            styles.flagModalButton,
+                            {
+                              backgroundColor: theme.error,
+                              borderColor: theme.error,
+                              opacity: flagSubmitting ? 0.7 : 1,
+                            },
+                          ]}
+                          onPress={handleFlag}
+                          disabled={flagSubmitting}
+                        >
+                          <ThemedText style={{ color: "white", fontWeight: "600" }}>
+                            {flagSubmitting ? "Flagging..." : "Flag for Review"}
+                          </ThemedText>
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                </Modal>
+
+                {/* Question Screen */}
+                {!showResults && !isLoading && currentCard && (
+                  <View style={styles.questionContainer}>
+                    <View style={[styles.questionCard, { backgroundColor: theme.backgroundDefault }]}>
+                      <View style={styles.questionHeaderRow}>
+                        <View style={[styles.cardLabel, { backgroundColor: subject?.color + "20" }]}>
+                          <ThemedText style={[styles.cardLabelText, { color: subject?.color }]}
+                          >
+                            Question {currentIndex + 1}
+                          </ThemedText>
+                        </View>
+
+                        <Pressable
+                          style={[styles.flagIconButton, { backgroundColor: theme.backgroundDefault }]}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setFlagModalVisible(true);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Flag question"
+                        >
+                          <ThemedText style={[styles.flagIconText, { color: theme.textSecondary }]}
+                          >
+                            🚩
+                          </ThemedText>
+                        </Pressable>
+                      </View>
+                      <ThemedText type="title" style={styles.questionText}>
+                        {currentCard.question}
+                      </ThemedText>
+                    </View>
+
+                    <View style={styles.answerSection}>
+                      <ThemedText style={[styles.answerLabel, { color: theme.textSecondary }]}>
+                        Choose an Answer
+                      </ThemedText>
+
+                      <View style={styles.choicesContainer}>
+                        {(currentCard.choices || []).slice(0, 4).map((choice, idx) => {
+                          const selected = selectedIndex === idx;
+                          const borderColor = hasChecked
+                            ? idx === currentCard.correctIndex
+                              ? theme.success
+                              : selected
+                                ? theme.error
+                                : theme.border
+                            : selected
+                              ? theme.primary
+                              : theme.border;
+
+                          const backgroundColor = hasChecked
+                            ? idx === currentCard.correctIndex
+                              ? theme.success + "15"
+                              : selected
+                                ? theme.error + "10"
+                                : theme.backgroundDefault
+                            : selected
+                              ? theme.primary + "10"
+                              : theme.backgroundDefault;
+
+                          return (
+                            <Pressable
+                              key={`${currentCard.id}:${idx}`}
+                              style={[
+                                styles.choiceButton,
+                                {
+                                  backgroundColor,
+                                  borderColor,
+                                },
+                              ]}
+                              onPress={() => {
+                                if (hasChecked) return;
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setSelectedIndex(idx);
+                              }}
+                            >
+                              <View style={styles.choiceRow}>
+                                <ThemedText style={{ color: theme.text, flex: 1 }}>{choice}</ThemedText>
+                                {selected && !hasChecked && (
+                                  <Feather name="check" size={16} color={theme.primary} />
+                                )}
+                                {hasChecked && idx === currentCard.correctIndex && (
+                                  <Feather name="check-circle" size={16} color={theme.success} />
+                                )}
+                                {hasChecked && selected && idx !== currentCard.correctIndex && (
+                                  <Feather name="x-circle" size={16} color={theme.error} />
+                                )}
+                              </View>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+
+                      {/* Feedback Section */}
+                      {hasChecked && selectedIndex !== null && (
+                        <View style={styles.feedbackContainer}>
+                          <View
+                            style={[
+                              styles.explanationBox,
+                              {
+                                backgroundColor: theme.backgroundDefault,
+                                borderColor: theme.border,
+                              },
+                            ]}
+                          >
+                            <ThemedText style={[styles.explanationLabel, { color: theme.textSecondary }]}
+                            >
+                              Explanation
+                            </ThemedText>
+                            <ThemedText style={[styles.explanationText, { color: theme.text }]}
+                            >
+                              {currentCard.explanations?.[selectedIndex] || ""}
+                            </ThemedText>
+                          </View>
+
+                          {!isCorrect && (
+                            <View
+                              style={[
+                                styles.correctAnswerBox,
+                                {
+                                  backgroundColor: theme.backgroundSecondary ?? theme.backgroundDefault,
+                                  borderWidth: 1,
+                                  borderColor:
+                                    theme.border ??
+                                    theme.backgroundTertiary ??
+                                    (theme.textSecondary + "33"),
+                                  borderLeftWidth: 4,
+                                  borderLeftColor: theme.secondary ?? theme.primary,
+                                },
+                              ]}
+                            >
+                              <ThemedText style={[styles.correctAnswerLabel, { color: theme.textSecondary }]}
+                              >
+                                Correct Answer:
+                              </ThemedText>
+                              <ThemedText style={[styles.correctAnswerText, { color: theme.text }]}
+                              >
+                                {currentCard.choices[currentCard.correctIndex]}
+                              </ThemedText>
+                              <ThemedText
+                                style={[styles.correctAnswerExplanation, { color: theme.textSecondary }]}
+                              >
+                                {currentCard.explanations?.[currentCard.correctIndex] || ""}
+                              </ThemedText>
+                            </View>
+                          )}
+                        </View>
+                      )}
+
+                      {/* Action Buttons */}
+                      {!hasChecked ? (
+                        <Pressable
+                          style={[
+                            styles.checkButton,
+                            {
+                              backgroundColor: theme.primary,
+                              opacity: selectedIndex === null ? 0.6 : 1,
+                            },
+                          ]}
+                          onPress={checkAnswer}
+                          disabled={selectedIndex === null}
+                        >
+                          <Feather name="check" size={20} color="white" />
+                          <ThemedText style={[styles.checkButtonText, { color: "white" }]}
+                          >
+                            Check Answer
+                          </ThemedText>
+                        </Pressable>
+                      ) : (
+                        <Pressable
+                          style={[styles.nextButton, { backgroundColor: theme.primary }]}
+                          onPress={goToNext}
+                        >
+                          <ThemedText style={styles.nextButtonText}>
+                            {currentIndex < cards.length - 1 ? "Next Card" : "See Results"}
+                          </ThemedText>
+                          <Feather
+                            name={currentIndex < cards.length - 1 ? "arrow-right" : "award"}
+                            size={20}
+                            color="white"
+                          />
+                        </Pressable>
+                      )}
+                    </View>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
@@ -228,15 +603,13 @@ function FlashcardPracticeModal({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          style={[styles.modalContainer, { backgroundColor: theme.backgroundRoot }]}
-          contentContainerStyle={[
-            styles.modalContent,
-            { backgroundColor: theme.backgroundRoot },
-          ]}
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.modalContent, { backgroundColor: theme.backgroundRoot }]}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View
+          <View style={styles.inner}>
+            {/* Header */}
+            <View
             style={[
               styles.modalHeader,
               {
@@ -586,6 +959,7 @@ function FlashcardPracticeModal({
               </View>
             </View>
           )}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
@@ -595,11 +969,37 @@ function FlashcardPracticeModal({
 export default FlashcardPracticeModal;
 
 const styles = StyleSheet.create({
+  webOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.xl,
+  },
+  webSheet: {
+    width: "100%",
+    maxWidth: 960,
+    height: "90%",
+    maxHeight: "90%",
+    borderRadius: BorderRadius.lg,
+    overflow: "hidden",
+  },
+  webScroll: {
+    flex: 1,
+  },
   modalContainer: {
     flex: 1,
   },
   modalContent: {
     flexGrow: 1,
+  },
+  inner: {
+    width: "100%",
+    flex: 1,
+  },
+  innerWeb: {
+    maxWidth: 960,
+    alignSelf: "center",
   },
   modalHeader: {
     flexDirection: "row",
@@ -832,6 +1232,7 @@ const styles = StyleSheet.create({
   },
   flagModalCard: {
     width: "100%",
+    ...(Platform.OS === "web" ? { maxWidth: 960 } : null),
     borderRadius: BorderRadius.lg,
     padding: Spacing.xl,
     gap: Spacing.sm,

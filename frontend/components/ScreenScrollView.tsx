@@ -43,4 +43,11 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: Spacing.xl,
   },
+  inner: {
+    width: "100%",
+  },
+  innerWeb: {
+    maxWidth: 960,
+    alignSelf: "center",
+  },
 });

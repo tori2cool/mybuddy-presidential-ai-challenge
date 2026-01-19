@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
 } from "react-native";
+import { ScreenScrollView } from "@/components/ScreenScrollView";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { createChild } from "@/services/childrenService";
@@ -159,15 +160,9 @@ export default function OnboardingNameAvatarScreen({ route, onComplete }: Props)
   return (
     <ThemedView style={styles.container}>
       <CancelXButton onPress={handleCancel} />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingTop: insets.top + Spacing.xl,
-            paddingBottom: insets.bottom + Spacing.xl,
-          },
-        ]}
+      <ScreenScrollView
+        style={[styles.scrollView, { backgroundColor: "transparent" }]}
+        contentContainerStyle={[styles.content, { paddingBottom: Spacing.xl }]}
       >
         <ThemedText type="title" style={styles.title}>
           Create Your Profile
@@ -291,7 +286,7 @@ export default function OnboardingNameAvatarScreen({ route, onComplete }: Props)
         >
           {submitting ? "Saving..." : "Finish Setup"}
         </Button>
-      </ScrollView>
+      </ScreenScrollView>
     </ThemedView>
   );
 }
