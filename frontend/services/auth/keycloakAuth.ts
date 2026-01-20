@@ -59,7 +59,7 @@ export async function startKeycloakLoginAsync(): Promise<KeycloakLoginResult | n
   const redirectUri =
     Platform.OS === "web"
       ? `${window.location.origin}/auth/callback`
-      : AuthSession.makeRedirectUri({ scheme: "mybuddy" });
+      : AuthSession.makeRedirectUri({ scheme: "mybuddy", path: "auth/callback" });
 
   const discovery = await AuthSession.fetchDiscoveryAsync(
     `${issuer}/realms/${realm}`,

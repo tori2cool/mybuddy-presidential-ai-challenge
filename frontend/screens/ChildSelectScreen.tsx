@@ -71,6 +71,13 @@ export default function ChildSelectScreen({ navigation }: Props) {
       borderWidth: 2,
       borderRadius: BorderRadius.md,                
     },
+    inner: {
+      width: "100%",
+    },
+    innerWeb: {
+      maxWidth: 960,
+      alignSelf: "center",
+    },
   });
 
   const loadChildren = useCallback(async () => {
@@ -211,12 +218,13 @@ export default function ChildSelectScreen({ navigation }: Props) {
 
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <ThemedText type="title">Who is using MyBuddy?</ThemedText>
+      <View style={[styles.inner, Platform.OS === "web" && styles.innerWeb]}>
+          <View style={styles.header}>
+          <ThemedText type="title">Who is using MyBuddy?</ThemedText>
         <ThemedText style={{ color: theme.textSecondary, marginTop: 8 }}>
           Please select a child to continue.
         </ThemedText>
-      </View>
+        </View>
 
       {loading ? (
         <View style={styles.center}>
@@ -285,6 +293,7 @@ export default function ChildSelectScreen({ navigation }: Props) {
           </Button>
         </View>
       )}
+      </View>
     </ThemedView>
   );
 }

@@ -33,7 +33,7 @@ export default function OnboardingWelcomeScreen() {
   return (
     <LinearGradient
       colors={["#C4C4C4", "#079D8E"]}
-      style={styles.container}
+      style={[styles.container, Platform.OS === "web" && styles.containerWeb]}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
@@ -86,14 +86,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  gradient: {
-    flex: 1,
-  },
-  gradientWeb: {
+  containerWeb: {
     maxWidth: 960,
     width: "100%",
     alignSelf: "center",
   },
+  gradient: {
+    flex: 1,
+  },
+
   content: {
     flex: 1,
     justifyContent: "center",

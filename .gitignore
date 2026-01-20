@@ -24,6 +24,7 @@ build/
 dist/
 *.egg-info/
 .eggs/
+frontend/.package-lock.json
 
 # -------------------------------------------------------
 # Test / coverage artifacts
@@ -76,7 +77,6 @@ node_modules/
 expo-env.d.ts
 dist/
 web-build/
-assets/
 
 # Native build outputs
 ios/

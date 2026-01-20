@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { ScrollView, ScrollViewProps, StyleSheet } from 'react-native';
+import { Platform, ScrollView, ScrollViewProps, StyleSheet, View } from 'react-native';
 
 import { useTheme } from "@/hooks/useTheme";
 import { useScreenInsets } from "@/hooks/useScreenInsets";
@@ -30,7 +30,9 @@ export const ScreenScrollView = forwardRef<ScrollView, ScrollViewProps>(
         scrollIndicatorInsets={{ bottom: scrollInsetBottom }}
         {...scrollViewProps}
       >
-        {children}
+        <View style={[styles.inner, Platform.OS === "web" && styles.innerWeb]}>
+          {children}
+        </View>
       </ScrollView>
     );
   }

@@ -487,6 +487,9 @@ useEffect(() => {
                 style={[
                   styles.sheetContainer,
                   {
+                    ...(Platform.OS === 'web'
+                      ? { width: '100%', maxWidth: 960, alignSelf: 'center' as const }
+                      : null),
                     backgroundColor: theme.backgroundRoot,
                     // paddingBottom: insets.bottom,
                     paddingBottom: insets.bottom + Spacing.xxl + keyboardHeight,
