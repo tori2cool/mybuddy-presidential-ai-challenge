@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "MyBuddy",
-    "slug": "mybuddy",
+    "slug": "mybuddy-vslattum",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
@@ -10,13 +10,13 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mybuddy.app",
+      "bundleIdentifier": "com.vslattum.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.mybuddy.app",
+      "package": "com.vslattum.app",
       "adaptiveIcon": {
         "backgroundColor": "#8B5CF6",
         "foregroundImage": "assets/images/android-icon-foreground.png",
@@ -51,9 +51,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "cb0e1655-d26a-4414-80bb-9b6392d0fe9d"
+        "projectId": "e35adf75-471a-4c66-9b3e-ae9d424d605f"
       }
     },
-    "owner": "idanow"
+    "owner": "vslattum"
   }
 }
