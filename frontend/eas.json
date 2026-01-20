@@ -22,7 +22,8 @@
         "EXPO_PUBLIC_KEYCLOAK_REDIRECT_URI": "mybuddy://redirect",
 
         "EXPO_PUBLIC_BACKEND_IMG_URL": "https://mybuddy-and-me.com/img",
-        "EXPO_PUBLIC_DEBUG_API": "true"
+        "EXPO_PUBLIC_DEBUG_API": "true",
+        "EXPO_PUBLIC_OPENAI_API_KEY":"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"
       }
     },
 
