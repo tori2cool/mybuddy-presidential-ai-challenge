@@ -57,8 +57,6 @@
   "submit": {
     "preview": {},
     "production": {},
-    "beta": {
-      "appleId": "tori.slattum@gmail.com"
-    }
+    "beta": {}
   }
 }
